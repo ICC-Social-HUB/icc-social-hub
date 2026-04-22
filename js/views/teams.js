@@ -33,8 +33,8 @@ const TeamsView = (() => {
                             </div>
                             <div class="p-3">
                                 <h3 class="font-heading font-semibold text-sm truncate">${lead.team}</h3>
-                                <p class="text-red-500 text-xs">${lead.role}</p>
-                                <p class="text-zinc-600 text-[10px] mt-0.5">${lead.name}</p>
+                                <p class="text-zinc-400 text-[11px] mt-1">Lead: <span class="text-white">${lead.name}</span></p>
+                                <p class="text-zinc-500 text-[10px] mt-0.5 truncate">Project: <span class="${lead.project_name ? 'text-emerald-400' : 'text-zinc-600'}">${lead.project_name || 'TBD'}</span></p>
                                 <div class="card-accent h-0.5 bg-gradient-to-r ${lead.gradient} rounded-full mt-2"></div>
                             </div>
                         </div>`;
