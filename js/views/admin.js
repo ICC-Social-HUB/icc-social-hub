@@ -5,6 +5,7 @@ const AdminView = (() => {
     let activeTab = 'overview';
     let pendingLeads = [];
     let allPosts = [];
+    let editingLead = null;
 
     function render() {
         const user = ICCSupabase.getUser();
@@ -76,8 +77,37 @@ const AdminView = (() => {
     }
 
     function renderLeads() {
+        if (editingLead) {
+            return `
+            <div class="glass-card rounded-xl p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-heading font-semibold text-lg">${editingLead.id ? 'Edit Lead' : 'Add Core Lead'}</h3>
+                    <button id="cancel-edit-lead" class="text-zinc-500 hover:text-white transition-colors">Cancel</button>
+                </div>
+                <form id="lead-edit-form" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-xs font-medium text-zinc-400 mb-1">Name</label><input type="text" id="lead-name" value="${editingLead.name || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
+                        <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team</label><input type="text" id="lead-team" value="${editingLead.team || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
+                        <div><label class="block text-xs font-medium text-zinc-400 mb-1">Role</label><input type="text" id="lead-role" value="${editingLead.role || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
+                        <div><label class="block text-xs font-medium text-zinc-400 mb-1">Initials</label><input type="text" id="lead-initials" value="${editingLead.initials || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
+                    </div>
+                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Bio</label><textarea id="lead-bio" rows="2" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${editingLead.bio || ''}</textarea></div>
+                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Specialties (comma-separated)</label><input type="text" id="lead-specialties" value="${(editingLead.specialties || []).join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-xs font-medium text-zinc-400 mb-1">Gradient (Tailwind classes)</label><input type="text" id="lead-gradient" value="${editingLead.gradient || 'from-red-600 to-orange-500'}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                        <div><label class="block text-xs font-medium text-zinc-400 mb-1">Theme Color (Hex)</label><input type="color" id="lead-color" value="${editingLead.color || '#ef4444'}" class="form-input w-full h-9 p-0 bg-zinc-950 border border-zinc-800 rounded-lg cursor-pointer"></div>
+                    </div>
+                    <button type="submit" class="w-full py-2.5 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all mt-2">Save Lead</button>
+                </form>
+            </div>`;
+        }
+
         return `
         <div class="glass-card rounded-xl overflow-hidden">
+            <div class="flex items-center justify-between p-4 border-b border-zinc-800/50">
+                <h3 class="font-heading font-semibold text-sm">Core Team Leads</h3>
+                <button id="add-lead-btn" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors">+ Add Lead</button>
+            </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead><tr class="border-b border-zinc-800">
@@ -91,7 +121,10 @@ const AdminView = (() => {
                             <td class="px-4 py-3"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-gradient-to-br ${l.gradient} flex items-center justify-center text-xs font-bold flex-shrink-0">${l.initials}</div><span class="text-sm font-medium">${l.name}</span></div></td>
                             <td class="px-4 py-3 text-zinc-400 text-xs hidden sm:table-cell">${l.role}</td>
                             <td class="px-4 py-3 text-zinc-500 text-xs hidden md:table-cell">${l.team}</td>
-                            <td class="px-4 py-3 text-right"><a href="#teams/${l.id}" class="text-xs text-red-400 hover:text-red-300 transition-colors">View</a></td>
+                            <td class="px-4 py-3 text-right">
+                                <button class="edit-lead-btn text-xs text-blue-400 hover:text-blue-300 transition-colors mr-3" data-id="${l.id}">Edit</button>
+                                <button class="delete-lead-btn text-xs text-red-500 hover:text-red-400 transition-colors" data-id="${l.id}">Delete</button>
+                            </td>
                         </tr>`).join('')}</tbody>
                 </table>
             </div>
@@ -181,6 +214,68 @@ const AdminView = (() => {
                 const { error } = await ICCSupabase.adminDeletePost(btn.dataset.postId);
                 if (error) Toast.error('Delete failed'); else { Toast.success('Post deleted'); allPosts = allPosts.filter(p => p.id !== btn.dataset.postId); container.innerHTML = render(); bindEvents(container); }
             });
+        });
+        // Core Leads CRUD
+        document.getElementById('add-lead-btn')?.addEventListener('click', () => {
+            editingLead = {}; container.innerHTML = render(); bindEvents(container);
+        });
+        document.getElementById('cancel-edit-lead')?.addEventListener('click', () => {
+            editingLead = null; container.innerHTML = render(); bindEvents(container);
+        });
+        container.querySelectorAll('.edit-lead-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = parseInt(btn.dataset.id);
+                editingLead = CORE_LEADS.find(l => l.id === id) || null;
+                if (editingLead) { container.innerHTML = render(); bindEvents(container); }
+            });
+        });
+        container.querySelectorAll('.delete-lead-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm('Are you sure you want to delete this core lead?')) return;
+                const id = parseInt(btn.dataset.id);
+                const { error } = await ICCSupabase.deleteLead(id);
+                if (error) Toast.error('Failed to delete lead: ' + error.message);
+                else {
+                    Toast.success('Lead deleted');
+                    await loadLeads(); // Refresh global data from DB
+                    container.innerHTML = render(); bindEvents(container);
+                }
+            });
+        });
+        document.getElementById('lead-edit-form')?.addEventListener('submit', async e => {
+            e.preventDefault();
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true; submitBtn.textContent = 'Saving...';
+            
+            const fields = {
+                name: document.getElementById('lead-name').value.trim(),
+                team: document.getElementById('lead-team').value.trim(),
+                role: document.getElementById('lead-role').value.trim(),
+                initials: document.getElementById('lead-initials').value.trim(),
+                bio: document.getElementById('lead-bio').value.trim(),
+                specialties: document.getElementById('lead-specialties').value.split(',').map(s => s.trim()).filter(Boolean),
+                gradient: document.getElementById('lead-gradient').value.trim(),
+                color: document.getElementById('lead-color').value.trim()
+            };
+
+            let error;
+            if (editingLead.id) {
+                const res = await ICCSupabase.updateLead(editingLead.id, fields);
+                error = res.error;
+            } else {
+                const res = await ICCSupabase.createLead(fields);
+                error = res.error;
+            }
+
+            if (error) {
+                Toast.error('Failed to save lead: ' + error.message);
+                submitBtn.disabled = false; submitBtn.textContent = 'Save Lead';
+            } else {
+                Toast.success('Lead saved successfully');
+                await loadLeads(); // refresh global data from DB
+                editingLead = null;
+                container.innerHTML = render(); bindEvents(container);
+            }
         });
     }
 
