@@ -5,6 +5,7 @@ const AdminView = (() => {
     let activeTab = 'overview';
     let pendingLeads = [];
     let allPosts = [];
+    let allUsers = [];
     let editingLead = null;
 
     function render() {
@@ -25,7 +26,7 @@ const AdminView = (() => {
                     </div>
                 </div>
                 <div class="flex gap-1 overflow-x-auto mb-4 pb-1 border-b border-zinc-800/50">
-                    ${['overview', 'broadcast', 'leads', 'moderate'].map(t => `<button class="admin-tab ${activeTab === t ? 'active' : ''}" data-tab="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</button>`).join('')}
+                    ${['overview', 'broadcast', 'leads', 'users', 'moderate'].map(t => `<button class="admin-tab ${activeTab === t ? 'active' : ''}" data-tab="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</button>`).join('')}
                 </div>
                 <div id="admin-content">${renderTab()}</div>
             </div>
@@ -37,6 +38,7 @@ const AdminView = (() => {
             case 'overview': return renderOverview();
             case 'broadcast': return renderBroadcast();
             case 'leads': return renderLeads();
+            case 'users': return renderUsers();
             case 'moderate': return renderModerate();
             default: return '';
         }
@@ -55,6 +57,7 @@ const AdminView = (() => {
             <div class="grid grid-cols-2 gap-2">
                 <button class="admin-tab-switch px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors text-left" data-tab="broadcast">📢 Send Broadcast</button>
                 <button class="admin-tab-switch px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors text-left" data-tab="leads">👥 Manage Leads</button>
+                <button class="admin-tab-switch px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors text-left" data-tab="users">🧑‍💻 Manage Users</button>
                 <button class="admin-tab-switch px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors text-left" data-tab="moderate">🛡️ Moderate Feed</button>
                 <a href="#teams" class="px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors text-left block">🏠 View Teams</a>
             </div>
@@ -165,11 +168,64 @@ const AdminView = (() => {
         </div>`;
     }
 
+    function renderUsers() {
+        return `
+        <div class="glass-card rounded-xl overflow-hidden">
+            <div class="flex items-center justify-between p-4 border-b border-zinc-800/50">
+                <h3 class="font-heading font-semibold text-sm">User Management</h3>
+                <span class="text-xs text-zinc-500">${allUsers.length} total</span>
+            </div>
+            <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
+                <table class="w-full text-left text-sm relative">
+                    <thead class="sticky top-0 bg-zinc-950 z-10"><tr class="border-b border-zinc-800">
+                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">User</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">Role</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">Team ID</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase text-right">Actions</th>
+                    </tr></thead>
+                    <tbody>${allUsers.map(u => `
+                        <tr class="border-b border-zinc-800/30 hover:bg-zinc-800/20 transition-colors">
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                        ${(u.full_name || u.username || '?').charAt(0).toUpperCase()}
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="font-medium text-xs">${u.full_name || 'Anon'}</span>
+                                        <span class="text-[10px] text-zinc-500">@${u.username || ''}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <select class="user-role-select bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 w-24" data-id="${u.id}">
+                                    <option value="member" ${u.role==='member'?'selected':''}>Member</option>
+                                    <option value="lead" ${u.role==='lead'?'selected':''}>Lead</option>
+                                    <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+                                </select>
+                            </td>
+                            <td class="px-4 py-3">
+                                <select class="user-team-select bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 w-32" data-id="${u.id}">
+                                    <option value="">None</option>
+                                    ${CORE_LEADS.map(l => `<option value="${l.id}" ${u.team_id===l.id?'selected':''}>${l.team}</option>`).join('')}
+                                </select>
+                            </td>
+                            <td class="px-4 py-3 text-right flex justify-end gap-2">
+                                <button class="save-user-btn text-[10px] bg-blue-600/20 text-blue-400 px-2.5 py-1.5 rounded hover:bg-blue-600/40 transition-colors font-medium" data-id="${u.id}">Save</button>
+                                <button class="delete-user-btn text-[10px] bg-red-600/20 text-red-400 px-2.5 py-1.5 rounded hover:bg-red-600/40 transition-colors font-medium" data-id="${u.id}">Delete</button>
+                            </td>
+                        </tr>
+                    `).join('')}</tbody>
+                </table>
+            </div>
+        </div>`;
+    }
+
     async function mount(container) {
         activeTab = 'overview';
         container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
         pendingLeads = await ICCSupabase.getPendingLeads();
         allPosts = await ICCSupabase.getAllPosts();
+        allUsers = await ICCSupabase.getAllProfiles();
         container.innerHTML = render();
         bindEvents(container);
     }
@@ -221,7 +277,37 @@ const AdminView = (() => {
             btn.addEventListener('click', async () => {
                 if (!confirm('Delete this post?')) return;
                 const { error } = await ICCSupabase.adminDeletePost(btn.dataset.postId);
-                if (error) Toast.error('Delete failed'); else { Toast.success('Post deleted'); allPosts = allPosts.filter(p => p.id !== btn.dataset.postId); container.innerHTML = render(); bindEvents(container); }
+                if (error) Toast.error('Delete failed');
+                else { Toast.success('Post deleted'); allPosts = await ICCSupabase.getAllPosts(); container.innerHTML = render(); bindEvents(container); }
+            });
+        });
+        
+        // User management
+        container.querySelectorAll('.save-user-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const userId = btn.dataset.id;
+                const role = document.querySelector(`.user-role-select[data-id="${userId}"]`).value;
+                const teamVal = document.querySelector(`.user-team-select[data-id="${userId}"]`).value;
+                const team_id = teamVal ? parseInt(teamVal) : null;
+                btn.textContent = '...';
+                const { error } = await ICCSupabase.adminUpdateUser(userId, { role, team_id, is_pending_member: false });
+                if (error) Toast.error('Failed to update user: ' + error.message);
+                else Toast.success('User updated!');
+                btn.textContent = 'Save';
+            });
+        });
+        container.querySelectorAll('.delete-user-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm('Are you sure you want to permanently delete this user? This cannot be undone.')) return;
+                const userId = btn.dataset.id;
+                btn.textContent = '...';
+                const { error } = await ICCSupabase.adminDeleteUser(userId);
+                if (error) { Toast.error('Delete failed: ' + error.message); btn.textContent = 'Delete'; }
+                else { 
+                    Toast.success('User deleted!'); 
+                    allUsers = await ICCSupabase.getAllProfiles(); 
+                    container.innerHTML = render(); bindEvents(container); 
+                }
             });
         });
         // Core Leads CRUD

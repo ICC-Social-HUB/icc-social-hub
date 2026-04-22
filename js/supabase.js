@@ -469,6 +469,19 @@ const ICCSupabase = (() => {
         return { error };
     }
 
+    async function adminUpdateUser(userId, fields) {
+        if (!client) return { error: { message: 'Not configured' } };
+        const { data, error } = await client.from('profiles')
+            .update(fields).eq('id', userId).select().single();
+        return { data, error };
+    }
+
+    async function adminDeleteUser(userId) {
+        if (!client) return { error: { message: 'Not configured' } };
+        const { error } = await client.rpc('admin_delete_user', { target_user_id: userId });
+        return { error };
+    }
+
     async function getAllProfiles() {
         if (!client) return [];
         const { data } = await client.from('profiles').select('*').order('created_at', { ascending: false });
@@ -631,6 +644,7 @@ const ICCSupabase = (() => {
         fetchLeads, createLead, updateLead, deleteLead,
         approveLead, denyLead, getPendingLeads,
         createBroadcast, getActiveBroadcast, dismissBroadcast, adminDeletePost,
+        adminUpdateUser, adminDeleteUser,
         getAllProfiles, getAllPosts,
         uploadImage, deleteImage,
         subscribeToFeed, subscribeToMessages, subscribeToConversation,

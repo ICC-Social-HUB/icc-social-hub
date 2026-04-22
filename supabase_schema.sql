@@ -55,6 +55,16 @@ CREATE POLICY "Leads can manage their team members"
         )
     );
 
+DROP POLICY IF EXISTS "Admins can update all profiles" ON public.profiles;
+CREATE POLICY "Admins can update all profiles"
+    ON public.profiles FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles p2
+            WHERE p2.id = auth.uid() AND p2.role = 'admin'
+        )
+    );
+
 -- ==========================================
 -- 2. POSTS TABLE
 -- ==========================================
@@ -264,7 +274,24 @@ ON CONFLICT (id) DO NOTHING;
 SELECT setval('core_leads_id_seq', (SELECT MAX(id) FROM core_leads));
 
 -- ==========================================
--- 8. AUTO-UPDATE likes_count TRIGGER
+-- 8. ADMIN FUNCTIONS
+-- ==========================================
+CREATE OR REPLACE FUNCTION admin_delete_user(target_user_id UUID)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin') THEN
+        DELETE FROM auth.users WHERE id = target_user_id;
+    ELSE
+        RAISE EXCEPTION 'Not authorized';
+    END IF;
+END;
+$$;
+
+-- ==========================================
+-- 9. AUTO-UPDATE likes_count TRIGGER
 -- ==========================================
 CREATE OR REPLACE FUNCTION update_likes_count()
 RETURNS TRIGGER AS $$
