@@ -218,6 +218,27 @@ CREATE POLICY "Only admins can manage leads"
         )
     );
 
+-- Insert initial static leads into the database
+INSERT INTO public.core_leads (id, name, role, team, initials, bio, specialties, gradient, color, sort_order)
+VALUES 
+(1, 'Arjun Mehta', 'Tech Lead', 'Team Circuit', 'AM', 'A visionary full-stack developer who believes in building systems that scale. Arjun leads Team Circuit with an obsession for clean architecture, performance optimization, and pushing the boundaries of what''s possible with code.', ARRAY['Full-Stack Development','System Architecture','Cloud & DevOps'], 'from-red-600 to-orange-500', '#dc2626', 1),
+(2, 'Priya Sharma', 'Design Lead', 'Team Pixel', 'PS', 'Priya is the creative force behind ICC''s visual identity. With an eye for detail and a deep understanding of human-centered design, she transforms complex ideas into beautiful, intuitive experiences.', ARRAY['UI/UX Design','Brand Identity','Motion Design'], 'from-pink-600 to-purple-500', '#db2777', 2),
+(3, 'Rohan Desai', 'AI/ML Lead', 'Team Neuron', 'RD', 'Rohan is on a mission to make artificial intelligence accessible and impactful. Leading Team Neuron, he dives deep into machine learning models, neural networks, and data science to solve real-world problems.', ARRAY['Machine Learning','Deep Learning','Data Science'], 'from-cyan-500 to-blue-600', '#06b6d4', 3),
+(4, 'Ananya Iyer', 'Web Dev Lead', 'Team Forge', 'AI', 'Ananya is a front-end wizard who turns designs into pixel-perfect, performant web applications. Team Forge specializes in modern web frameworks and responsive design.', ARRAY['React & Next.js','Frontend Engineering','Web Performance'], 'from-emerald-500 to-teal-600', '#10b981', 4),
+(5, 'Karthik Nair', 'App Dev Lead', 'Team Swift', 'KN', 'Karthik breathes life into mobile experiences. With expertise in both native and cross-platform development, Team Swift builds polished, high-performance mobile applications.', ARRAY['React Native','Flutter','Mobile UI/UX'], 'from-violet-500 to-indigo-600', '#8b5cf6', 5),
+(6, 'Sneha Reddy', 'Marketing Lead', 'Team Blaze', 'SR', 'Sneha knows how to make ideas go viral. As the head of Team Blaze, she crafts compelling narratives and manages ICC''s digital presence with data-driven strategy.', ARRAY['Digital Marketing','Growth Strategy','Social Media'], 'from-amber-500 to-red-500', '#f59e0b', 6),
+(7, 'Vikram Joshi', 'Cybersecurity Lead', 'Team Shield', 'VJ', 'In a world of digital threats, Vikram stands guard. Team Shield focuses on ethical hacking, vulnerability assessment, and building secure systems.', ARRAY['Ethical Hacking','Network Security','CTF Competitions'], 'from-green-500 to-emerald-700', '#22c55e', 7),
+(8, 'Diya Kapoor', 'Content Lead', 'Team Quill', 'DK', 'Words are Diya''s superpower. Leading Team Quill, she manages everything from technical blog posts and newsletters to social media copy and event scripts.', ARRAY['Technical Writing','Content Strategy','Copywriting'], 'from-rose-500 to-pink-600', '#f43f5e', 8),
+(9, 'Aditya Patel', 'Events Lead', 'Team Spark', 'AP', 'Every legendary ICC event has Aditya''s fingerprints on it. Team Spark plans, organizes, and executes hackathons, workshops, and tech talks that bring the community together.', ARRAY['Event Management','Workshop Design','Community Building'], 'from-orange-500 to-yellow-500', '#f97316', 9),
+(10, 'Meera Krishnan', 'Media Lead', 'Team Lens', 'MK', 'Meera captures the soul of ICC through her lens. Team Lens handles photography, videography, and multimedia production for all events and projects.', ARRAY['Photography','Video Production','Visual Storytelling'], 'from-fuchsia-500 to-purple-600', '#d946ef', 10),
+(11, 'Harsh Gupta', 'Finance Lead', 'Team Ledger', 'HG', 'Behind every successful project is solid financial planning. Harsh and Team Ledger manage budgets, sponsorships, and resource allocation with analytical precision.', ARRAY['Budget Management','Sponsorship','Financial Planning'], 'from-slate-400 to-zinc-600', '#94a3b8', 11),
+(12, 'Ishita Sen', 'Outreach Lead', 'Team Bridge', 'IS', 'Ishita builds bridges between ICC and the world. Team Bridge manages partnerships with companies, other colleges, and industry mentors for exclusive opportunities.', ARRAY['Corporate Relations','Partnerships','Networking'], 'from-sky-400 to-blue-600', '#38bdf8', 12),
+(13, 'Siddharth Rao', 'Operations Lead', 'Team Axis', 'SRo', 'Siddharth is the engine that keeps ICC running smoothly. Team Axis handles logistics, internal coordination, and process optimization across all teams.', ARRAY['Project Management','Logistics','Process Optimization'], 'from-red-500 to-rose-700', '#ef4444', 13)
+ON CONFLICT (id) DO NOTHING;
+
+-- Reset the auto-increment sequence so new leads start at ID 14
+SELECT setval('core_leads_id_seq', (SELECT MAX(id) FROM core_leads));
+
 -- ==========================================
 -- 8. AUTO-UPDATE likes_count TRIGGER
 -- ==========================================
