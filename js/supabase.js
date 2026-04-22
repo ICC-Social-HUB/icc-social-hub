@@ -373,15 +373,15 @@ const ICCSupabase = (() => {
 
     async function createLead(fields) {
         if (!client) return { error: { message: 'Not configured' } };
-        const { data, error } = await client.from('core_leads').insert(fields).select().single();
-        return { data, error };
+        const { data, error } = await client.from('core_leads').insert([fields]).select();
+        return { data: data && data.length > 0 ? data[0] : null, error };
     }
 
     async function updateLead(id, fields) {
         if (!client) return { error: { message: 'Not configured' } };
         fields.updated_at = new Date().toISOString();
-        const { data, error } = await client.from('core_leads').update(fields).eq('id', id).select().single();
-        return { data, error };
+        const { data, error } = await client.from('core_leads').update(fields).eq('id', id).select();
+        return { data: data && data.length > 0 ? data[0] : null, error };
     }
 
     async function deleteLead(id) {
