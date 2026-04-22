@@ -166,6 +166,17 @@ const ICCSupabase = (() => {
         return data || [];
     }
 
+    async function fetchPostById(postId) {
+        if (!client) return null;
+        const { data, error } = await client
+            .from('posts')
+            .select('*, profiles:user_id(id, username, full_name, avatar_url, role, team_id)')
+            .eq('id', postId)
+            .single();
+        if (error) { console.error('fetchPostById error:', error); return null; }
+        return data;
+    }
+
     async function fetchPostsByTeam(teamId, page = 0, limit = ICC_CONFIG.POSTS_PER_PAGE) {
         if (!client) return [];
         const from = page * limit;
@@ -636,7 +647,7 @@ const ICCSupabase = (() => {
     return {
         init, signInWithGoogle, sendOTP, verifyOTP, signOut, getSession, onAuthStateChange,
         fetchProfile, updateProfile, fetchUserById, searchUsers, checkUsernameAvailable,
-        fetchPosts, fetchPostsByTeam, fetchPostsByUser, createPost, deletePost,
+        fetchPosts, fetchPostById, fetchPostsByTeam, fetchPostsByUser, createPost, deletePost,
         toggleLike, hasLiked, fetchUserLikes,
         fetchComments, addComment, deleteComment,
         fetchConversations, fetchMessages, sendMessage, markAsRead, getUnreadCount,

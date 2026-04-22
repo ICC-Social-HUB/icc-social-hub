@@ -46,7 +46,11 @@ const ProfileView = (() => {
                 </div>
                 ${userPosts.length > 0 ? `
                 <div class="profile-post-grid mb-4">
-                    ${userPosts.map(p => `<div class="profile-post-thumb">${p.image_url ? `<img src="${p.image_url}" alt="" loading="lazy">` : `<div class="w-full h-full flex items-center justify-center bg-zinc-800 text-zinc-600 text-[10px] p-1 text-center leading-tight">${(p.caption || '').slice(0, 30)}</div>`}</div>`).join('')}
+                    ${userPosts.map(p => `
+                        <a href="#post/${p.id}" class="profile-post-thumb block overflow-hidden rounded-lg">
+                            ${p.image_url ? `<img src="${p.image_url}" alt="" loading="lazy" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center bg-zinc-800 text-zinc-600 text-[10px] p-1 text-center leading-tight">${(p.caption || '').slice(0, 30)}</div>`}
+                        </a>
+                    `).join('')}
                 </div>` : `
                 <div class="empty-state py-12">
                     <p class="text-sm text-zinc-600">No posts yet — share your first idea!</p>

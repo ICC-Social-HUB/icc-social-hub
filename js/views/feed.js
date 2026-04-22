@@ -32,11 +32,21 @@ const FeedView = (() => {
         </section>`;
     }
 
-    async function mount(container) {
+    async function mount(container, targetPostId = null) {
         page = 0; posts = []; hasMore = true; filter = 'all';
         container.innerHTML = render();
         const postsEl = document.getElementById('feed-posts');
         postsEl.innerHTML = renderSkeletons();
+        
+        if (targetPostId) {
+            const target = await ICCSupabase.fetchPostById(targetPostId);
+            if (target) {
+                posts = [target];
+                // Mark that we are in "single post" mode or just showing this first
+                // For simplicity, we'll just show this post and then load others
+            }
+        }
+
         await loadPosts();
         bindEvents();
         ICCSupabase.subscribeToFeed(async newPost => {
@@ -53,7 +63,12 @@ const FeedView = (() => {
         loadingMore = true;
         const newPosts = await ICCSupabase.fetchPosts(page, ICC_CONFIG.POSTS_PER_PAGE);
         if (newPosts.length < ICC_CONFIG.POSTS_PER_PAGE) hasMore = false;
-        posts = [...posts, ...newPosts];
+        
+        // Filter out duplicates (if we prepended a target post)
+        const existingIds = new Set(posts.map(p => p.id));
+        const uniqueNew = newPosts.filter(p => !existingIds.has(p.id));
+        
+        posts = [...posts, ...uniqueNew];
         if (ICCSupabase.getUser() && posts.length) {
             userLikes = await ICCSupabase.fetchUserLikes(posts.map(p => p.id));
         }

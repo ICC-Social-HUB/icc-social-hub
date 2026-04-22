@@ -31,6 +31,10 @@ const Router = (() => {
             if (hash === '#feed' || hash === '' || hash === '#') {
                 previousView = 'feed';
                 FeedView.mount(container);
+            } else if (hash.startsWith('#post/')) {
+                previousView = 'feed';
+                const postId = hash.split('/')[1];
+                FeedView.mount(container, postId);
             } else if (hash === '#teams') {
                 previousView = 'teams';
                 TeamsView.mount(container);
