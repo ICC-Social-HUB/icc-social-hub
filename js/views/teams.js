@@ -15,7 +15,7 @@ const TeamsView = (() => {
                 <div class="text-center mb-8 px-2">
                     <p class="text-red-500 text-xs font-semibold tracking-widest uppercase mb-2">Core Teams</p>
                     <h1 class="font-heading font-bold text-2xl sm:text-3xl mb-2">Connect with <span class="gradient-text-static">your team</span></h1>
-                    <p class="text-zinc-500 text-sm max-w-md mx-auto">13 teams, 13 visionaries. Find the one that matches your passion.</p>
+                    <p class="text-zinc-500 text-sm max-w-md mx-auto">Find the team that matches your passion.</p>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" id="leads-grid">
                     ${CORE_LEADS.map((lead, i) => {
