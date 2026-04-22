@@ -203,6 +203,11 @@ const ICCSupabase = (() => {
 
     async function deletePost(postId) {
         if (!client) return { error: { message: 'Not configured' } };
+        // Fetch post first to get image_url
+        const { data: post } = await client.from('posts').select('image_url').eq('id', postId).single();
+        if (post?.image_url) {
+            await deleteImage('posts', post.image_url);
+        }
         const { error } = await client.from('posts').delete().eq('id', postId);
         return { error };
     }
@@ -469,6 +474,17 @@ const ICCSupabase = (() => {
         return { url: urlData.publicUrl, error: null };
     }
 
+    async function deleteImage(bucket, publicUrl) {
+        if (!client || !publicUrl) return;
+        try {
+            const pathParts = publicUrl.split(`/storage/v1/object/public/${bucket}/`);
+            if (pathParts.length === 2) {
+                const path = pathParts[1];
+                await client.storage.from(bucket).remove([path]);
+            }
+        } catch (e) { console.error('Failed to delete image', e); }
+    }
+
     // ==================== REALTIME ====================
 
     function subscribeToFeed(onNewPost) {
@@ -592,7 +608,7 @@ const ICCSupabase = (() => {
         approveLead, denyLead, getPendingLeads,
         createBroadcast, getActiveBroadcast, dismissBroadcast, adminDeletePost,
         getAllProfiles, getAllPosts,
-        uploadImage,
+        uploadImage, deleteImage,
         subscribeToFeed, subscribeToMessages, subscribeToConversation,
         subscribeToTeam, subscribeToBroadcasts,
         unsubscribeChannel, cleanupAllChannels,

@@ -72,7 +72,10 @@ const ProfileView = (() => {
                         </div>
                         <input type="file" id="edit-avatar-file" accept="image/*" class="hidden">
                     </div>
-                    <div class="text-xs text-zinc-500">Tap to change<br>your photo</div>
+                    <div class="flex flex-col justify-center">
+                        <div class="text-xs text-zinc-500 mb-1">Tap to change<br>your photo</div>
+                        ${profile.avatar_url ? `<button type="button" id="edit-remove-avatar" class="text-xs text-red-500 hover:text-red-400 font-medium text-left">Remove photo</button>` : ''}
+                    </div>
                 </div>
                 <div><label class="block text-[11px] font-medium text-zinc-500 mb-1">Full Name</label><input type="text" id="edit-name" value="${profile.full_name || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
                 <div><label class="block text-[11px] font-medium text-zinc-500 mb-1">Bio</label><textarea id="edit-bio" rows="2" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${profile.bio || ''}</textarea></div>
@@ -90,10 +93,12 @@ const ProfileView = (() => {
     }
 
     let _avatarFile = null;
+    let _removeAvatar = false;
 
     async function mount(container) {
         editing = false;
         _avatarFile = null;
+        _removeAvatar = false;
         container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
         if (ICCSupabase.getUser()) {
             userPosts = await ICCSupabase.fetchPostsByUser(ICCSupabase.getUser().id);
@@ -111,12 +116,14 @@ const ProfileView = (() => {
         document.getElementById('profile-edit-btn')?.addEventListener('click', () => {
             editing = !editing;
             _avatarFile = null;
+            _removeAvatar = false;
             container.innerHTML = render();
             bindEvents(container);
         });
         document.getElementById('edit-cancel')?.addEventListener('click', () => {
             editing = false;
             _avatarFile = null;
+            _removeAvatar = false;
             container.innerHTML = render();
             bindEvents(container);
         });
@@ -129,8 +136,17 @@ const ProfileView = (() => {
             if (!file) return;
             if (file.size > 5 * 1024 * 1024) { Toast.error('Image must be under 5MB'); return; }
             _avatarFile = file;
+            _removeAvatar = false;
             const preview = document.getElementById('avatar-edit-preview');
             if (preview) preview.innerHTML = `<img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover">`;
+        });
+        // Remove avatar
+        document.getElementById('edit-remove-avatar')?.addEventListener('click', () => {
+            _avatarFile = null;
+            _removeAvatar = true;
+            const preview = document.getElementById('avatar-edit-preview');
+            const name = document.getElementById('edit-name')?.value || ICCSupabase.getProfile()?.full_name || '?';
+            if (preview) preview.innerHTML = `<span class="font-heading font-bold text-xl text-red-500">${name.charAt(0).toUpperCase()}</span>`;
         });
         document.getElementById('profile-edit-form')?.addEventListener('submit', async e => {
             e.preventDefault();
@@ -148,11 +164,15 @@ const ProfileView = (() => {
                 const { url, error: upErr } = await ICCSupabase.uploadImage('avatars', _avatarFile);
                 if (upErr) { Toast.error('Avatar upload failed'); if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; } return; }
                 fields.avatar_url = url;
+            } else if (_removeAvatar) {
+                fields.avatar_url = null;
+                const oldAvatar = ICCSupabase.getProfile()?.avatar_url;
+                if (oldAvatar) await ICCSupabase.deleteImage('avatars', oldAvatar);
             }
 
             const { error } = await ICCSupabase.updateProfile(fields);
             if (error) Toast.error('Update failed: ' + error.message);
-            else { Toast.success('Profile updated!'); editing = false; _avatarFile = null; container.innerHTML = render(); bindEvents(container); BottomNav.mount(); }
+            else { Toast.success('Profile updated!'); editing = false; _avatarFile = null; _removeAvatar = false; container.innerHTML = render(); bindEvents(container); BottomNav.mount(); }
         });
     }
 

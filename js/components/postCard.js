@@ -8,9 +8,15 @@ const PostCard = (() => {
         const teamLead = post.team_tag ? getLeadByTeamId(post.team_tag) : null;
         const timeAgo = formatTimeAgo(post.created_at);
         const isAnnounce = post.is_announcement;
+        const currentUser = ICCSupabase.getUser();
+        const canDelete = currentUser && (currentUser.id === post.user_id || ICCSupabase.isAdmin());
 
         return `
-        <article class="post-card mb-4" data-post-id="${post.id}">
+        <article class="post-card mb-4 relative group" data-post-id="${post.id}">
+            ${canDelete ? `
+            <button class="delete-post-btn absolute top-3 right-3 p-2 text-zinc-600 hover:text-red-500 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-zinc-800/50 z-10" data-post-id="${post.id}" title="Delete post">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>` : ''}
             <div class="flex items-center gap-3 p-4 pb-2">
                 <button class="user-link w-9 h-9 rounded-full bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center text-xs font-bold flex-shrink-0 overflow-hidden" data-user-id="${p.id || post.user_id}">
                     ${p.avatar_url ? `<img src="${p.avatar_url}" class="w-full h-full object-cover" alt="">` : (p.full_name || 'U').charAt(0).toUpperCase()}
@@ -77,6 +83,25 @@ const PostCard = (() => {
                     await loadComments(postId, section);
                 } else {
                     section.classList.add('hidden');
+                }
+            });
+        });
+
+        // Delete post
+        container.querySelectorAll('.delete-post-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm('Are you sure you want to delete this post?')) return;
+                const postId = btn.dataset.postId;
+                const card = btn.closest('.post-card');
+                if (card) { card.style.opacity = '0.5'; card.style.pointerEvents = 'none'; }
+                
+                const { error } = await ICCSupabase.deletePost(postId);
+                if (error) {
+                    Toast.error('Failed to delete post: ' + error.message);
+                    if (card) { card.style.opacity = '1'; card.style.pointerEvents = 'auto'; }
+                } else {
+                    Toast.success('Post deleted');
+                    if (card) card.remove();
                 }
             });
         });
