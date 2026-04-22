@@ -141,6 +141,7 @@ const TeamsView = (() => {
             container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
             const lead = CORE_LEADS.find(l => l.id === currentTeamId);
             if (!lead) { container.innerHTML = '<div class="empty-state"><p class="text-zinc-500">Team not found</p></div>'; return; }
+            teamMembers = await ICCSupabase.getTeamMembers(currentTeamId);
             const profile = ICCSupabase.getProfile();
             if (profile?.role === 'lead' && profile.team_id === currentTeamId) {
                 pendingMembers = await ICCSupabase.getPendingMembers(currentTeamId);
