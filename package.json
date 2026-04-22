@@ -1,0 +1,10 @@
+{
+  "name": "icc-innovoapp",
+  "version": "1.0.0",
+  "description": "ICC Innovoapp with Vercel Serverless Functions",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "cors": "^2.8.5",
+    "nodemailer": "^6.9.7"
+  }
+}

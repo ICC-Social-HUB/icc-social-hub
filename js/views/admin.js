@@ -91,11 +91,10 @@ const AdminView = (() => {
                     <div class="grid grid-cols-2 gap-4">
                         <div><label class="block text-xs font-medium text-zinc-400 mb-1">Name</label><input type="text" id="lead-name" value="${editingLead.name || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
                         <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team</label><input type="text" id="lead-team" value="${editingLead.team || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
-                        <div><label class="block text-xs font-medium text-zinc-400 mb-1">Role</label><input type="text" id="lead-role" value="${editingLead.role || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
                         <div><label class="block text-xs font-medium text-zinc-400 mb-1">Initials</label><input type="text" id="lead-initials" value="${editingLead.initials || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
+                        <div><label class="block text-xs font-medium text-zinc-400 mb-1">Specialties (comma-separated)</label><input type="text" id="lead-specialties" value="${(editingLead.specialties || []).join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
                     </div>
                     <div><label class="block text-xs font-medium text-zinc-400 mb-1">Bio</label><textarea id="lead-bio" rows="2" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${editingLead.bio || ''}</textarea></div>
-                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Specialties (comma-separated)</label><input type="text" id="lead-specialties" value="${(editingLead.specialties || []).join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
                     <div class="grid grid-cols-2 gap-4">
                         <div><label class="block text-xs font-medium text-zinc-400 mb-1">Gradient (Tailwind classes)</label><input type="text" id="lead-gradient" value="${editingLead.gradient || 'from-red-600 to-orange-500'}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
                         <div><label class="block text-xs font-medium text-zinc-400 mb-1">Theme Color (Hex)</label><input type="color" id="lead-color" value="${editingLead.color || '#ef4444'}" class="form-input w-full h-9 p-0 bg-zinc-950 border border-zinc-800 rounded-lg cursor-pointer"></div>
@@ -115,14 +114,12 @@ const AdminView = (() => {
                 <table class="w-full text-left text-sm">
                     <thead><tr class="border-b border-zinc-800">
                         <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">Lead</th>
-                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase hidden sm:table-cell">Role</th>
                         <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase hidden md:table-cell">Team</th>
                         <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase text-right">Actions</th>
                     </tr></thead>
                     <tbody>${CORE_LEADS.map(l => `
                         <tr class="border-b border-zinc-800/30 hover:bg-zinc-800/20 transition-colors">
                             <td class="px-4 py-3"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-gradient-to-br ${l.gradient} flex items-center justify-center text-xs font-bold flex-shrink-0">${l.initials}</div><span class="text-sm font-medium">${l.name}</span></div></td>
-                            <td class="px-4 py-3 text-zinc-400 text-xs hidden sm:table-cell">${l.role}</td>
                             <td class="px-4 py-3 text-zinc-500 text-xs hidden md:table-cell">${l.team}</td>
                             <td class="px-4 py-3 text-right">
                                 <button class="edit-lead-btn text-xs text-blue-400 hover:text-blue-300 transition-colors mr-3" data-id="${l.id}">Edit</button>
@@ -345,7 +342,6 @@ const AdminView = (() => {
             const fields = {
                 name: document.getElementById('lead-name').value.trim(),
                 team: document.getElementById('lead-team').value.trim(),
-                role: document.getElementById('lead-role').value.trim(),
                 initials: document.getElementById('lead-initials').value.trim(),
                 bio: document.getElementById('lead-bio').value.trim(),
                 specialties: document.getElementById('lead-specialties').value.split(',').map(s => s.trim()).filter(Boolean),
