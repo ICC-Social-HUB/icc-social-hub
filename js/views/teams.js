@@ -51,6 +51,7 @@ const TeamsView = (() => {
         const isPending = profile?.team_id === lead.id && profile?.is_pending_member;
         const isOther = profile?.team_id && profile.team_id !== lead.id && !profile?.is_pending_member;
         const isLeadUser = profile?.role === 'lead' && profile.team_id === lead.id;
+        const isLeadOrAdmin = isLeadUser || ICCSupabase.isAdmin();
 
         return `
         <section class="min-h-screen" id="team-detail-section">
@@ -94,7 +95,15 @@ const TeamsView = (() => {
                             <div class="flex items-center gap-1.5 mb-3 px-2 py-1.5 bg-zinc-950 rounded-lg"><span class="relative flex h-1.5 w-1.5"><span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative rounded-full h-1.5 w-1.5 bg-emerald-500"></span></span><span class="text-[10px] text-zinc-500">Live</span></div>
                             <div id="team-roster" class="space-y-1.5 max-h-60 overflow-y-auto">
                                 ${teamMembers.length === 0 ? '<p class="text-xs text-zinc-600 text-center py-4">No members yet — be first!</p>'
-                                : teamMembers.map((m, i) => `<div class="roster-item flex items-center gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i*0.04}s"><div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name||'?').charAt(0).toUpperCase()}</div><p class="text-xs font-medium truncate">${m.full_name||'Anonymous'}</p></div>`).join('')}
+                                : teamMembers.map((m, i) => `
+                                <div class="roster-item flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i*0.04}s">
+                                    <a href="#chat/${m.id}" class="flex items-center gap-2 flex-1 min-w-0 hover:opacity-80 transition-opacity" title="Message ${m.full_name||'User'}">
+                                        <div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name||'?').charAt(0).toUpperCase()}</div>
+                                        <p class="text-xs font-medium truncate">${m.full_name||'Anonymous'}</p>
+                                    </a>
+                                    ${(isLeadOrAdmin && m.id !== profile?.id) ? `<button class="remove-member-btn px-1.5 py-1 bg-red-900/30 text-red-400 hover:bg-red-900/60 rounded text-[10px] font-medium transition-colors" data-id="${m.id}">Remove</button>` : ''}
+                                </div>
+                                `).join('')}
                             </div>
                         </div>
                         
@@ -152,7 +161,19 @@ const TeamsView = (() => {
                 teamMembers = await ICCSupabase.getTeamMembers(currentTeamId);
                 const roster = document.getElementById('team-roster');
                 const count = document.getElementById('team-member-count');
-                if (roster) roster.innerHTML = teamMembers.map((m, i) => `<div class="roster-item flex items-center gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i*0.04}s"><div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name||'?').charAt(0).toUpperCase()}</div><p class="text-xs font-medium truncate">${m.full_name||'Anonymous'}</p></div>`).join('') || '<p class="text-xs text-zinc-600 text-center py-4">No members yet</p>';
+                if (roster) {
+                    const isLeadOrAdmin = (profile?.role === 'lead' && profile.team_id === currentTeamId) || ICCSupabase.isAdmin();
+                    roster.innerHTML = teamMembers.length === 0 ? '<p class="text-xs text-zinc-600 text-center py-4">No members yet — be first!</p>'
+                                : teamMembers.map((m, i) => `
+                                <div class="roster-item flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i*0.04}s">
+                                    <a href="#chat/${m.id}" class="flex items-center gap-2 flex-1 min-w-0 hover:opacity-80 transition-opacity" title="Message ${m.full_name||'User'}">
+                                        <div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name||'?').charAt(0).toUpperCase()}</div>
+                                        <p class="text-xs font-medium truncate">${m.full_name||'Anonymous'}</p>
+                                    </a>
+                                    ${(isLeadOrAdmin && m.id !== profile?.id) ? `<button class="remove-member-btn px-1.5 py-1 bg-red-900/30 text-red-400 hover:bg-red-900/60 rounded text-[10px] font-medium transition-colors" data-id="${m.id}">Remove</button>` : ''}
+                                </div>
+                                `).join('');
+                }
                 if (count) count.textContent = teamMembers.length;
             });
         } else {
@@ -179,6 +200,17 @@ const TeamsView = (() => {
             const { error } = await ICCSupabase.joinTeam(lead.id);
             if (error) { Toast.error('Failed to request: ' + error.message); btn.disabled = false; btn.textContent = `Request to Join`; }
             else { Toast.success(`Join request sent! The Team Lead will review it shortly.`); const c = document.getElementById('app'); mount(c, lead.id); }
+        });
+
+        document.getElementById('team-roster')?.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.remove-member-btn');
+            if (btn) {
+                if (!confirm('Are you sure you want to remove this member?')) return;
+                const userId = btn.dataset.id;
+                const { error } = await ICCSupabase.denyMember(userId);
+                if (error) Toast.error('Failed to remove member');
+                else { Toast.success('Member removed'); const c = document.getElementById('app'); mount(c, lead.id); }
+            }
         });
 
         // Team Lead actions
