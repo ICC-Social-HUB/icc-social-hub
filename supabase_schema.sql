@@ -228,16 +228,20 @@ CREATE TABLE IF NOT EXISTS public.core_leads (
     gradient TEXT,
     color TEXT,
     avatar_url TEXT,
+    project_name TEXT,
     sort_order INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Add avatar_url column if it doesn't exist
+-- Add avatar_url and project_name columns if they don't exist
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'core_leads' AND column_name = 'avatar_url') THEN
         ALTER TABLE public.core_leads ADD COLUMN avatar_url TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'core_leads' AND column_name = 'project_name') THEN
+        ALTER TABLE public.core_leads ADD COLUMN project_name TEXT;
     END IF;
 END $$;
 
