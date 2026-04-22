@@ -227,10 +227,19 @@ CREATE TABLE IF NOT EXISTS public.core_leads (
     specialties TEXT[] DEFAULT '{}',
     gradient TEXT,
     color TEXT,
+    avatar_url TEXT,
     sort_order INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Add avatar_url column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'core_leads' AND column_name = 'avatar_url') THEN
+        ALTER TABLE public.core_leads ADD COLUMN avatar_url TEXT;
+    END IF;
+END $$;
 
 ALTER TABLE public.core_leads ENABLE ROW LEVEL SECURITY;
 

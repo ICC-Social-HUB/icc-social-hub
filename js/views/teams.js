@@ -62,17 +62,19 @@ const TeamsView = (() => {
                     Back
                 </button>
                 <div class="absolute -bottom-12 left-1/2 -translate-x-1/2">
-                    <div class="avatar-ring"><div class="w-24 h-24 rounded-full bg-zinc-900 flex items-center justify-center">
-                        <span class="font-heading font-bold text-3xl" style="color:${lead.color}">${lead.initials}</span>
+                    <div class="avatar-ring"><div class="w-24 h-24 rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden">
+                        ${lead.avatar_url 
+                            ? `<img src="${lead.avatar_url}" class="w-full h-full object-cover">` 
+                            : `<span class="font-heading font-bold text-3xl" style="color:${lead.color}">${lead.initials}</span>`}
                     </div></div>
                 </div>
             </div>
             <div class="max-w-3xl mx-auto px-4 pt-16 pb-6">
                 <div class="text-center mb-6">
-                    <h1 class="font-heading font-bold text-2xl">${lead.name}</h1>
+                    <h1 class="font-heading font-bold text-2xl">${lead.team}</h1>
                     <div class="flex items-center justify-center gap-2 mt-1">
                         <span class="px-2.5 py-0.5 bg-red-600/15 text-red-400 rounded-full text-xs font-medium">${lead.role}</span>
-                        <span class="text-zinc-500 text-xs">${lead.team}</span>
+                        <span class="text-zinc-500 text-xs">${lead.name}</span>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -127,6 +129,7 @@ const TeamsView = (() => {
                             
                             <h3 class="font-heading font-semibold text-sm mt-6 mb-3">Team Configuration</h3>
                             <form id="lead-edit-team-form" class="space-y-3">
+                                <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team Profile Picture (Optional)</label><input type="file" id="lead-avatar-input" accept="image/jpeg, image/png, image/webp" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
                                 <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team Name</label><input type="text" id="lead-team-name" value="${lead.team}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
                                 <div><label class="block text-xs font-medium text-zinc-400 mb-1">Bio</label><textarea id="lead-bio" rows="3" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${lead.bio}</textarea></div>
                                 <div><label class="block text-xs font-medium text-zinc-400 mb-1">Specialties (comma-separated)</label><input type="text" id="lead-specialties" value="${lead.specialties.join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
@@ -237,12 +240,24 @@ const TeamsView = (() => {
             const btn = e.target.querySelector('button[type="submit"]');
             btn.disabled = true; btn.textContent = 'Saving...';
             
+            const fileInput = document.getElementById('lead-avatar-input');
+            let newAvatarUrl = lead.avatar_url;
+            
+            if (fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                if (file.size > 2 * 1024 * 1024) { Toast.error('Image must be under 2MB'); btn.disabled = false; btn.textContent = 'Save Configuration'; return; }
+                const { url, error: uploadError } = await ICCSupabase.uploadImage('avatars', file);
+                if (uploadError) { Toast.error('Image upload failed: ' + uploadError.message); btn.disabled = false; btn.textContent = 'Save Configuration'; return; }
+                newAvatarUrl = url;
+            }
+
             const fields = {
                 team: document.getElementById('lead-team-name').value.trim(),
                 bio: document.getElementById('lead-bio').value.trim(),
                 specialties: document.getElementById('lead-specialties').value.split(',').map(s => s.trim()).filter(Boolean),
                 gradient: document.getElementById('lead-gradient').value.trim(),
-                color: document.getElementById('lead-color').value.trim()
+                color: document.getElementById('lead-color').value.trim(),
+                avatar_url: newAvatarUrl
             };
 
             const { error } = await ICCSupabase.updateLead(lead.id, fields);
