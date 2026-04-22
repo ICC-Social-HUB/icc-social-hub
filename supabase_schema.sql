@@ -288,15 +288,51 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.broadcasts;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
 
 -- ==========================================
+-- 12. STORAGE BUCKETS & POLICIES
+-- ==========================================
+
+-- Create buckets if they don't exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES 
+    ('avatars', 'avatars', true),
+    ('posts', 'posts', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Avatars Policies
+CREATE POLICY "Avatar images are publicly accessible."
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'avatars');
+
+CREATE POLICY "Anyone can upload an avatar."
+    ON storage.objects FOR INSERT
+    WITH CHECK (bucket_id = 'avatars');
+
+CREATE POLICY "Users can update their own avatars."
+    ON storage.objects FOR UPDATE
+    USING (auth.uid() = owner)
+    WITH CHECK (bucket_id = 'avatars');
+
+-- Posts Policies
+CREATE POLICY "Post images are publicly accessible."
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'posts');
+
+CREATE POLICY "Authenticated users can upload post images."
+    ON storage.objects FOR INSERT
+    WITH CHECK (bucket_id = 'posts' AND auth.role() = 'authenticated');
+
+CREATE POLICY "Users can delete their own post images."
+    ON storage.objects FOR DELETE
+    USING (bucket_id = 'posts' AND auth.uid() = owner);
+
+-- ==========================================
 -- DONE! ✅
 -- ==========================================
 -- Your database is now ready.
 -- 
 -- NEXT STEPS:
 -- 1. Go to Authentication → Providers → Enable Google
--- 2. Go to Storage → Create bucket "avatars" (public)
--- 3. Go to Storage → Create bucket "posts" (public)
--- 4. Set your first admin: Run this query replacing YOUR_USER_ID:
+-- 2. Set your first admin: Run this query replacing YOUR_USER_ID:
 --
 --    UPDATE public.profiles SET role = 'admin' WHERE id = 'YOUR_USER_ID';
 --
