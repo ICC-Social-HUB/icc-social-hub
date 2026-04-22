@@ -24,17 +24,17 @@ const TeamsView = (() => {
                         <div class="lead-card bg-zinc-900/60 border border-zinc-800/50 rounded-xl overflow-hidden cursor-pointer group" data-lead-id="${lead.id}" style="animation:slideUp 0.4s ease-out ${i*0.05}s both">
                             <div class="relative h-28 sm:h-36 overflow-hidden bg-gradient-to-br ${lead.gradient}">
                                 <div class="portrait absolute inset-0 flex items-center justify-center">
-                                    <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-zinc-950/40 backdrop-blur-sm border-2 border-white/20 flex items-center justify-center">
-                                        <span class="font-heading font-bold text-xl text-white/90">${lead.initials}</span>
+                                    <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-zinc-950/40 backdrop-blur-sm border-2 border-white/20 flex items-center justify-center overflow-hidden">
+                                        ${lead.avatar_url ? `<img src="${lead.avatar_url}" class="w-full h-full object-cover">` : `<span class="font-heading font-bold text-xl text-white/90">${lead.initials}</span>`}
                                     </div>
                                 </div>
                                 <div class="absolute inset-0 bg-gradient-to-t from-zinc-900 via-transparent to-transparent opacity-60"></div>
                                 ${isMember ? `<div class="absolute top-2 right-2 px-2 py-0.5 bg-emerald-600 rounded-full text-[10px] font-bold flex items-center gap-1 z-10">✓ You</div>` : ''}
                             </div>
                             <div class="p-3">
-                                <h3 class="font-heading font-semibold text-sm truncate">${lead.name}</h3>
+                                <h3 class="font-heading font-semibold text-sm truncate">${lead.team}</h3>
                                 <p class="text-red-500 text-xs">${lead.role}</p>
-                                <p class="text-zinc-600 text-[10px] mt-0.5">${lead.team}</p>
+                                <p class="text-zinc-600 text-[10px] mt-0.5">${lead.name}</p>
                                 <div class="card-accent h-0.5 bg-gradient-to-r ${lead.gradient} rounded-full mt-2"></div>
                             </div>
                         </div>`;
