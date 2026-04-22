@@ -40,14 +40,11 @@ const ICCSupabase = (() => {
     }
 
     // Email OTP: send
-    async function sendOTP(email) {
+    async function sendOTP(email, metadata = null) {
         if (!client) return { error: { message: 'Supabase not configured' } };
-        const { data, error } = await client.auth.signInWithOtp({
-            email,
-            options: {
-                shouldCreateUser: true
-            }
-        });
+        const options = { shouldCreateUser: true };
+        if (metadata) options.data = metadata;
+        const { data, error } = await client.auth.signInWithOtp({ email, options });
         return { data, error };
     }
 

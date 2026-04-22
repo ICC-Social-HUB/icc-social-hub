@@ -58,7 +58,7 @@ const ChatView = (() => {
         }
         if (partnerId) {
             currentPartnerId = partnerId;
-            container.innerHTML = '<div class="h-screen flex flex-col" id="chat-thread-container"></div>';
+            container.innerHTML = '<div class="h-[calc(100dvh-5rem)] flex flex-col w-full max-w-lg mx-auto" id="chat-thread-container"></div>';
             await ChatPanel.mount(document.getElementById('chat-thread-container'), partnerId);
         } else {
             currentPartnerId = null;
