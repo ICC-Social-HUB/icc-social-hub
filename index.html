@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <title>ICC — The Innovation Social Hub</title>
+    <meta name="description" content="Innovators Creators Club — A social platform for innovators. Share ideas, join teams, collaborate, and build the future together.">
+    <meta name="theme-color" content="#030303" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#030303">
+
+    <!-- Mobile Web App -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ICC Hub">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="ICC — The Innovation Social Hub">
+    <meta property="og:description" content="Share ideas, join teams, and innovate together with the Innovators Creators Club.">
+    <meta property="og:type" content="website">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS v4 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+    <!-- Tailwind Theme Config -->
+    <style type="text/tailwindcss">
+        @theme {
+            --font-heading: 'Space Grotesk', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --color-obsidian: #030303;
+            --color-crimson: #E11D48;
+            --color-crimson-light: #FB7185;
+            --color-crimson-dark: #9F1239;
+        }
+    </style>
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Supabase JS v2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-obsidian text-white font-body min-h-[100dvh] antialiased overflow-x-hidden">
+
+    <!-- Broadcast Alert Banner -->
+    <div id="broadcast-bar" class="hidden"></div>
+
+    <!-- Modal Root (Auth, Create Post, User Profile) -->
+    <div id="modal-root"></div>
+
+    <!-- Main App View Container -->
+    <main id="app" class="relative pb-20"></main>
+
+    <!-- Bottom Navigation Mount -->
+    <div id="bottom-nav-root"></div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-root" class="fixed top-4 right-4 z-[300] space-y-2 pointer-events-none"></div>
+
+    <!-- Floating Particles Background -->
+    <div id="particles-bg" class="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true"></div>
+
+    <!-- Application Scripts (order matters) -->
+    <script src="js/config.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/components/toast.js"></script>
+    <script src="js/components/bottomNav.js"></script>
+    <script src="js/components/authModal.js"></script>
+    <script src="js/components/postCard.js"></script>
+    <script src="js/components/createPostModal.js"></script>
+    <script src="js/components/chatPanel.js"></script>
+    <script src="js/components/userProfileModal.js"></script>
+    <script src="js/views/feed.js"></script>
+    <script src="js/views/teams.js"></script>
+    <script src="js/views/chat.js"></script>
+    <script src="js/views/profile.js"></script>
+    <script src="js/views/onboarding.js"></script>
+    <script src="js/views/admin.js"></script>
+    <script src="js/router.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
