@@ -125,12 +125,16 @@ const PostCard = (() => {
             ${comments.length === 0 ? '<p class="text-xs text-zinc-600 text-center">No comments yet</p>' :
             comments.map(c => {
                 const cp = c.profiles || {};
-                return `<div class="flex gap-2">
+                const canDelete = user && (user.id === c.user_id || ICCSupabase.isAdmin());
+                return `<div class="flex gap-2 group relative">
                     <div class="w-6 h-6 rounded-full bg-zinc-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(cp.full_name||'?').charAt(0).toUpperCase()}</div>
-                    <div class="flex-1 min-w-0">
+                    <div class="flex-1 min-w-0 pr-6">
                         <span class="text-xs font-semibold text-zinc-300">${cp.username||cp.full_name||'Anon'}</span>
                         <p class="text-xs text-zinc-400 mt-0.5">${escapeHtml(c.content)}</p>
                     </div>
+                    ${canDelete ? `<button class="delete-comment-btn absolute right-0 top-0 p-1 text-zinc-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" data-comment-id="${c.id}" title="Delete comment">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>` : ''}
                 </div>`;
             }).join('')}
         </div>
@@ -149,6 +153,18 @@ const PostCard = (() => {
             const { error } = await ICCSupabase.addComment(postId, content);
             if (error) Toast.error('Failed to comment');
             else await loadComments(postId, section);
+        });
+
+        // Delete comment
+        section.querySelectorAll('.delete-comment-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm('Delete this comment?')) return;
+                const commentId = btn.dataset.commentId;
+                btn.style.opacity = '0.5';
+                const { error } = await ICCSupabase.deleteComment(commentId);
+                if (error) { Toast.error('Failed to delete comment'); btn.style.opacity = '1'; }
+                else await loadComments(postId, section);
+            });
         });
     }
 
