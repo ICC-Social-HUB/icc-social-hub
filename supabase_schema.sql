@@ -16,9 +16,18 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     team_id INTEGER,
     role TEXT DEFAULT 'member' CHECK (role IN ('member', 'lead', 'admin')),
     is_pending_lead BOOLEAN DEFAULT false,
+    is_pending_member BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Add column if it doesn't exist (for existing tables)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'is_pending_member') THEN
+        ALTER TABLE public.profiles ADD COLUMN is_pending_member BOOLEAN DEFAULT false;
+    END IF;
+END $$;
 
 -- Enable RLS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -35,6 +44,16 @@ CREATE POLICY "Users can insert their own profile"
 CREATE POLICY "Users can update their own profile"
     ON public.profiles FOR UPDATE
     USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Leads can manage their team members" ON public.profiles;
+CREATE POLICY "Leads can manage their team members"
+    ON public.profiles FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles p2
+            WHERE p2.id = auth.uid() AND p2.role = 'lead' AND p2.team_id = profiles.team_id
+        )
+    );
 
 -- ==========================================
 -- 2. POSTS TABLE
@@ -209,12 +228,17 @@ CREATE POLICY "Core leads are viewable by everyone"
     ON public.core_leads FOR SELECT
     USING (true);
 
-CREATE POLICY "Only admins can manage leads"
+DROP POLICY IF EXISTS "Only admins can manage leads" ON public.core_leads;
+DROP POLICY IF EXISTS "Admins and assigned leads can manage leads" ON public.core_leads;
+CREATE POLICY "Admins and assigned leads can manage leads"
     ON public.core_leads FOR ALL
     USING (
         EXISTS (
             SELECT 1 FROM public.profiles
-            WHERE id = auth.uid() AND role = 'admin'
+            WHERE profiles.id = auth.uid() AND (
+                profiles.role = 'admin' OR 
+                (profiles.role = 'lead' AND profiles.team_id = core_leads.id)
+            )
         )
     );
 

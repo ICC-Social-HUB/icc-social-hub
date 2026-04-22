@@ -349,7 +349,7 @@ const ICCSupabase = (() => {
 
     async function joinTeam(teamId) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
-        return await updateProfile({ team_id: teamId });
+        return await updateProfile({ team_id: parseInt(teamId), is_pending_member: true });
     }
 
     async function getTeamMembers(teamId) {
@@ -357,8 +357,35 @@ const ICCSupabase = (() => {
         const { data } = await client.from('profiles')
             .select('id, username, full_name, avatar_url, updated_at')
             .eq('team_id', teamId)
+            .eq('is_pending_member', false)
             .order('updated_at', { ascending: false });
         return data || [];
+    }
+
+    async function getPendingMembers(teamId) {
+        if (!client) return [];
+        const { data } = await client.from('profiles')
+            .select('id, username, full_name, avatar_url, updated_at')
+            .eq('team_id', teamId)
+            .eq('is_pending_member', true)
+            .order('updated_at', { ascending: false });
+        return data || [];
+    }
+
+    async function approveMember(userId) {
+        if (!client) return { error: { message: 'Not configured' } };
+        const { data, error } = await client.from('profiles')
+            .update({ is_pending_member: false })
+            .eq('id', userId).select().single();
+        return { data, error };
+    }
+
+    async function denyMember(userId) {
+        if (!client) return { error: { message: 'Not configured' } };
+        const { data, error } = await client.from('profiles')
+            .update({ team_id: null, is_pending_member: false })
+            .eq('id', userId).select().single();
+        return { data, error };
     }
 
     // ==================== ADMIN ====================
@@ -600,7 +627,7 @@ const ICCSupabase = (() => {
         toggleLike, hasLiked, fetchUserLikes,
         fetchComments, addComment, deleteComment,
         fetchConversations, fetchMessages, sendMessage, markAsRead, getUnreadCount,
-        joinTeam, getTeamMembers,
+        joinTeam, getTeamMembers, getPendingMembers, approveMember, denyMember,
         fetchLeads, createLead, updateLead, deleteLead,
         approveLead, denyLead, getPendingLeads,
         createBroadcast, getActiveBroadcast, dismissBroadcast, adminDeletePost,

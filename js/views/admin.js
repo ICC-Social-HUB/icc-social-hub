@@ -135,7 +135,11 @@ const AdminView = (() => {
             <div class="space-y-2">${pendingLeads.map(p => `
                 <div class="flex items-center justify-between px-3 py-2.5 bg-zinc-900 rounded-lg">
                     <div><p class="text-sm font-medium">${p.full_name || p.username || 'User'}</p><p class="text-[11px] text-zinc-500">${p.username ? '@'+p.username : ''}</p></div>
-                    <div class="flex gap-2">
+                    <div class="flex items-center gap-2">
+                        <select class="assign-team-select text-[11px] bg-zinc-950 border border-zinc-800 rounded px-2 py-1 outline-none text-zinc-300" data-user-id="${p.id}">
+                            <option value="">Select Team...</option>
+                            ${CORE_LEADS.map(l => `<option value="${l.id}">${l.team}</option>`).join('')}
+                        </select>
                         <button class="approve-lead-btn px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-[11px] font-semibold transition-colors" data-id="${p.id}">Approve</button>
                         <button class="deny-lead-btn px-3 py-1 bg-zinc-700 hover:bg-zinc-600 rounded text-[11px] font-medium transition-colors" data-id="${p.id}">Deny</button>
                     </div>
@@ -195,8 +199,13 @@ const AdminView = (() => {
         // Approve/deny leads
         container.querySelectorAll('.approve-lead-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
-                const { error } = await ICCSupabase.approveLead(btn.dataset.id, null);
-                if (error) Toast.error('Approve failed'); else { Toast.success('Lead approved!'); pendingLeads = await ICCSupabase.getPendingLeads(); container.innerHTML = render(); bindEvents(container); }
+                const userId = btn.dataset.id;
+                const select = document.querySelector(`.assign-team-select[data-user-id="${userId}"]`);
+                const teamId = select ? select.value : null;
+                if (!teamId) { Toast.error('Please select a team to assign this lead to.'); return; }
+                
+                const { error } = await ICCSupabase.approveLead(userId, parseInt(teamId));
+                if (error) Toast.error('Approve failed'); else { Toast.success('Lead approved and assigned!'); pendingLeads = await ICCSupabase.getPendingLeads(); container.innerHTML = render(); bindEvents(container); }
             });
         });
         container.querySelectorAll('.deny-lead-btn').forEach(btn => {

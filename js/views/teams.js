@@ -4,6 +4,7 @@
 const TeamsView = (() => {
     let currentTeamId = null;
     let teamMembers = [];
+    let pendingMembers = [];
 
     function renderGrid() {
         const profile = ICCSupabase.getProfile();
@@ -46,8 +47,9 @@ const TeamsView = (() => {
     function renderDetail(lead) {
         const user = ICCSupabase.getUser();
         const profile = ICCSupabase.getProfile();
-        const isMember = profile?.team_id === lead.id;
-        const isOther = profile?.team_id && profile.team_id !== lead.id;
+        const isMember = profile?.team_id === lead.id && !profile?.is_pending_member;
+        const isPending = profile?.team_id === lead.id && profile?.is_pending_member;
+        const isOther = profile?.team_id && profile.team_id !== lead.id && !profile?.is_pending_member;
         const isLeadUser = profile?.role === 'lead' && profile.team_id === lead.id;
 
         return `
@@ -79,8 +81,8 @@ const TeamsView = (() => {
                         <div class="pt-2">
                             ${!user ? `<button id="team-join-btn" class="join-btn px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Join ${lead.team}</button><p class="text-[11px] text-zinc-600 mt-1.5">Sign in to join</p>`
                             : isMember ? `<div class="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600/15 border border-emerald-600/30 rounded-xl"><svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="text-emerald-400 text-sm font-semibold">You're a Member</span></div>`
-                            : `<button id="team-join-btn" class="join-btn px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">${isOther ? 'Switch to' : 'Join'} ${lead.team}</button>${isOther ? '<p class="text-[11px] text-zinc-600 mt-1.5">You\'ll leave your current team</p>' : ''}`}
-                            ${isLeadUser ? `<button id="edit-team-btn" class="ml-3 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm font-medium transition-colors border border-zinc-700">Edit Team</button>` : ''}
+                            : isPending ? `<div class="inline-flex items-center gap-2 px-6 py-3 bg-amber-500/15 border border-amber-500/30 rounded-xl"><svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="text-amber-400 text-sm font-semibold">Request Pending</span></div>`
+                            : `<button id="team-join-btn" class="join-btn px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">${isOther ? 'Switch to' : 'Request to Join'} ${lead.team}</button>${isOther ? '<p class="text-[11px] text-zinc-600 mt-1.5">You\'ll leave your current team</p>' : ''}`}
                         </div>
                     </div>
                     <div>
@@ -95,6 +97,38 @@ const TeamsView = (() => {
                                 : teamMembers.map((m, i) => `<div class="roster-item flex items-center gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i*0.04}s"><div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name||'?').charAt(0).toUpperCase()}</div><p class="text-xs font-medium truncate">${m.full_name||'Anonymous'}</p></div>`).join('')}
                             </div>
                         </div>
+                        
+                        ${isLeadUser ? `
+                        <div class="glass-card rounded-xl p-4 mt-4">
+                            <h3 class="font-heading font-semibold text-sm mb-3">Pending Requests (${pendingMembers.length})</h3>
+                            <div class="space-y-2 max-h-48 overflow-y-auto">
+                                ${pendingMembers.length === 0 ? '<p class="text-xs text-zinc-600">No pending requests</p>' : pendingMembers.map(m => `
+                                <div class="flex items-center justify-between px-2 py-1.5 bg-zinc-950 rounded-lg border border-zinc-800">
+                                    <div class="min-w-0 pr-2">
+                                        <p class="text-xs font-medium truncate">${m.full_name||'Anon'}</p>
+                                        <p class="text-[10px] text-zinc-500 truncate">@${m.username||''}</p>
+                                    </div>
+                                    <div class="flex gap-1 flex-shrink-0">
+                                        <button class="approve-member-btn px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-[10px] font-semibold transition-colors" data-id="${m.id}">Approve</button>
+                                        <button class="deny-member-btn px-2 py-1 bg-zinc-800 hover:bg-zinc-700 rounded text-[10px] transition-colors" data-id="${m.id}">Deny</button>
+                                    </div>
+                                </div>
+                                `).join('')}
+                            </div>
+                            
+                            <h3 class="font-heading font-semibold text-sm mt-6 mb-3">Team Configuration</h3>
+                            <form id="lead-edit-team-form" class="space-y-3">
+                                <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team Name</label><input type="text" id="lead-team-name" value="${lead.team}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
+                                <div><label class="block text-xs font-medium text-zinc-400 mb-1">Bio</label><textarea id="lead-bio" rows="3" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${lead.bio}</textarea></div>
+                                <div><label class="block text-xs font-medium text-zinc-400 mb-1">Specialties (comma-separated)</label><input type="text" id="lead-specialties" value="${lead.specialties.join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Gradient</label><input type="text" id="lead-gradient" value="${lead.gradient}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Color (Hex)</label><input type="color" id="lead-color" value="${lead.color}" class="form-input w-full h-9 p-0 bg-zinc-950 border border-zinc-800 rounded-lg cursor-pointer"></div>
+                                </div>
+                                <button type="submit" class="w-full py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-semibold mt-2 transition-colors border border-zinc-700">Save Configuration</button>
+                            </form>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
             </div>
@@ -107,7 +141,10 @@ const TeamsView = (() => {
             container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
             const lead = CORE_LEADS.find(l => l.id === currentTeamId);
             if (!lead) { container.innerHTML = '<div class="empty-state"><p class="text-zinc-500">Team not found</p></div>'; return; }
-            teamMembers = await ICCSupabase.getTeamMembers(currentTeamId);
+            const profile = ICCSupabase.getProfile();
+            if (profile?.role === 'lead' && profile.team_id === currentTeamId) {
+                pendingMembers = await ICCSupabase.getPendingMembers(currentTeamId);
+            }
             container.innerHTML = renderDetail(lead);
             bindDetailEvents(lead);
             ICCSupabase.subscribeToTeam(currentTeamId, async () => {
@@ -139,8 +176,45 @@ const TeamsView = (() => {
             const btn = document.getElementById('team-join-btn');
             btn.disabled = true; btn.innerHTML = '<div class="spinner spinner-sm"></div>';
             const { error } = await ICCSupabase.joinTeam(lead.id);
-            if (error) { Toast.error('Failed to join: ' + error.message); btn.disabled = false; btn.textContent = `Join ${lead.team}`; }
-            else { Toast.success(`Welcome to ${lead.team}! 🎉`); BottomNav.mount(); const c = document.getElementById('app'); mount(c, lead.id); }
+            if (error) { Toast.error('Failed to request: ' + error.message); btn.disabled = false; btn.textContent = `Request to Join`; }
+            else { Toast.success(`Join request sent! The Team Lead will review it shortly.`); const c = document.getElementById('app'); mount(c, lead.id); }
+        });
+
+        // Team Lead actions
+        document.querySelectorAll('.approve-member-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const userId = btn.dataset.id;
+                const { error } = await ICCSupabase.approveMember(userId);
+                if (error) Toast.error('Failed to approve');
+                else { Toast.success('Member approved!'); const c = document.getElementById('app'); mount(c, lead.id); }
+            });
+        });
+
+        document.querySelectorAll('.deny-member-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const userId = btn.dataset.id;
+                const { error } = await ICCSupabase.denyMember(userId);
+                if (error) Toast.error('Failed to deny');
+                else { Toast.info('Request denied'); const c = document.getElementById('app'); mount(c, lead.id); }
+            });
+        });
+
+        document.getElementById('lead-edit-team-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true; btn.textContent = 'Saving...';
+            
+            const fields = {
+                team: document.getElementById('lead-team-name').value.trim(),
+                bio: document.getElementById('lead-bio').value.trim(),
+                specialties: document.getElementById('lead-specialties').value.split(',').map(s => s.trim()).filter(Boolean),
+                gradient: document.getElementById('lead-gradient').value.trim(),
+                color: document.getElementById('lead-color').value.trim()
+            };
+
+            const { error } = await ICCSupabase.updateLead(lead.id, fields);
+            if (error) { Toast.error('Failed to update team: ' + error.message); btn.disabled = false; btn.textContent = 'Save Configuration'; }
+            else { Toast.success('Team configuration updated!'); await loadLeads(); const c = document.getElementById('app'); mount(c, lead.id); }
         });
     }
 
