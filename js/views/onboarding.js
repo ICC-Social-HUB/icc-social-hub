@@ -4,6 +4,7 @@
 const OnboardingView = (() => {
     let step = 1;
     let formData = { username: '', bio: '', skills: [], avatar_url: '' };
+    let _avatarFile = null;
     let usernameError = '';
     let saving = false;
 
@@ -75,14 +76,21 @@ const OnboardingView = (() => {
     }
 
     function renderStep3() {
+        const previewSrc = _avatarFile ? URL.createObjectURL(_avatarFile) : formData.avatar_url;
         return `
         <div class="onboarding-step glass-card rounded-xl p-6 space-y-4">
             <h2 class="font-heading font-semibold text-lg">Profile picture</h2>
-            <div class="flex flex-col items-center gap-3">
-                <div class="avatar-ring"><div class="w-20 h-20 rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden" id="ob-avatar-preview">
-                    ${formData.avatar_url ? `<img src="${formData.avatar_url}" class="w-full h-full object-cover">` : `<span class="font-heading font-bold text-2xl text-zinc-600">?</span>`}
-                </div></div>
-                <input type="url" id="ob-avatar" value="${formData.avatar_url}" placeholder="Paste image URL" class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm">
+            <div class="flex flex-col items-center gap-4">
+                <div class="relative cursor-pointer" id="ob-avatar-trigger">
+                    <div class="avatar-ring"><div class="w-24 h-24 rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden" id="ob-avatar-preview">
+                        ${previewSrc ? `<img src="${previewSrc}" class="w-full h-full object-cover">` : `<svg class="w-10 h-10 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/></svg>`}
+                    </div></div>
+                    <div class="absolute -bottom-1 -right-1 w-7 h-7 bg-red-600 rounded-full flex items-center justify-center shadow-lg">
+                        <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    </div>
+                    <input type="file" id="ob-avatar-file" accept="image/*" class="hidden">
+                </div>
+                <p class="text-sm text-zinc-400">${_avatarFile ? _avatarFile.name : 'Tap to upload a photo'}</p>
                 <p class="text-[11px] text-zinc-600">Or skip — you can add one later</p>
             </div>
             <div class="flex gap-2">
@@ -95,7 +103,7 @@ const OnboardingView = (() => {
     }
 
     function mount(container) {
-        step = 1; formData = { username: '', bio: '', skills: [], avatar_url: '' }; usernameError = ''; saving = false;
+        step = 1; formData = { username: '', bio: '', skills: [], avatar_url: '' }; usernameError = ''; saving = false; _avatarFile = null;
         container.innerHTML = render();
         bindEvents(container);
     }
@@ -127,21 +135,35 @@ const OnboardingView = (() => {
             formData.bio = document.getElementById('ob-bio')?.value?.trim() || '';
             step = 3; container.innerHTML = render(); bindEvents(container);
         });
-        // Step 3
-        document.getElementById('ob-avatar')?.addEventListener('input', e => {
-            const preview = document.getElementById('ob-avatar-preview');
-            if (preview) preview.innerHTML = e.target.value ? `<img src="${e.target.value}" class="w-full h-full object-cover" onerror="this.outerHTML='<span class=\\'font-heading font-bold text-2xl text-zinc-600\\'>?</span>'">` : '<span class="font-heading font-bold text-2xl text-zinc-600">?</span>';
+        // Step 3 — Avatar file upload
+        document.getElementById('ob-avatar-trigger')?.addEventListener('click', () => {
+            document.getElementById('ob-avatar-file')?.click();
+        });
+        document.getElementById('ob-avatar-file')?.addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) { Toast.error('Image must be under 5MB'); return; }
+            _avatarFile = file;
+            container.innerHTML = render(); bindEvents(container);
         });
         document.getElementById('ob-back-3')?.addEventListener('click', () => { step = 2; container.innerHTML = render(); bindEvents(container); });
         document.getElementById('ob-finish')?.addEventListener('click', async () => {
-            formData.avatar_url = document.getElementById('ob-avatar')?.value?.trim() || '';
             saving = true; container.innerHTML = render(); bindEvents(container);
+
+            let avatarUrl = formData.avatar_url || '';
+            // Upload avatar file if selected
+            if (_avatarFile) {
+                const { url, error: upErr } = await ICCSupabase.uploadImage('avatars', _avatarFile);
+                if (upErr) { Toast.error('Avatar upload failed'); saving = false; container.innerHTML = render(); bindEvents(container); return; }
+                avatarUrl = url;
+            }
+
             const { error } = await ICCSupabase.updateProfile({
                 username: formData.username,
                 full_name: formData.full_name,
                 bio: formData.bio,
                 skills: formData.skills,
-                avatar_url: formData.avatar_url
+                avatar_url: avatarUrl
             });
             saving = false;
             if (error) { Toast.error('Setup failed: ' + error.message); container.innerHTML = render(); bindEvents(container); }

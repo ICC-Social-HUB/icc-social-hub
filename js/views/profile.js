@@ -62,12 +62,23 @@ const ProfileView = (() => {
         <div class="glass-card rounded-xl p-5 mb-4 animate-slide-up" id="edit-form-card">
             <h3 class="font-heading font-semibold text-sm mb-3">Edit Profile</h3>
             <form id="profile-edit-form" class="space-y-3">
+                <div class="flex items-center gap-4 mb-2">
+                    <div class="relative cursor-pointer" id="avatar-upload-trigger">
+                        <div class="avatar-ring"><div class="w-16 h-16 rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden" id="avatar-edit-preview">
+                            ${profile.avatar_url ? `<img src="${profile.avatar_url}" class="w-full h-full object-cover">` : `<span class="font-heading font-bold text-xl text-red-500">${(profile.full_name || '?').charAt(0).toUpperCase()}</span>`}
+                        </div></div>
+                        <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-red-600 rounded-full flex items-center justify-center">
+                            <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/></svg>
+                        </div>
+                        <input type="file" id="edit-avatar-file" accept="image/*" class="hidden">
+                    </div>
+                    <div class="text-xs text-zinc-500">Tap to change<br>your photo</div>
+                </div>
                 <div><label class="block text-[11px] font-medium text-zinc-500 mb-1">Full Name</label><input type="text" id="edit-name" value="${profile.full_name || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
                 <div><label class="block text-[11px] font-medium text-zinc-500 mb-1">Bio</label><textarea id="edit-bio" rows="2" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${profile.bio || ''}</textarea></div>
-                <div><label class="block text-[11px] font-medium text-zinc-500 mb-1">Avatar URL</label><input type="url" id="edit-avatar" value="${profile.avatar_url || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" placeholder="https://..."></div>
                 <div><label class="block text-[11px] font-medium text-zinc-500 mb-1">Skills <span class="text-zinc-600">(comma separated)</span></label><input type="text" id="edit-skills" value="${(profile.skills || []).join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" placeholder="React, Design, ML..."></div>
                 <div class="flex gap-2 pt-1">
-                    <button type="submit" class="flex-1 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-xs font-semibold transition-all">Save</button>
+                    <button type="submit" id="edit-save-btn" class="flex-1 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-xs font-semibold transition-all">Save</button>
                     <button type="button" id="edit-cancel" class="flex-1 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors">Cancel</button>
                 </div>
             </form>
@@ -78,8 +89,11 @@ const ProfileView = (() => {
         return `<div class="empty-state min-h-screen"><div class="empty-state-icon"><svg class="w-7 h-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg></div><h3 class="font-heading font-semibold text-lg mb-1">Your Profile</h3><p class="text-sm text-zinc-500 mb-4">Sign in to see your profile</p><button onclick="AuthModal.open()" class="px-6 py-2.5 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all">Sign In</button></div>`;
     }
 
+    let _avatarFile = null;
+
     async function mount(container) {
         editing = false;
+        _avatarFile = null;
         container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
         if (ICCSupabase.getUser()) {
             userPosts = await ICCSupabase.fetchPostsByUser(ICCSupabase.getUser().id);
@@ -96,25 +110,49 @@ const ProfileView = (() => {
         });
         document.getElementById('profile-edit-btn')?.addEventListener('click', () => {
             editing = !editing;
+            _avatarFile = null;
             container.innerHTML = render();
             bindEvents(container);
         });
         document.getElementById('edit-cancel')?.addEventListener('click', () => {
             editing = false;
+            _avatarFile = null;
             container.innerHTML = render();
             bindEvents(container);
         });
+        // Avatar file upload
+        document.getElementById('avatar-upload-trigger')?.addEventListener('click', () => {
+            document.getElementById('edit-avatar-file')?.click();
+        });
+        document.getElementById('edit-avatar-file')?.addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) { Toast.error('Image must be under 5MB'); return; }
+            _avatarFile = file;
+            const preview = document.getElementById('avatar-edit-preview');
+            if (preview) preview.innerHTML = `<img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover">`;
+        });
         document.getElementById('profile-edit-form')?.addEventListener('submit', async e => {
             e.preventDefault();
+            const saveBtn = document.getElementById('edit-save-btn');
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<div class="spinner spinner-sm mx-auto"></div>'; }
+
             const fields = {
                 full_name: document.getElementById('edit-name').value.trim(),
                 bio: document.getElementById('edit-bio').value.trim(),
-                avatar_url: document.getElementById('edit-avatar').value.trim(),
                 skills: document.getElementById('edit-skills').value.split(',').map(s => s.trim()).filter(Boolean)
             };
+
+            // Upload avatar if file selected
+            if (_avatarFile) {
+                const { url, error: upErr } = await ICCSupabase.uploadImage('avatars', _avatarFile);
+                if (upErr) { Toast.error('Avatar upload failed'); if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; } return; }
+                fields.avatar_url = url;
+            }
+
             const { error } = await ICCSupabase.updateProfile(fields);
             if (error) Toast.error('Update failed: ' + error.message);
-            else { Toast.success('Profile updated!'); editing = false; container.innerHTML = render(); bindEvents(container); BottomNav.mount(); }
+            else { Toast.success('Profile updated!'); editing = false; _avatarFile = null; container.innerHTML = render(); bindEvents(container); BottomNav.mount(); }
         });
     }
 
