@@ -150,8 +150,8 @@ const PostCard = (() => {
                         <span class="text-xs font-semibold text-zinc-300">${cp.username||cp.full_name||'Anon'}</span>
                         <p class="text-xs text-zinc-400 mt-0.5">${escapeHtml(c.content)}</p>
                     </div>
-                    ${canDelete ? `<button class="delete-comment-btn absolute right-0 top-0 p-1 text-zinc-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" data-comment-id="${c.id}" title="Delete comment">
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    ${canDelete ? `<button class="delete-comment-btn absolute right-0 top-0 p-1.5 text-zinc-600 hover:text-red-500 transition-all rounded-lg hover:bg-zinc-800/50" data-comment-id="${c.id}" title="Delete comment">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>` : ''}
                 </div>`;
             }).join('')}
