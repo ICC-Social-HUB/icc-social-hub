@@ -28,7 +28,7 @@ const NotificationsView = (() => {
             <header class="sticky top-0 z-30 bg-[#030303]/80 backdrop-blur-xl border-b border-zinc-900/50 px-4 py-4">
                 <div class="max-w-lg mx-auto flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <h1 class="text-xl font-bold tracking-tight">Inbox</h1>
+                        <h1 class="text-xl font-bold tracking-tight">Notifications</h1>
                         ${unreadCount > 0 ? `<span class="px-2 py-0.5 bg-red-600 rounded-full text-[10px] font-bold animate-pulse">${unreadCount}</span>` : ''}
                     </div>
                     <div class="flex items-center gap-2">
