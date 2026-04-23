@@ -92,7 +92,14 @@ const TeamsView = (() => {
                             ${(() => {
                                 if (!user) return `<button id="team-join-btn" class="join-btn px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Join ${lead.team}</button><p class="text-[11px] text-zinc-600 mt-1.5">Sign in to join</p>`;
                                 if (isMember) return `<div class="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600/15 border border-emerald-600/30 rounded-xl"><svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="text-emerald-400 text-sm font-semibold">You're a Member</span></div>`;
-                                if (isPending) return `<div class="inline-flex items-center gap-2 px-6 py-3 bg-amber-500/15 border border-amber-500/30 rounded-xl"><svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="text-amber-400 text-sm font-semibold">Request Pending</span></div>`;
+                                if (isPending) return `
+                                    <div class="flex flex-col gap-2">
+                                        <div class="inline-flex items-center gap-2 px-6 py-3 bg-amber-500/15 border border-amber-500/30 rounded-xl">
+                                            <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <span class="text-amber-400 text-sm font-semibold">Request Pending</span>
+                                        </div>
+                                        <button id="team-cancel-btn" class="text-[11px] text-zinc-500 hover:text-red-400 transition-colors w-fit mx-auto underline decoration-dotted">Cancel Request</button>
+                                    </div>`;
                                 
                                 // Explicit Lead Check
                                 if (profile?.role === 'lead') {
@@ -242,6 +249,15 @@ const TeamsView = (() => {
                 }
                 const c = document.getElementById('app'); mount(c, lead.id); 
             }
+        });
+        
+        document.getElementById('team-cancel-btn')?.addEventListener('click', async () => {
+            if (!confirm('Cancel your join request?')) return;
+            const btn = document.getElementById('team-cancel-btn');
+            btn.disabled = true; btn.textContent = 'Cancelling...';
+            const { error } = await ICCSupabase.cancelJoinRequest();
+            if (error) { Toast.error('Failed to cancel: ' + error.message); btn.disabled = false; btn.textContent = 'Cancel Request'; }
+            else { Toast.success('Request cancelled'); const c = document.getElementById('app'); mount(c, lead.id); }
         });
 
         document.getElementById('team-roster')?.addEventListener('click', async (e) => {

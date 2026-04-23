@@ -407,6 +407,11 @@ const ICCSupabase = (() => {
         return await updateProfile({ team_id: parseInt(teamId), is_pending_member: true });
     }
 
+    async function cancelJoinRequest() {
+        if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        return await updateProfile({ team_id: null, is_pending_member: false });
+    }
+
     async function getTeamMembers(teamId) {
         if (!client) return [];
         const { data } = await client.from('profiles')
@@ -797,7 +802,7 @@ const ICCSupabase = (() => {
         toggleLike, hasLiked, fetchUserLikes,
         fetchComments, addComment, deleteComment,
         fetchConversations, fetchMessages, sendMessage, markAsRead, getUnreadCount,
-        joinTeam, getTeamMembers, getPendingMembers, approveMember, denyMember,
+        joinTeam, cancelJoinRequest, getTeamMembers, getPendingMembers, approveMember, denyMember,
         fetchLeads, createLead, updateLead, deleteLead,
         approveLead, denyLead, getPendingLeads,
         createBroadcast, getActiveBroadcast, dismissBroadcast, adminDeletePost,
