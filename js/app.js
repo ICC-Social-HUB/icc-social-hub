@@ -16,6 +16,8 @@
         // 3. Load leads data
         await loadLeads();
 
+        let subscriptionsStarted = false;
+
         // 4. Listen for auth state changes
         ICCSupabase.onAuthStateChange(async (event, session) => {
             console.log('🔑 Auth event:', event);
@@ -28,43 +30,46 @@
                     window.dispatchEvent(new Event('hashchange'));
                 }
                 
-                // Refresh badges
                 BottomNav.updateAllBadges();
                 NotifBell.update();
 
-                // 8. Subscribe to incoming messages & notifications
-                ICCSupabase.subscribeToMessages(() => {
-                    BottomNav.updateUnreadCount();
-                });
+                // Only subscribe once per session
+                if (!subscriptionsStarted) {
+                    subscriptionsStarted = true;
 
-                ICCSupabase.subscribeToNotifications(async (newNotif) => {
-                    BottomNav.updateNotifCount();
-                    NotifBell.update();
+                    ICCSupabase.subscribeToMessages(() => {
+                        BottomNav.updateUnreadCount();
+                    });
 
-                    // Enrich for toast
-                    let actorName = 'Someone';
-                    if (newNotif.actor_id) {
-                        const actor = await ICCSupabase.fetchUserById(newNotif.actor_id);
-                        if (actor) actorName = actor.full_name || actor.username || 'Someone';
-                    }
+                    ICCSupabase.subscribeToNotifications(async (newNotif) => {
+                        BottomNav.updateNotifCount();
+                        NotifBell.update();
 
-                    // In-app Toast notification
-                    let msg = 'New notification';
-                    switch (newNotif.type) {
-                        case 'like': msg = `${actorName} liked your post`; break;
-                        case 'comment': msg = `${actorName} commented on your post`; break;
-                        case 'message': msg = `${actorName} sent you a message`; break;
-                        case 'post': msg = `${actorName} shared a new post`; break;
-                        case 'team_join': msg = `${actorName} requested to join your team`; break;
-                        case 'team_approve': msg = `Your request to join ${newNotif.body} was approved! 🎉`; break;
-                        case 'team_deny': msg = `Your request to join ${newNotif.body} was declined.`; break;
-                        case 'broadcast': msg = `📢 Admin: ${newNotif.body}`; break;
-                        case 'system': msg = newNotif.body; break;
-                    }
-                    Toast.info(msg);
-                });
+                        let actorName = 'Someone';
+                        if (newNotif.actor_id) {
+                            const actor = await ICCSupabase.fetchUserById(newNotif.actor_id);
+                            if (actor) actorName = actor.full_name || actor.username || 'Someone';
+                        }
+
+                        let msg = 'New notification';
+                        switch (newNotif.type) {
+                            case 'like':        msg = `❤️ ${actorName} liked your post`; break;
+                            case 'comment':     msg = `💬 ${actorName} commented on your post`; break;
+                            case 'message':     msg = `✉️ ${actorName} sent you a message`; break;
+                            case 'post':        msg = `✨ ${actorName} shared a new post`; break;
+                            case 'team_join':   msg = `🤝 ${actorName} requested to join your team`; break;
+                            case 'team_approve': msg = `✅ Your request to join ${newNotif.body} was approved!`; break;
+                            case 'team_deny':   msg = `❌ Your request to join ${newNotif.body} was declined.`; break;
+                            case 'broadcast':   msg = `📢 Admin: ${newNotif.body}`; break;
+                            default:            msg = newNotif.body || 'New notification'; break;
+                        }
+                        Toast.info(msg);
+                    });
+                }
             }
+
             if (event === 'SIGNED_OUT') {
+                subscriptionsStarted = false;
                 window.location.hash = '#feed';
             }
         });
@@ -72,10 +77,10 @@
         // 5. Mount components
         BottomNav.mount();
 
-        // 9. Initialize router
+        // 6. Initialize router
         Router.init();
 
-        // 10. Init particles
+        // 7. Init particles
         initParticles();
 
         console.log('✅ ICC Social Hub ready');
