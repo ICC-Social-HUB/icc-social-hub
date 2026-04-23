@@ -16,6 +16,7 @@ const NotificationsView = (() => {
         broadcast: { icon: '📢', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
         team_join: { icon: '👥', color: '#10B981', bg: 'rgba(16,185,129,0.12)' },
         team_approve: { icon: '✅', color: '#22C55E', bg: 'rgba(34,197,94,0.12)' },
+        team_deny: { icon: '❌', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
         mention: { icon: '@', color: '#06B6D4', bg: 'rgba(6,182,212,0.12)' },
         welcome: { icon: '🚀', color: '#FB7185', bg: 'rgba(251,113,133,0.12)' },
         system: { icon: '🔔', color: '#A1A1AA', bg: 'rgba(161,161,170,0.12)' }

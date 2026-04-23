@@ -572,33 +572,29 @@ const ICCSupabase = (() => {
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
         const { data, error } = await client.from('notifications')
-            .select('*')
+            .select('*, actor:actor_id(id, full_name, username, avatar_url)')
             .eq('user_id', currentUser.id)
             .gt('created_at', thirtyDaysAgo)
             .order('created_at', { ascending: false })
             .limit(limit);
 
-        if (error) { console.error('fetchNotifications error:', error); return []; }
+        if (error) { 
+            console.error('fetchNotifications error:', error); 
+            Toast.error('Error loading notifications: ' + error.message);
+            return []; 
+        }
 
         // Filter broadcasts that are older than 24h
         const filtered = (data || []).filter(n => {
-            if (n.type === 'broadcast') {
-                return n.created_at > oneDayAgo;
-            }
+            if (n.type === 'broadcast') return n.created_at > oneDayAgo;
             return true;
         });
 
-        // Enrich with actor names
-        const enriched = [];
-        const actorCache = {};
-        for (const n of filtered) {
-            if (n.actor_id && !actorCache[n.actor_id]) {
-                const actor = await fetchUserById(n.actor_id);
-                actorCache[n.actor_id] = actor?.full_name || actor?.username || 'Someone';
-            }
-            enriched.push({ ...n, actor_name: n.actor_id ? actorCache[n.actor_id] : null });
-        }
-        return enriched;
+        // Map actor names
+        return filtered.map(n => ({
+            ...n,
+            actor_name: n.actor ? (n.actor.full_name || n.actor.username || 'Someone') : null
+        }));
     }
 
     async function createNotification({ userId, type, actorId = null, referenceId = null, body = null }) {
