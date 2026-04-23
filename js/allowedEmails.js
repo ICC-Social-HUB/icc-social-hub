@@ -13,11 +13,20 @@ const _ALLOWED_EMAIL_LIST = [
 
     // ── Batch 1: Core Members ──
     "saravanantm1920@gmail.com",
+    "chetansurya625v3@gmail.com",
+    "rishikrishnarishi25@gmail.com",
+    "vn.bhavika@gmail.com",
+    "shreyame193@gmail.com",
+    "vigneshkaushik17@gmail.com",
+    "puneethagsksit@gmail.com",
+    "sujay200731@gmail.com",
 
-    // ── Add more below as needed ──
+    "
+
+    // ── Batch 2:  Club Members ──
 
 ];
-
+s
 // Internal lookup set (auto-built, case-insensitive — don't edit this)
 const ALLOWED_EMAILS = new Set(_ALLOWED_EMAIL_LIST.map(e => e.trim().toLowerCase()));
 
