@@ -391,7 +391,7 @@ CREATE INDEX IF NOT EXISTS idx_profiles_team_id ON public.profiles(team_id);
 CREATE TABLE IF NOT EXISTS public.notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-    type TEXT NOT NULL CHECK (type IN ('like', 'comment', 'message', 'post', 'broadcast', 'team_join', 'team_approve', 'mention', 'welcome', 'system')),
+    type TEXT NOT NULL CHECK (type IN ('like', 'comment', 'message', 'post', 'broadcast', 'team_join', 'team_approve', 'team_deny', 'mention', 'welcome', 'system')),
     actor_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     reference_id TEXT,
     body TEXT,

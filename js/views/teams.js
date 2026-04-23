@@ -291,6 +291,8 @@ const TeamsView = (() => {
                         actorId: ICCSupabase.getUser().id,
                         referenceId: lead.id.toString(),
                         body: lead.team
+                    }).then(({ error: nError }) => {
+                        if (nError) console.error('Approval notification failed:', nError);
                     });
                     const c = document.getElementById('app'); mount(c, lead.id); 
                 }
@@ -309,9 +311,12 @@ const TeamsView = (() => {
                     // Notify denial
                     ICCSupabase.createNotification({
                         userId: userId,
-                        type: 'system',
+                        type: 'team_deny',
                         actorId: ICCSupabase.getUser().id,
-                        body: `Your request to join ${lead.team} was declined.`
+                        referenceId: lead.id.toString(),
+                        body: lead.team
+                    }).then(({ error: nError }) => {
+                        if (nError) console.error('Denial notification failed:', nError);
                     });
                     const c = document.getElementById('app'); mount(c, lead.id); 
                 }

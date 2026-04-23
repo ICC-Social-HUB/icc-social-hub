@@ -125,6 +125,7 @@ const NotificationsView = (() => {
             case 'broadcast': return `📢 Admin broadcast: <span class="text-zinc-400">"${escapeHtml(n.body || '')}"</span>`;
             case 'team_join': return `${actor} requested to join your team`;
             case 'team_approve': return `You've been approved to join <span class="text-white font-semibold">${escapeHtml(n.body || 'the team')}</span>! 🎉`;
+            case 'team_deny': return `Your request to join <span class="text-zinc-300 font-semibold">${escapeHtml(n.body || 'the team')}</span> was declined.`;
             case 'mention': return `${actor} mentioned you in a comment`;
             case 'welcome': return `Welcome to ICC! 🚀 Set up your profile to get started`;
             default: return n.body || 'New notification';
