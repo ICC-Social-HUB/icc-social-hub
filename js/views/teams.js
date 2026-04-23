@@ -250,8 +250,13 @@ const TeamsView = (() => {
                 if (!confirm('Are you sure you want to remove this member?')) return;
                 const userId = btn.dataset.id;
                 const { error } = await ICCSupabase.denyMember(userId);
-                if (error) Toast.error('Failed to remove member');
-                else { Toast.success('Member removed'); const c = document.getElementById('app'); mount(c, lead.id); }
+                if (error) {
+                    console.error('Removal error:', error);
+                    Toast.error('Error: Could not remove member. Ensure RLS policies are updated.');
+                } else { 
+                    Toast.success('Member removed successfully'); 
+                    const c = document.getElementById('app'); mount(c, lead.id); 
+                }
             }
         });
 
@@ -260,7 +265,7 @@ const TeamsView = (() => {
             btn.addEventListener('click', async () => {
                 const userId = btn.dataset.id;
                 const { error } = await ICCSupabase.approveMember(userId);
-                if (error) Toast.error('Failed to approve');
+                if (error) Toast.error('Failed to approve member');
                 else { 
                     Toast.success('Member approved!'); 
                     // Notify the approved user
@@ -280,10 +285,12 @@ const TeamsView = (() => {
             btn.addEventListener('click', async () => {
                 const userId = btn.dataset.id;
                 const { error } = await ICCSupabase.denyMember(userId);
-                if (error) Toast.error('Failed to deny');
-                else { 
-                    Toast.info('Request denied'); 
-                    // Maybe notify denial? Usually not necessary but good for UX
+                if (error) {
+                    console.error('Denial error:', error);
+                    Toast.error('Error: Could not deny request');
+                } else { 
+                    Toast.info('Join request denied'); 
+                    // Notify denial
                     ICCSupabase.createNotification({
                         userId: userId,
                         type: 'system',
