@@ -12,8 +12,7 @@
 const _ALLOWED_EMAIL_LIST = [
 
     // ── Batch 1: Core Members ──
-    // "member1@example.com",
-    // "member2@example.com",
+    "saravanantn1920@gmail.com",
 
     // ── Add more below as needed ──
 
