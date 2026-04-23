@@ -210,7 +210,27 @@ const TeamsView = (() => {
             btn.disabled = true; btn.innerHTML = '<div class="spinner spinner-sm"></div>';
             const { error } = await ICCSupabase.joinTeam(lead.id);
             if (error) { Toast.error('Failed to request: ' + error.message); btn.disabled = false; btn.textContent = `Request to Join`; }
-            else { Toast.success(`Join request sent! The Team Lead will review it shortly.`); const c = document.getElementById('app'); mount(c, lead.id); }
+            else { 
+                Toast.success(`Join request sent! The Team Lead will review it shortly.`); 
+                // Notify the Team Lead
+                const leadProfile = CORE_LEADS.find(l => l.id === lead.id);
+                // We need to find the user_id of the lead. 
+                // Since CORE_LEADS is hardcoded in data.js, let's see if we can find the lead user_id.
+                // In this app, the lead is a user with role='lead' and team_id=lead.id.
+                // We can't easily find the lead's UUID here without a query, 
+                // but we can at least try to get team members and find the lead.
+                const members = await ICCSupabase.getTeamMembers(lead.id);
+                const leadUser = members.find(m => m.role === 'lead');
+                if (leadUser) {
+                    ICCSupabase.createNotification({
+                        userId: leadUser.id,
+                        type: 'team_join',
+                        actorId: ICCSupabase.getUser().id,
+                        referenceId: lead.id.toString()
+                    });
+                }
+                const c = document.getElementById('app'); mount(c, lead.id); 
+            }
         });
 
         document.getElementById('team-roster')?.addEventListener('click', async (e) => {
@@ -230,7 +250,18 @@ const TeamsView = (() => {
                 const userId = btn.dataset.id;
                 const { error } = await ICCSupabase.approveMember(userId);
                 if (error) Toast.error('Failed to approve');
-                else { Toast.success('Member approved!'); const c = document.getElementById('app'); mount(c, lead.id); }
+                else { 
+                    Toast.success('Member approved!'); 
+                    // Notify the approved user
+                    ICCSupabase.createNotification({
+                        userId: userId,
+                        type: 'team_approve',
+                        actorId: ICCSupabase.getUser().id,
+                        referenceId: lead.id.toString(),
+                        body: lead.team
+                    });
+                    const c = document.getElementById('app'); mount(c, lead.id); 
+                }
             });
         });
 
@@ -239,7 +270,17 @@ const TeamsView = (() => {
                 const userId = btn.dataset.id;
                 const { error } = await ICCSupabase.denyMember(userId);
                 if (error) Toast.error('Failed to deny');
-                else { Toast.info('Request denied'); const c = document.getElementById('app'); mount(c, lead.id); }
+                else { 
+                    Toast.info('Request denied'); 
+                    // Maybe notify denial? Usually not necessary but good for UX
+                    ICCSupabase.createNotification({
+                        userId: userId,
+                        type: 'system',
+                        actorId: ICCSupabase.getUser().id,
+                        body: `Your request to join ${lead.team} was declined.`
+                    });
+                    const c = document.getElementById('app'); mount(c, lead.id); 
+                }
             });
         });
 

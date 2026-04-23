@@ -106,6 +106,12 @@ const ICCSupabase = (() => {
             .from('profiles').select('*').eq('id', currentUser.id).single();
         if (!error && data) {
             currentProfile = data;
+            // Sync email from auth if not yet stored
+            if (!data.email && currentUser.email) {
+                client.from('profiles').update({ email: currentUser.email }).eq('id', currentUser.id).then(() => {
+                    currentProfile.email = currentUser.email;
+                });
+            }
         } else if (error && error.code === 'PGRST116') {
             // Profile doesn't exist yet, create it
             const meta = currentUser.user_metadata || {};
@@ -113,7 +119,8 @@ const ICCSupabase = (() => {
                 id: currentUser.id,
                 full_name: meta.full_name || meta.name || '',
                 avatar_url: meta.avatar_url || meta.picture || '',
-                username: null
+                username: null,
+                email: currentUser.email || ''
             }).select().single();
             if (newProfile) currentProfile = newProfile;
         }
@@ -507,6 +514,61 @@ const ICCSupabase = (() => {
         return data || [];
     }
 
+    // ==================== NOTIFICATIONS ====================
+
+    async function fetchNotifications(limit = 50) {
+        if (!client || !currentUser) return [];
+        const { data, error } = await client.from('notifications')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('created_at', { ascending: false })
+            .limit(limit);
+        if (error) { console.error('fetchNotifications error:', error); return []; }
+        // Enrich with actor names
+        const enriched = [];
+        const actorCache = {};
+        for (const n of (data || [])) {
+            if (n.actor_id && !actorCache[n.actor_id]) {
+                const actor = await fetchUserById(n.actor_id);
+                actorCache[n.actor_id] = actor?.full_name || actor?.username || 'Someone';
+            }
+            enriched.push({ ...n, actor_name: n.actor_id ? actorCache[n.actor_id] : null });
+        }
+        return enriched;
+    }
+
+    async function createNotification({ userId, type, actorId = null, referenceId = null, body = null }) {
+        if (!client) return { error: { message: 'Not configured' } };
+        // Don't notify yourself
+        if (actorId && userId === actorId) return { data: null, error: null };
+        const { data, error } = await client.from('notifications')
+            .insert({ user_id: userId, type, actor_id: actorId, reference_id: referenceId, body })
+            .select().single();
+        return { data, error };
+    }
+
+    async function markNotificationRead(notifId) {
+        if (!client) return;
+        await client.from('notifications').update({ is_read: true }).eq('id', notifId);
+    }
+
+    async function markAllNotificationsRead() {
+        if (!client || !currentUser) return;
+        await client.from('notifications')
+            .update({ is_read: true })
+            .eq('user_id', currentUser.id)
+            .eq('is_read', false);
+    }
+
+    async function getUnreadNotifCount() {
+        if (!client || !currentUser) return 0;
+        const { count } = await client.from('notifications')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', currentUser.id)
+            .eq('is_read', false);
+        return count || 0;
+    }
+
     // ==================== STORAGE ====================
 
     async function uploadImage(bucket, file) {
@@ -610,6 +672,22 @@ const ICCSupabase = (() => {
         return channel;
     }
 
+    function subscribeToNotifications(onNotif) {
+        if (!client || !currentUser) return null;
+        const channelName = `notifs-${currentUser.id}`;
+        const existing = activeChannels.find(c => c.name === channelName);
+        if (existing) { client.removeChannel(existing.channel); activeChannels = activeChannels.filter(c => c.name !== channelName); }
+
+        const channel = client.channel(channelName)
+            .on('postgres_changes', {
+                event: 'INSERT', schema: 'public', table: 'notifications',
+                filter: `user_id=eq.${currentUser.id}`
+            }, (payload) => onNotif(payload.new))
+            .subscribe();
+        activeChannels.push({ name: channelName, channel });
+        return channel;
+    }
+
     function unsubscribeChannel(name) {
         if (!client) return;
         const idx = activeChannels.findIndex(c => c.name === name);
@@ -657,9 +735,10 @@ const ICCSupabase = (() => {
         createBroadcast, getActiveBroadcast, dismissBroadcast, adminDeletePost,
         adminUpdateUser, adminDeleteUser,
         getAllProfiles, getAllPosts,
+        fetchNotifications, createNotification, markNotificationRead, markAllNotificationsRead, getUnreadNotifCount,
         uploadImage, deleteImage,
         subscribeToFeed, subscribeToMessages, subscribeToConversation,
-        subscribeToTeam, subscribeToBroadcasts,
+        subscribeToTeam, subscribeToBroadcasts, subscribeToNotifications,
         unsubscribeChannel, cleanupAllChannels,
         getUser, getProfile, isConfigured, getClient, isAdmin, isLead, needsOnboarding
     };

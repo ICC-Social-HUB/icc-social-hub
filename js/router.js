@@ -19,6 +19,7 @@ const Router = (() => {
         if (previousView === 'teams') TeamsView.unmount?.();
         if (previousView === 'chat') ChatView.unmount?.();
         if (previousView === 'profile') ProfileView.unmount?.();
+        if (previousView === 'notifications') NotificationsView.unmount?.();
 
         // Transition — keep delay short for snappy mobile feel
         container.classList.remove('view-enter');
@@ -49,6 +50,9 @@ const Router = (() => {
                 previousView = 'chat';
                 const partnerId = hash.split('/')[1];
                 ChatView.mount(container, partnerId);
+            } else if (hash === '#notifications') {
+                previousView = 'notifications';
+                NotificationsView.mount(container);
             } else if (hash === '#profile') {
                 previousView = 'profile';
                 // Guard: redirect to onboarding if needed
@@ -82,3 +86,4 @@ const Router = (() => {
 
     return { init };
 })();
+

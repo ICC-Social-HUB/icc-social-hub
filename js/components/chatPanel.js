@@ -75,6 +75,15 @@ const ChatPanel = (() => {
             appendMessage(tempMsg);
             const { error } = await ICCSupabase.sendMessage(currentPartnerId, content);
             if (error) Toast.error('Failed to send');
+            else {
+                // Notify the recipient
+                ICCSupabase.createNotification({
+                    userId: currentPartnerId,
+                    type: 'message',
+                    actorId: ICCSupabase.getUser().id,
+                    body: content
+                });
+            }
         });
         document.getElementById('chat-back-btn')?.addEventListener('click', () => {
             window.location.hash = '#chat';

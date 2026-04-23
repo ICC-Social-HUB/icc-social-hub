@@ -190,6 +190,7 @@ const AdminView = (() => {
                                     <div class="flex flex-col">
                                         <span class="font-medium text-xs">${u.full_name || 'Anon'}</span>
                                         <span class="text-[10px] text-zinc-500">@${u.username || ''}</span>
+                                        ${u.email ? `<span class="text-[10px] text-zinc-600 truncate max-w-[140px]" title="${u.email}">📧 ${u.email}</span>` : ''}
                                     </div>
                                 </div>
                             </td>
@@ -247,18 +248,43 @@ const AdminView = (() => {
             if (!msg) return;
             const { error } = await ICCSupabase.createBroadcast(msg);
             if (error) Toast.error('Broadcast failed: ' + error.message);
-            else { Toast.success('Broadcast sent! 🚨'); document.getElementById('broadcast-msg').value = ''; }
+            else { 
+                Toast.success('Broadcast sent! 📢'); 
+                document.getElementById('broadcast-msg').value = '';
+                // Notify everyone
+                ICCSupabase.getAllProfiles().then(profiles => {
+                    profiles.forEach(p => {
+                        ICCSupabase.createNotification({
+                            userId: p.id,
+                            type: 'broadcast',
+                            actorId: ICCSupabase.getUser().id,
+                            body: msg
+                        });
+                    });
+                });
+            }
         });
         // Approve/deny leads
         container.querySelectorAll('.approve-lead-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const userId = btn.dataset.id;
-                const select = document.querySelector(`.assign-team-select[data-user-id="${userId}"]`);
-                const teamId = select ? select.value : null;
-                if (!teamId) { Toast.error('Please select a team to assign this lead to.'); return; }
+                const teamId = container.querySelector(`.assign-team-select[data-user-id="${userId}"]`)?.value;
+                if (!teamId) { Toast.error('Please select a team first'); return; }
                 
                 const { error } = await ICCSupabase.approveLead(userId, parseInt(teamId));
-                if (error) Toast.error('Approve failed'); else { Toast.success('Lead approved and assigned!'); pendingLeads = await ICCSupabase.getPendingLeads(); container.innerHTML = render(); bindEvents(container); }
+                if (error) Toast.error('Failed to approve lead');
+                else { 
+                    Toast.success('Lead approved!'); 
+                    // Notify the user
+                    const teamName = CORE_LEADS.find(l => l.id === parseInt(teamId))?.team || 'a team';
+                    ICCSupabase.createNotification({
+                        userId: userId,
+                        type: 'system',
+                        actorId: ICCSupabase.getUser().id,
+                        body: `Congratulations! You have been appointed as the Team Lead for ${teamName}.`
+                    });
+                    mount(container); 
+                }
             });
         });
         container.querySelectorAll('.deny-lead-btn').forEach(btn => {

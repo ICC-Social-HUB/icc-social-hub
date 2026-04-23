@@ -69,6 +69,21 @@ const PostCard = (() => {
                 countEl.textContent = parseInt(countEl.textContent) + (wasLiked ? -1 : 1);
                 if (!wasLiked) btn.classList.add('animate-heart-burst');
                 await ICCSupabase.toggleLike(postId);
+
+                // Create notification for the post owner (only on like, not unlike)
+                if (!wasLiked) {
+                    const postCard = btn.closest('.post-card');
+                    const postOwnerLink = postCard?.querySelector('.user-link');
+                    const postOwnerId = postOwnerLink?.dataset?.userId;
+                    if (postOwnerId) {
+                        ICCSupabase.createNotification({
+                            userId: postOwnerId,
+                            type: 'like',
+                            actorId: ICCSupabase.getUser().id,
+                            referenceId: postId
+                        });
+                    }
+                }
             });
         });
 
@@ -152,7 +167,22 @@ const PostCard = (() => {
             input.value = '';
             const { error } = await ICCSupabase.addComment(postId, content);
             if (error) Toast.error('Failed to comment');
-            else await loadComments(postId, section);
+            else {
+                await loadComments(postId, section);
+                // Create notification for post owner
+                const postCard = section.closest('.post-card');
+                const postOwnerLink = postCard?.querySelector('.user-link');
+                const postOwnerId = postOwnerLink?.dataset?.userId;
+                if (postOwnerId) {
+                    ICCSupabase.createNotification({
+                        userId: postOwnerId,
+                        type: 'comment',
+                        actorId: ICCSupabase.getUser().id,
+                        referenceId: postId,
+                        body: content
+                    });
+                }
+            }
         });
 
         // Delete comment

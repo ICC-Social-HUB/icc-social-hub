@@ -26,7 +26,7 @@
                 } else {
                     window.dispatchEvent(new Event('hashchange'));
                 }
-                BottomNav.updateUnreadCount();
+                BottomNav.updateAllBadges();
             }
             if (event === 'SIGNED_OUT') {
                 window.location.hash = '#feed';
@@ -44,11 +44,14 @@
             showBroadcast(broadcast);
         });
 
-        // 8. Subscribe to incoming messages for badge
+        // 8. Subscribe to incoming messages & notifications for badges
         if (session) {
-            BottomNav.updateUnreadCount();
+            BottomNav.updateAllBadges();
             ICCSupabase.subscribeToMessages(() => {
                 BottomNav.updateUnreadCount();
+            });
+            ICCSupabase.subscribeToNotifications(() => {
+                BottomNav.updateNotifCount();
             });
         }
 

@@ -167,7 +167,17 @@ const OnboardingView = (() => {
             });
             saving = false;
             if (error) { Toast.error('Setup failed: ' + error.message); container.innerHTML = render(); bindEvents(container); }
-            else { Toast.success('Profile ready! Welcome to ICC 🎉'); window.location.hash = '#feed'; BottomNav.mount(); }
+            else { 
+                Toast.success('Profile ready! Welcome to ICC 🎉'); 
+                // Create welcome notification
+                ICCSupabase.createNotification({
+                    userId: ICCSupabase.getUser().id,
+                    type: 'welcome',
+                    body: 'Welcome to ICC Innovation Hub! Explore projects, connect with teams, and share your ideas.'
+                });
+                window.location.hash = '#feed'; 
+                BottomNav.mount(); 
+            }
         });
     }
 

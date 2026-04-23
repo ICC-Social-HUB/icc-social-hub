@@ -27,6 +27,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'is_pending_member') THEN
         ALTER TABLE public.profiles ADD COLUMN is_pending_member BOOLEAN DEFAULT false;
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'email') THEN
+        ALTER TABLE public.profiles ADD COLUMN email TEXT;
+    END IF;
 END $$;
 
 -- Enable RLS
@@ -330,14 +333,15 @@ CREATE TRIGGER on_like_change
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.profiles (id, full_name, avatar_url, username)
+    INSERT INTO public.profiles (id, full_name, avatar_url, username, email)
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', ''),
         COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture', ''),
-        NEW.raw_user_meta_data->>'username'
+        NEW.raw_user_meta_data->>'username',
+        NEW.email
     )
-    ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -364,6 +368,38 @@ CREATE INDEX IF NOT EXISTS idx_profiles_username ON public.profiles(username);
 CREATE INDEX IF NOT EXISTS idx_profiles_team_id ON public.profiles(team_id);
 
 -- ==========================================
+-- 10b. NOTIFICATIONS TABLE
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    type TEXT NOT NULL CHECK (type IN ('like', 'comment', 'message', 'post', 'broadcast', 'team_join', 'team_approve', 'mention', 'welcome', 'system')),
+    actor_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    reference_id TEXT,
+    body TEXT,
+    is_read BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own notifications"
+    ON public.notifications FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Authenticated users can create notifications"
+    ON public.notifications FOR INSERT
+    WITH CHECK (true);
+
+CREATE POLICY "Users can update their own notifications"
+    ON public.notifications FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON public.notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON public.notifications(user_id, is_read);
+
+-- ==========================================
 -- 11. ENABLE REALTIME (for live updates)
 -- ==========================================
 ALTER PUBLICATION supabase_realtime ADD TABLE public.posts;
@@ -372,6 +408,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.likes;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.comments;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.broadcasts;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
 
 -- ==========================================
 -- 12. STORAGE BUCKETS & POLICIES
