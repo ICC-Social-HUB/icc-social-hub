@@ -37,13 +37,7 @@
         // 5. Mount components
         BottomNav.mount();
 
-        // 6. Load broadcast banner
-        await loadBroadcast();
 
-        // 7. Subscribe to broadcasts
-        ICCSupabase.subscribeToBroadcasts(broadcast => {
-            showBroadcast(broadcast);
-        });
 
         // 8. Subscribe to incoming messages & notifications for badges
         if (session) {
@@ -88,20 +82,7 @@
         console.log('✅ ICC Social Hub ready');
     });
 
-    async function loadBroadcast() {
-        const broadcast = await ICCSupabase.getActiveBroadcast();
-        if (broadcast) showBroadcast(broadcast);
-    }
 
-    function showBroadcast(broadcast) {
-        const bar = document.getElementById('broadcast-bar');
-        if (!bar || !broadcast) return;
-        bar.className = 'broadcast-banner';
-        bar.innerHTML = `
-            <span>📢 ${escapeHtml(broadcast.message)}</span>
-            <button class="close-broadcast" onclick="this.parentElement.classList.add('hidden')">&times;</button>
-        `;
-    }
 
     function initParticles() {
         const bg = document.getElementById('particles-bg');

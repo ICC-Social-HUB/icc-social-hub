@@ -521,18 +521,32 @@ const ICCSupabase = (() => {
 
     async function fetchNotifications(limit = 50) {
         if (!client || !currentUser) return [];
-        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        
+        // Broadcasts last 24h, others last 7 days
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
         const { data, error } = await client.from('notifications')
             .select('*')
             .eq('user_id', currentUser.id)
-            .gt('created_at', yesterday)
+            .gt('created_at', sevenDaysAgo)
             .order('created_at', { ascending: false })
             .limit(limit);
+
         if (error) { console.error('fetchNotifications error:', error); return []; }
+
+        // Filter broadcasts that are older than 24h
+        const filtered = (data || []).filter(n => {
+            if (n.type === 'broadcast') {
+                return n.created_at > oneDayAgo;
+            }
+            return true;
+        });
+
         // Enrich with actor names
         const enriched = [];
         const actorCache = {};
-        for (const n of (data || [])) {
+        for (const n of filtered) {
             if (n.actor_id && !actorCache[n.actor_id]) {
                 const actor = await fetchUserById(n.actor_id);
                 actorCache[n.actor_id] = actor?.full_name || actor?.username || 'Someone';
@@ -567,13 +581,26 @@ const ICCSupabase = (() => {
 
     async function getUnreadNotifCount() {
         if (!client || !currentUser) return 0;
-        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const { count } = await client.from('notifications')
-            .select('id', { count: 'exact', head: true })
+        
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+        const { data, error } = await client.from('notifications')
+            .select('id, type, created_at')
             .eq('user_id', currentUser.id)
             .eq('is_read', false)
-            .gt('created_at', yesterday);
-        return count || 0;
+            .gt('created_at', sevenDaysAgo);
+
+        if (error) return 0;
+
+        const count = data.filter(n => {
+            if (n.type === 'broadcast') {
+                return n.created_at > oneDayAgo;
+            }
+            return true;
+        }).length;
+
+        return count;
     }
 
     // ==================== STORAGE ====================
