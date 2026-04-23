@@ -124,13 +124,17 @@ const ICCSupabase = (() => {
             .from('profiles').select('*').eq('id', currentUser.id).single();
         if (!error && data) {
             currentProfile = data;
-            // Sync email from auth if not yet stored
+            // Sync email from auth if not yet stored (Safely)
             if (!data.email && currentUser.email) {
-                client.from('profiles').update({ email: currentUser.email }).eq('id', currentUser.id).then(() => {
-                    currentProfile.email = currentUser.email;
-                });
+                client.from('profiles')
+                    .update({ email: currentUser.email })
+                    .eq('id', currentUser.id)
+                    .then(({ error }) => {
+                        if (!error) currentProfile.email = currentUser.email;
+                        else console.warn('Note: Profile email sync skipped (column might be missing)');
+                    });
             }
-        } else if (error && error.code === 'PGRST116') {
+        } else if (error && (error.code === 'PGRST116' || error.message?.includes('0 rows'))) {
             // Profile doesn't exist yet, create it
             const meta = currentUser.user_metadata || {};
             const { data: newProfile } = await client.from('profiles').insert({

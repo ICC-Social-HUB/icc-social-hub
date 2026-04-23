@@ -12,7 +12,7 @@ const BottomNav = (() => {
             { id:'feed', hash:'#feed', label:'Feed', icon:feedIcon },
             { id:'teams', hash:'#teams', label:'Teams', icon:teamsIcon },
             { id:'fab', isFab:true },
-            { id:'notifs', hash:'#notifications', label:'Inbox', icon:notifIcon, badge:unreadNotifs },
+            { id:'notifs', hash:'#notifications', label:'Notifications', icon:notifIcon, badge:unreadNotifs },
             { id:'chat', hash:'#chat', label:'Chat', icon:chatIcon, badge:unreadMessages },
             { id:'profile', hash:'#profile', label:'Profile', icon:profileIcon }
         ];

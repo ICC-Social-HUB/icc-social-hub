@@ -17,17 +17,52 @@
         await loadLeads();
 
         // 4. Listen for auth state changes
-        ICCSupabase.onAuthStateChange((event, session) => {
+        ICCSupabase.onAuthStateChange(async (event, session) => {
             console.log('🔑 Auth event:', event);
             BottomNav.mount();
-            if (event === 'SIGNED_IN') {
+            
+            if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                 if (ICCSupabase.needsOnboarding()) {
                     window.location.hash = '#onboarding';
                 } else {
                     window.dispatchEvent(new Event('hashchange'));
                 }
+                
+                // Refresh badges
                 BottomNav.updateAllBadges();
                 NotifBell.update();
+
+                // 8. Subscribe to incoming messages & notifications
+                ICCSupabase.subscribeToMessages(() => {
+                    BottomNav.updateUnreadCount();
+                });
+
+                ICCSupabase.subscribeToNotifications(async (newNotif) => {
+                    BottomNav.updateNotifCount();
+                    NotifBell.update();
+
+                    // Enrich for toast
+                    let actorName = 'Someone';
+                    if (newNotif.actor_id) {
+                        const actor = await ICCSupabase.fetchUserById(newNotif.actor_id);
+                        if (actor) actorName = actor.full_name || actor.username || 'Someone';
+                    }
+
+                    // In-app Toast notification
+                    let msg = 'New notification';
+                    switch (newNotif.type) {
+                        case 'like': msg = `${actorName} liked your post`; break;
+                        case 'comment': msg = `${actorName} commented on your post`; break;
+                        case 'message': msg = `${actorName} sent you a message`; break;
+                        case 'post': msg = `${actorName} shared a new post`; break;
+                        case 'team_join': msg = `${actorName} requested to join your team`; break;
+                        case 'team_approve': msg = `Your request to join ${newNotif.body} was approved! 🎉`; break;
+                        case 'team_deny': msg = `Your request to join ${newNotif.body} was declined.`; break;
+                        case 'broadcast': msg = `📢 Admin: ${newNotif.body}`; break;
+                        case 'system': msg = newNotif.body; break;
+                    }
+                    Toast.info(msg);
+                });
             }
             if (event === 'SIGNED_OUT') {
                 window.location.hash = '#feed';
@@ -36,42 +71,6 @@
 
         // 5. Mount components
         BottomNav.mount();
-
-
-
-        // 8. Subscribe to incoming messages & notifications for badges
-        if (session) {
-            BottomNav.updateAllBadges();
-            NotifBell.update();
-            ICCSupabase.subscribeToMessages(() => {
-                BottomNav.updateUnreadCount();
-            });
-            ICCSupabase.subscribeToNotifications(async (newNotif) => {
-                BottomNav.updateNotifCount();
-                NotifBell.update();
-
-                // Enrich for toast
-                let actorName = 'Someone';
-                if (newNotif.actor_id) {
-                    const actor = await ICCSupabase.fetchUserById(newNotif.actor_id);
-                    if (actor) actorName = actor.full_name || actor.username || 'Someone';
-                }
-
-                // In-app Toast notification
-                let msg = 'New notification';
-                switch (newNotif.type) {
-                    case 'like': msg = `${actorName} liked your post`; break;
-                    case 'comment': msg = `${actorName} commented on your post`; break;
-                    case 'message': msg = `${actorName} sent you a message`; break;
-                    case 'post': msg = `${actorName} shared a new post`; break;
-                    case 'team_join': msg = `${actorName} requested to join your team`; break;
-                    case 'team_approve': msg = `Your request to join ${newNotif.body} was approved! 🎉`; break;
-                    case 'broadcast': msg = `📢 Admin: ${newNotif.body}`; break;
-                    case 'system': msg = newNotif.body; break;
-                }
-                Toast.info(msg);
-            });
-        }
 
         // 9. Initialize router
         Router.init();
