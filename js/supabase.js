@@ -421,7 +421,7 @@ const ICCSupabase = (() => {
     async function getTeamMembers(teamId) {
         if (!client) return [];
         const { data } = await client.from('profiles')
-            .select('id, username, full_name, avatar_url, updated_at')
+            .select('id, username, full_name, avatar_url, role, updated_at')
             .eq('team_id', teamId)
             .eq('is_pending_member', false)
             .order('updated_at', { ascending: false });
@@ -431,7 +431,7 @@ const ICCSupabase = (() => {
     async function getPendingMembers(teamId) {
         if (!client) return [];
         const { data } = await client.from('profiles')
-            .select('id, username, full_name, avatar_url, updated_at')
+            .select('id, username, full_name, avatar_url, role, updated_at')
             .eq('team_id', teamId)
             .eq('is_pending_member', true)
             .order('updated_at', { ascending: false });
