@@ -237,16 +237,6 @@ const TeamsView = (() => {
                 // In this app, the lead is a user with role='lead' and team_id=lead.id.
                 // We can't easily find the lead's UUID here without a query, 
                 // but we can at least try to get team members and find the lead.
-                const members = await ICCSupabase.getTeamMembers(lead.id);
-                const leadUser = members.find(m => m.role === 'lead');
-                if (leadUser) {
-                    ICCSupabase.createNotification({
-                        userId: leadUser.id,
-                        type: 'team_join',
-                        actorId: ICCSupabase.getUser().id,
-                        referenceId: lead.id.toString()
-                    });
-                }
                 const c = document.getElementById('app'); mount(c, lead.id); 
             }
         });
@@ -284,16 +274,6 @@ const TeamsView = (() => {
                 if (error) Toast.error('Failed to approve member');
                 else { 
                     Toast.success('Member approved!'); 
-                    // Notify the approved user
-                    ICCSupabase.createNotification({
-                        userId: userId,
-                        type: 'team_approve',
-                        actorId: ICCSupabase.getUser().id,
-                        referenceId: lead.id.toString(),
-                        body: lead.team
-                    }).then(({ error: nError }) => {
-                        if (nError) console.error('Approval notification failed:', nError);
-                    });
                     const c = document.getElementById('app'); mount(c, lead.id); 
                 }
             });
@@ -308,16 +288,6 @@ const TeamsView = (() => {
                     Toast.error('Error: Could not deny request');
                 } else { 
                     Toast.info('Join request denied'); 
-                    // Notify denial
-                    ICCSupabase.createNotification({
-                        userId: userId,
-                        type: 'team_deny',
-                        actorId: ICCSupabase.getUser().id,
-                        referenceId: lead.id.toString(),
-                        body: lead.team
-                    }).then(({ error: nError }) => {
-                        if (nError) console.error('Denial notification failed:', nError);
-                    });
                     const c = document.getElementById('app'); mount(c, lead.id); 
                 }
             });
