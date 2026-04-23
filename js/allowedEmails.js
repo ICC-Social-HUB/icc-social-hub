@@ -26,12 +26,9 @@ const _ALLOWED_EMAIL_LIST = [
     "Shrujantejask@gmail.com",
     "hasini01032007@gmail.com",
 
-    "
-
     // ── Batch 2:  Club Members ──
 
 ];
-s
 // Internal lookup set (auto-built, case-insensitive — don't edit this)
 const ALLOWED_EMAILS = new Set(_ALLOWED_EMAIL_LIST.map(e => e.trim().toLowerCase()));
 
