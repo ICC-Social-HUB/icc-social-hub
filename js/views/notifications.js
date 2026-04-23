@@ -119,9 +119,9 @@ const NotificationsView = (() => {
         const actor = n.actor_name ? `<span class="text-white font-semibold">${escapeHtml(n.actor_name)}</span>` : 'Someone';
         switch (n.type) {
             case 'like': return `${actor} liked your post`;
-            case 'comment': return `${actor} commented on your post${n.body ? ': <span class="text-zinc-500">"' + escapeHtml(n.body.slice(0, 50)) + '"</span>' : ''}`;
-            case 'message': return `${actor} sent you a message${n.body ? ': <span class="text-zinc-500">"' + escapeHtml(n.body.slice(0, 50)) + '"</span>' : ''}`;
-            case 'post': return `${actor} shared a new post${n.body ? ': <span class="text-zinc-500">"' + escapeHtml(n.body.slice(0, 50)) + '"</span>' : ''}`;
+            case 'comment': return `${actor} commented on your post${n.body ? ': <span class="text-zinc-500">"' + escapeHtml(n.body.slice(0, 140)) + '"</span>' : ''}`;
+            case 'message': return `${actor} sent you a message${n.body ? ': <span class="text-zinc-500">"' + escapeHtml(n.body.slice(0, 140)) + '"</span>' : ''}`;
+            case 'post': return `${actor} shared a new post${n.body ? ': <span class="text-zinc-500">"' + escapeHtml(n.body.slice(0, 140)) + '"</span>' : ''}`;
             case 'broadcast': return `📢 Admin broadcast: <span class="text-zinc-400">"${escapeHtml(n.body || '')}"</span>`;
             case 'team_join': return `${actor} requested to join your team`;
             case 'team_approve': return `You've been approved to join <span class="text-white font-semibold">${escapeHtml(n.body || 'the team')}</span>! 🎉`;

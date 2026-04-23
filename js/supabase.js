@@ -537,17 +537,17 @@ const ICCSupabase = (() => {
 
     // ==================== NOTIFICATIONS ====================
 
-    async function fetchNotifications(limit = 50) {
+    async function fetchNotifications(limit = 100) {
         if (!client || !currentUser) return [];
         
-        // Broadcasts last 24h, others last 7 days
+        // Broadcasts last 24h, others last 30 days
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
         const { data, error } = await client.from('notifications')
             .select('*')
             .eq('user_id', currentUser.id)
-            .gt('created_at', sevenDaysAgo)
+            .gt('created_at', thirtyDaysAgo)
             .order('created_at', { ascending: false })
             .limit(limit);
 
@@ -601,13 +601,13 @@ const ICCSupabase = (() => {
         if (!client || !currentUser) return 0;
         
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
         const { data, error } = await client.from('notifications')
             .select('id, type, created_at')
             .eq('user_id', currentUser.id)
             .eq('is_read', false)
-            .gt('created_at', sevenDaysAgo);
+            .gt('created_at', thirtyDaysAgo);
 
         if (error) return 0;
 

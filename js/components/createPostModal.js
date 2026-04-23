@@ -157,32 +157,21 @@ const CreatePostModal = (() => {
             
             // Notification logic
             const user = ICCSupabase.getUser();
-            const profile = ICCSupabase.getProfile();
             
-            // 1. If tagged to a team, notify team members
-            if (fields.team_tag) {
-                ICCSupabase.getTeamMembers(fields.team_tag).then(members => {
-                    members.forEach(member => {
-                        if (member.id !== user.id) {
-                            ICCSupabase.createNotification({
-                                userId: member.id,
-                                type: 'post',
-                                actorId: user.id,
-                                referenceId: data.id,
-                                body: fields.caption
-                            });
-                        }
-                    });
+            // Notify everyone about the new post
+            ICCSupabase.getAllProfiles().then(profiles => {
+                profiles.forEach(p => {
+                    if (p.id !== user.id) {
+                        ICCSupabase.createNotification({
+                            userId: p.id,
+                            type: 'post',
+                            actorId: user.id,
+                            referenceId: data.id,
+                            body: fields.caption || 'Shared a new post'
+                        });
+                    }
                 });
-            }
-            
-            // 2. If announcement (and user is admin/lead), notify everyone or some relevant group
-            // For now, let's just do team notifications as broad notifications for every post might be noisy.
-            // But the user said "posts that gets uploaded", so maybe they want broad notifications.
-            // If it's a general post (no team_tag), we could notify everyone. 
-            // Warning: This could be very slow on client side if there are many users.
-            // In a real app, this should be a DB trigger or Edge Function.
-            // For this project, let's stick to team notifications for now or limited broad ones.
+            });
             
             close(); 
             window.dispatchEvent(new Event('hashchange')); 
