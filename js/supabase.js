@@ -169,11 +169,14 @@ const ICCSupabase = (() => {
         return data || [];
     }
 
-    async function checkUsernameAvailable(username) {
+    async function checkUsernameAvailable(username, email = null) {
         if (!client) return false;
         const { data } = await client.from('profiles')
-            .select('id').eq('username', username).single();
-        return !data;
+            .select('email').eq('username', username).maybeSingle();
+        
+        if (!data) return true; // Not taken
+        if (email && data.email === email) return true; // It's their own username
+        return false; // Taken by someone else
     }
 
     // ==================== POSTS ====================

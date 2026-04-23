@@ -115,7 +115,8 @@ const OnboardingView = (() => {
             const fullName = document.getElementById('ob-name')?.value?.trim();
             if (!username || username.length < 3) { usernameError = 'Username must be at least 3 characters'; container.innerHTML = render(); bindEvents(container); return; }
             if (!/^[a-zA-Z0-9_]+$/.test(username)) { usernameError = 'Only letters, numbers, and underscore'; container.innerHTML = render(); bindEvents(container); return; }
-            const available = await ICCSupabase.checkUsernameAvailable(username);
+            const user = ICCSupabase.getUser();
+            const available = await ICCSupabase.checkUsernameAvailable(username, user?.email);
             if (!available) { usernameError = 'Username is taken'; container.innerHTML = render(); bindEvents(container); return; }
             formData.username = username;
             formData.full_name = fullName;

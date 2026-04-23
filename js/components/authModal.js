@@ -185,7 +185,7 @@ const AuthModal = (() => {
                 if (!name || !username) { errorMsg = 'Fill all fields'; mount(); return; }
                 
                 loading = true; errorMsg = ''; mount();
-                const available = await ICCSupabase.checkUsernameAvailable(username);
+                const available = await ICCSupabase.checkUsernameAvailable(username, email);
                 if (!available) { errorMsg = 'Username is already taken'; loading=false; mount(); return; }
                 
                 const metadata = { full_name: name, username: username };
