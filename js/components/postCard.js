@@ -12,7 +12,7 @@ const PostCard = (() => {
         const canDelete = currentUser && (currentUser.id === post.user_id || ICCSupabase.isAdmin());
 
         return `
-        <article class="post-card mb-4 relative group" data-post-id="${post.id}">
+        <article class="post-card mb-4 relative group" data-post-id="${post.id}" data-owner-id="${post.user_id}">
             ${canDelete ? `
             <button class="delete-post-btn absolute top-3 right-3 p-2 text-zinc-600 hover:text-red-500 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-zinc-800/50 z-10" data-post-id="${post.id}" title="Delete post">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -135,12 +135,15 @@ const PostCard = (() => {
         const comments = await ICCSupabase.fetchComments(postId);
         const user = ICCSupabase.getUser();
 
+        const postCard = section.closest('.post-card');
+        const postOwnerId = postCard?.dataset?.ownerId;
+
         section.innerHTML = `
         <div class="p-4 space-y-3 max-h-64 overflow-y-auto">
             ${comments.length === 0 ? '<p class="text-xs text-zinc-600 text-center">No comments yet</p>' :
             comments.map(c => {
                 const cp = c.profiles || {};
-                const canDelete = user && (user.id === c.user_id || ICCSupabase.isAdmin());
+                const canDelete = user && (user.id === c.user_id || ICCSupabase.isAdmin() || user.id === postOwnerId);
                 return `<div class="flex gap-2 group relative">
                     <div class="w-6 h-6 rounded-full bg-zinc-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(cp.full_name||'?').charAt(0).toUpperCase()}</div>
                     <div class="flex-1 min-w-0 pr-6">
@@ -192,7 +195,11 @@ const PostCard = (() => {
                 const commentId = btn.dataset.commentId;
                 btn.style.opacity = '0.5';
                 const { error } = await ICCSupabase.deleteComment(commentId);
-                if (error) { Toast.error('Failed to delete comment'); btn.style.opacity = '1'; }
+                if (error) { 
+                    console.error('Delete comment error:', error);
+                    Toast.error('Failed to delete comment: ' + (error.message || 'Unknown error')); 
+                    btn.style.opacity = '1'; 
+                }
                 else await loadComments(postId, section);
             });
         });

@@ -161,7 +161,16 @@ CREATE POLICY "Admins can delete any comment"
     USING (
         EXISTS (
             SELECT 1 FROM public.profiles
-            WHERE id = auth.uid() AND role = 'admin'
+            WHERE id = auth.uid() AND LOWER(role) = 'admin'
+        )
+    );
+
+CREATE POLICY "Post owners can delete any comment on their post"
+    ON public.comments FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.posts
+            WHERE id = public.comments.post_id AND user_id = auth.uid()
         )
     );
 
