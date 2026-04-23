@@ -233,9 +233,7 @@ const NotificationsView = (() => {
             }
             // Update badge counts
             BottomNav.updateNotifCount();
-            // Show toast for new notification
-            const meta = NOTIF_ICONS[newNotif.type] || NOTIF_ICONS.system;
-            Toast.info(`${meta.icon} ${formatNotifText(newNotif).replace(/<[^>]*>/g, '')}`);
+            NotifBell.update();
         });
     }
 

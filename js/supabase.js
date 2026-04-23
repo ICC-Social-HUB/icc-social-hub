@@ -367,6 +367,9 @@ const ICCSupabase = (() => {
 
     async function joinTeam(teamId) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        // Prevent leads from switching
+        const profile = getProfile();
+        if (profile?.role === 'lead') return { error: { message: 'Team Leads cannot switch teams.' } };
         return await updateProfile({ team_id: parseInt(teamId), is_pending_member: true });
     }
 
@@ -518,9 +521,11 @@ const ICCSupabase = (() => {
 
     async function fetchNotifications(limit = 50) {
         if (!client || !currentUser) return [];
+        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         const { data, error } = await client.from('notifications')
             .select('*')
             .eq('user_id', currentUser.id)
+            .gt('created_at', yesterday)
             .order('created_at', { ascending: false })
             .limit(limit);
         if (error) { console.error('fetchNotifications error:', error); return []; }
@@ -562,10 +567,12 @@ const ICCSupabase = (() => {
 
     async function getUnreadNotifCount() {
         if (!client || !currentUser) return 0;
+        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         const { count } = await client.from('notifications')
             .select('id', { count: 'exact', head: true })
             .eq('user_id', currentUser.id)
-            .eq('is_read', false);
+            .eq('is_read', false)
+            .gt('created_at', yesterday);
         return count || 0;
     }
 

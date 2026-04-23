@@ -52,9 +52,30 @@
             ICCSupabase.subscribeToMessages(() => {
                 BottomNav.updateUnreadCount();
             });
-            ICCSupabase.subscribeToNotifications(() => {
+            ICCSupabase.subscribeToNotifications(async (newNotif) => {
                 BottomNav.updateNotifCount();
                 NotifBell.update();
+
+                // Enrich for toast
+                let actorName = 'Someone';
+                if (newNotif.actor_id) {
+                    const actor = await ICCSupabase.fetchUserById(newNotif.actor_id);
+                    if (actor) actorName = actor.full_name || actor.username || 'Someone';
+                }
+
+                // In-app Toast notification
+                let msg = 'New notification';
+                switch (newNotif.type) {
+                    case 'like': msg = `${actorName} liked your post`; break;
+                    case 'comment': msg = `${actorName} commented on your post`; break;
+                    case 'message': msg = `${actorName} sent you a message`; break;
+                    case 'post': msg = `${actorName} shared a new post`; break;
+                    case 'team_join': msg = `${actorName} requested to join your team`; break;
+                    case 'team_approve': msg = `Your request to join ${newNotif.body} was approved! 🎉`; break;
+                    case 'broadcast': msg = `📢 Admin: ${newNotif.body}`; break;
+                    case 'system': msg = newNotif.body; break;
+                }
+                Toast.info(msg);
             });
         }
 
