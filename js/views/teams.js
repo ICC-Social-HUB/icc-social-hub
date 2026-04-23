@@ -61,7 +61,7 @@ const TeamsView = (() => {
                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                     Back
                 </button>
-                <div class="absolute -bottom-12 left-1/2 -translate-x-1/2">
+                <div class="absolute -bottom-14 left-1/2 -translate-x-1/2">
                     <div class="avatar-ring"><div class="w-24 h-24 rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden">
                         ${lead.avatar_url 
                             ? `<img src="${lead.avatar_url}" class="w-full h-full object-cover">` 
@@ -69,7 +69,7 @@ const TeamsView = (() => {
                     </div></div>
                 </div>
             </div>
-            <div class="max-w-3xl mx-auto px-4 pt-16 pb-6">
+            <div class="max-w-3xl mx-auto px-4 pt-20 pb-6">
                 <div class="text-center mb-6">
                     <h1 class="font-heading font-bold text-2xl">${lead.team}</h1>
                     <div class="flex flex-col items-center justify-center gap-1 mt-2">
