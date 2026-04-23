@@ -564,47 +564,47 @@ const ICCSupabase = (() => {
 
     // ==================== NOTIFICATIONS ====================
 
+    // ==================== NOTIFICATIONS ====================
+
     async function fetchNotifications(limit = 100) {
         if (!client || !currentUser) return [];
-        
-        // Broadcasts last 24h, others last 30 days
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-        const { data, error } = await client.from('notifications')
-            .select('*, actor:actor_id(id, full_name, username, avatar_url)')
-            .eq('user_id', currentUser.id)
-            .gt('created_at', thirtyDaysAgo)
-            .order('created_at', { ascending: false })
-            .limit(limit);
+        try {
+            const { data, error } = await client.from('notifications')
+                .select('*, actor:actor_id(id, full_name, username, avatar_url)')
+                .eq('user_id', currentUser.id)
+                .gt('created_at', thirtyDaysAgo)
+                .order('created_at', { ascending: false })
+                .limit(limit);
 
-        if (error) { 
-            console.error('fetchNotifications error:', error); 
-            Toast.error('Error loading notifications: ' + error.message);
-            return []; 
+            if (error) throw error;
+
+            const filtered = (data || []).filter(n => {
+                if (n.type === 'broadcast') return n.created_at > oneDayAgo;
+                return true;
+            });
+
+            return filtered.map(n => ({
+                ...n,
+                actor_name: n.actor ? (n.actor.full_name || n.actor.username || 'Someone') : null,
+                actor_avatar: n.actor?.avatar_url || null
+            }));
+        } catch (err) {
+            console.error('❌ fetchNotifications failed:', err);
+            return [];
         }
-
-        // Filter broadcasts that are older than 24h
-        const filtered = (data || []).filter(n => {
-            if (n.type === 'broadcast') return n.created_at > oneDayAgo;
-            return true;
-        });
-
-        // Map actor names
-        return filtered.map(n => ({
-            ...n,
-            actor_name: n.actor ? (n.actor.full_name || n.actor.username || 'Someone') : null
-        }));
     }
 
     async function createNotification({ userId, type, actorId = null, referenceId = null, body = null }) {
-        if (!client) return { error: { message: 'Not configured' } };
-        // Don't notify yourself
-        if (actorId && userId === actorId) return { data: null, error: null };
-        const { data, error } = await client.from('notifications')
+        if (!client || !userId) return { error: { message: 'Invalid target' } };
+        // Avoid self-notification unless it's a system message
+        if (actorId && userId === actorId && type !== 'system' && type !== 'welcome') return { data: null, error: null };
+
+        return await client.from('notifications')
             .insert({ user_id: userId, type, actor_id: actorId, reference_id: referenceId, body })
             .select().single();
-        return { data, error };
     }
 
     async function markNotificationRead(notifId) {
@@ -622,26 +622,39 @@ const ICCSupabase = (() => {
 
     async function getUnreadNotifCount() {
         if (!client || !currentUser) return 0;
-        
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-
-        const { data, error } = await client.from('notifications')
-            .select('id, type, created_at')
+        
+        const { count, error } = await client.from('notifications')
+            .select('*', { count: 'exact', head: true })
             .eq('user_id', currentUser.id)
             .eq('is_read', false)
             .gt('created_at', thirtyDaysAgo);
 
-        if (error) return 0;
+        return error ? 0 : (count || 0);
+    }
 
-        const count = data.filter(n => {
-            if (n.type === 'broadcast') {
-                return n.created_at > oneDayAgo;
-            }
-            return true;
-        }).length;
+    function subscribeToNotifications(callback) {
+        if (!client || !currentUser) return;
+        const channelId = `notifs:${currentUser.id}`;
+        
+        const channel = client.channel(channelId)
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'notifications', 
+                filter: `user_id=eq.${currentUser.id}` 
+            }, async (payload) => {
+                const newNotif = payload.new;
+                if (newNotif.actor_id) {
+                    const actor = await fetchUserById(newNotif.actor_id);
+                    newNotif.actor_name = actor?.full_name || actor?.username || 'Someone';
+                    newNotif.actor_avatar = actor?.avatar_url;
+                }
+                callback(newNotif);
+            })
+            .subscribe();
 
-        return count;
+        activeChannels.push({ name: channelId, channel });
     }
 
     // ==================== STORAGE ====================
