@@ -176,8 +176,9 @@ const AdminView = (() => {
                 <table class="w-full text-left text-sm relative">
                     <thead class="sticky top-0 bg-zinc-950 z-10"><tr class="border-b border-zinc-800">
                         <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">User</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">Email</th>
                         <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">Role</th>
-                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">Team ID</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">Team</th>
                         <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase text-right">Actions</th>
                     </tr></thead>
                     <tbody>${allUsers.map(u => `
@@ -189,10 +190,15 @@ const AdminView = (() => {
                                     </div>
                                     <div class="flex flex-col">
                                         <span class="font-medium text-xs">${u.full_name || 'Anon'}</span>
-                                        <span class="text-[10px] text-zinc-500">@${u.username || ''}</span>
-                                        ${u.email ? `<span class="text-[10px] text-zinc-600 truncate max-w-[140px]" title="${u.email}">📧 ${u.email}</span>` : ''}
+                                        <span class="text-[10px] text-zinc-500">@${u.username || '—'}</span>
                                     </div>
                                 </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                ${u.email 
+                                    ? `<span class="text-xs text-zinc-300 font-mono">${u.email}</span>`
+                                    : `<span class="text-[10px] text-zinc-600 italic">No email</span>`
+                                }
                             </td>
                             <td class="px-4 py-3">
                                 <select class="user-role-select bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 w-24" data-id="${u.id}">
