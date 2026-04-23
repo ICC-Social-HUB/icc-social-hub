@@ -20,6 +20,11 @@ const _ALLOWED_EMAIL_LIST = [
     "vigneshkaushik17@gmail.com",
     "puneethagsksit@gmail.com",
     "sujay200731@gmail.com",
+    "dithyasem2@gmail.com",
+    "Sanchitburli002@gmail.com",
+    "ntarun132007@gmail.com",
+    "Shrujantejask@gmail.com",
+    "hasini01032007@gmail.com",
 
     "
 
