@@ -156,7 +156,16 @@ const ICCSupabase = (() => {
 
     async function fetchUserById(userId) {
         if (!client) return null;
-        const { data } = await client.from('profiles').select('*').eq('id', userId).single();
+        const { data } = await client.from('profiles').select('*').eq('id', userId).maybeSingle();
+        return data;
+    }
+
+    async function fetchProfileByEmail(email) {
+        if (!client || !email) return null;
+        const { data } = await client.from('profiles')
+            .select('*')
+            .eq('email', email.toLowerCase().trim())
+            .maybeSingle();
         return data;
     }
 
@@ -170,12 +179,16 @@ const ICCSupabase = (() => {
     }
 
     async function checkUsernameAvailable(username, email = null) {
-        if (!client) return false;
+        if (!client || !username) return false;
+        const targetUsername = username.toLowerCase().trim();
         const { data } = await client.from('profiles')
-            .select('email').eq('username', username).maybeSingle();
+            .select('email').eq('username', targetUsername).maybeSingle();
         
         if (!data) return true; // Not taken
-        if (email && data.email === email) return true; // It's their own username
+        // If it's taken, check if it belongs to the same email
+        if (email && data.email && data.email.toLowerCase().trim() === email.toLowerCase().trim()) {
+            return true;
+        }
         return false; // Taken by someone else
     }
 
@@ -779,7 +792,7 @@ const ICCSupabase = (() => {
 
     return {
         init, signInWithGoogle, sendOTP, verifyOTP, signOut, getSession, onAuthStateChange,
-        fetchProfile, updateProfile, fetchUserById, searchUsers, checkUsernameAvailable,
+        fetchProfile, updateProfile, fetchUserById, fetchProfileByEmail, searchUsers, checkUsernameAvailable,
         fetchPosts, fetchPostById, fetchPostsByTeam, fetchPostsByUser, createPost, deletePost,
         toggleLike, hasLiked, fetchUserLikes,
         fetchComments, addComment, deleteComment,

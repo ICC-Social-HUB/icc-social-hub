@@ -185,8 +185,21 @@ const AuthModal = (() => {
                 if (!name || !username) { errorMsg = 'Fill all fields'; mount(); return; }
                 
                 loading = true; errorMsg = ''; mount();
-                const available = await ICCSupabase.checkUsernameAvailable(username, email);
-                if (!available) { errorMsg = 'Username is already taken'; loading=false; mount(); return; }
+                
+                // Check if user already exists
+                const existingProfile = await ICCSupabase.fetchProfileByEmail(email);
+                if (existingProfile && existingProfile.username) {
+                    // They already have an account!
+                    if (username !== existingProfile.username.toLowerCase()) {
+                        errorMsg = `You already have an account with username "${existingProfile.username}". Please use that to sign up/reset or just log in.`;
+                        loading = false; mount(); return;
+                    }
+                    // If it matches, we can proceed to OTP (to reset password)
+                } else {
+                    // New user or missing username: check availability
+                    const available = await ICCSupabase.checkUsernameAvailable(username, email);
+                    if (!available) { errorMsg = 'Username is already taken by another member'; loading=false; mount(); return; }
+                }
                 
                 const metadata = { full_name: name, username: username };
                 const { error } = await ICCSupabase.sendOTP(email, metadata);
