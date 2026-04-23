@@ -55,13 +55,18 @@ const TeamsView = (() => {
 
         return `
         <section class="min-h-screen" id="team-detail-section">
-            <div class="relative h-40 sm:h-52 bg-gradient-to-br ${lead.gradient} overflow-hidden">
-                <div class="absolute inset-0 bg-zinc-950/30"></div>
+            <!-- Outer wrapper has NO overflow-hidden so the avatar can peek below freely -->
+            <div class="relative h-40 sm:h-52">
+                <!-- Background gradient clipped independently -->
+                <div class="absolute inset-0 bg-gradient-to-br ${lead.gradient} overflow-hidden">
+                    <div class="absolute inset-0 bg-zinc-950/30"></div>
+                </div>
                 <button id="team-back-btn" class="absolute top-4 left-4 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-zinc-950/50 backdrop-blur-sm rounded-lg text-xs text-zinc-300 hover:text-white border border-white/10 transition-all">
                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                     Back
                 </button>
-                <div class="absolute -bottom-14 left-1/2 -translate-x-1/2">
+                <!-- Avatar now free to overflow below the banner -->
+                <div class="absolute -bottom-12 left-1/2 -translate-x-1/2 z-10">
                     <div class="avatar-ring"><div class="w-24 h-24 rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden">
                         ${lead.avatar_url 
                             ? `<img src="${lead.avatar_url}" class="w-full h-full object-cover">` 
