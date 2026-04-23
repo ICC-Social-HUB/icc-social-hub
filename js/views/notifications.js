@@ -258,6 +258,7 @@ const NotificationsView = (() => {
             container.innerHTML = render();
             bindEvents(container);
             BottomNav.updateNotifCount();
+            NotifBell.update();
             Toast.success('All notifications marked as read');
         });
 
@@ -290,6 +291,7 @@ const NotificationsView = (() => {
                     const dot = el.querySelector('.notif-dot');
                     if (dot) dot.remove();
                     BottomNav.updateNotifCount();
+                    NotifBell.update();
                 }
 
                 // Navigate

@@ -27,6 +27,7 @@
                     window.dispatchEvent(new Event('hashchange'));
                 }
                 BottomNav.updateAllBadges();
+                NotifBell.update();
             }
             if (event === 'SIGNED_OUT') {
                 window.location.hash = '#feed';
@@ -47,11 +48,13 @@
         // 8. Subscribe to incoming messages & notifications for badges
         if (session) {
             BottomNav.updateAllBadges();
+            NotifBell.update();
             ICCSupabase.subscribeToMessages(() => {
                 BottomNav.updateUnreadCount();
             });
             ICCSupabase.subscribeToNotifications(() => {
                 BottomNav.updateNotifCount();
+                NotifBell.update();
             });
         }
 

@@ -12,7 +12,7 @@ const BottomNav = (() => {
             { id:'feed', hash:'#feed', label:'Feed', icon:feedIcon },
             { id:'teams', hash:'#teams', label:'Teams', icon:teamsIcon },
             { id:'fab', isFab:true },
-            { id:'notifications', hash:'#notifications', label:'Alerts', icon:notifIcon, badge:unreadNotifs },
+            { id:'chat', hash:'#chat', label:'Chat', icon:chatIcon, badge:unreadMessages },
             { id:'profile', hash:'#profile', label:'Profile', icon:profileIcon }
         ];
         const mobile = `<nav class="bottom-nav md:hidden" id="bottom-nav"><div class="flex items-end justify-around px-2 pt-1 pb-1 max-w-lg mx-auto">${tabs.map(t=>{
@@ -24,7 +24,6 @@ const BottomNav = (() => {
             { id:'feed', hash:'#feed', label:'Feed', icon:feedIcon },
             { id:'teams', hash:'#teams', label:'Teams', icon:teamsIcon },
             { id:'chat', hash:'#chat', label:'Chat', icon:chatIcon, badge:unreadMessages },
-            { id:'notifications', hash:'#notifications', label:'Alerts', icon:notifIcon, badge:unreadNotifs },
             { id:'profile', hash:'#profile', label:'Profile', icon:profileIcon }
         ];
         const desktop = `<nav class="desktop-nav hidden md:flex" id="desktop-nav"><a href="#feed" class="block mb-4 mt-2"><div class="w-10 h-10 bg-gradient-to-br from-red-600 to-rose-700 rounded-xl flex items-center justify-center font-heading font-bold text-xs">ICC</div></a><div class="flex-1 flex flex-col items-center gap-1 mt-4">${desktopTabs.map(t=>{const a=h.startsWith(t.hash);return `<a href="${t.hash}" class="desktop-nav-item ${a?'active':''}" title="${t.label}" id="dnav-${t.id}">${t.icon(a)}${t.badge>0?`<span class="nav-badge" style="top:4px;right:4px;transform:none">${t.badge>9?'9+':t.badge}</span>`:''}</a>`;}).join('')}<button class="desktop-nav-item mt-2" id="desktop-fab-btn" title="Create Post" style="color:#E11D48"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button></div>${ICCSupabase.isAdmin()?`<a href="#admin" class="desktop-nav-item mb-4 ${h==='#admin'?'active':''}" title="Admin"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></a>`:''}</nav>`;
