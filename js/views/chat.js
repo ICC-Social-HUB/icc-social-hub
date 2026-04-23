@@ -7,18 +7,25 @@ const ChatView = (() => {
 
     function renderList() {
         return `
-        <section class="min-h-screen pt-2 pb-4 px-4" id="chat-section">
-            <div class="max-w-lg mx-auto">
-                <div class="flex items-center justify-between mb-4 px-1">
-                    <h1 class="font-heading font-bold text-xl">Messages</h1>
-                    <button id="new-chat-btn" class="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors" title="New message">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                    </button>
+        <section class="min-h-screen pb-4" id="chat-section">
+            <div class="sticky top-0 z-20 bg-obsidian/80 backdrop-blur-md border-b border-zinc-800/50 px-4 py-4 mb-4">
+                <div class="max-w-lg mx-auto flex flex-col items-center gap-4">
+                    <h1 class="font-heading font-bold text-xl tracking-tight">Messages</h1>
+                    <div class="flex items-center gap-3 w-full">
+                        <div id="search-bar-wrapper" class="flex-1 relative">
+                            <input type="text" id="user-search-input" placeholder="Search users to chat..." class="form-input w-full pl-10 pr-4 py-2.5 bg-zinc-900/50 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600 focus:border-red-600/50 transition-all">
+                            <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            </div>
+                        </div>
+                        <button id="new-chat-btn" class="w-10 h-10 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-all shadow-lg shadow-red-600/20 flex items-center justify-center flex-shrink-0" title="New message">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        </button>
+                    </div>
+                    <div id="user-search-results" class="w-full space-y-1 hidden absolute top-[calc(100%+8px)] bg-zinc-900 border border-zinc-800 rounded-2xl p-2 shadow-2xl max-h-80 overflow-y-auto"></div>
                 </div>
-                <div id="search-user-area" class="hidden mb-4">
-                    <input type="text" id="user-search-input" placeholder="Search users..." class="form-input w-full px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600">
-                    <div id="user-search-results" class="mt-2 space-y-1"></div>
-                </div>
+            </div>
+            <div class="max-w-lg mx-auto px-4">
                 <div id="conversations-list">
                     ${conversations.length === 0 ? `
                     <div class="empty-state">
@@ -75,28 +82,48 @@ const ChatView = (() => {
                 window.location.hash = `#chat/${item.dataset.partnerId}`;
             });
         });
-        let searchOpen = false;
+
         document.getElementById('new-chat-btn')?.addEventListener('click', () => {
-            searchOpen = !searchOpen;
-            const area = document.getElementById('search-user-area');
-            if (area) { area.classList.toggle('hidden'); if (searchOpen) document.getElementById('user-search-input')?.focus(); }
+            document.getElementById('user-search-input')?.focus();
         });
+
         let searchTimeout;
         document.getElementById('user-search-input')?.addEventListener('input', e => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(async () => {
                 const query = e.target.value.trim();
                 const results = document.getElementById('user-search-results');
-                if (!results || query.length < 2) { if (results) results.innerHTML = ''; return; }
+                if (!results) return;
+                if (query.length < 1) { results.innerHTML = ''; results.classList.add('hidden'); return; }
+
                 const users = await ICCSupabase.searchUsers(query);
                 const myId = ICCSupabase.getUser()?.id;
-                results.innerHTML = users.filter(u => u.id !== myId).map(u => `
-                    <div class="conversation-item flex items-center gap-3 px-3 py-2.5 cursor-pointer" data-partner-id="${u.id}">
-                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center text-xs font-bold flex-shrink-0 overflow-hidden">${u.avatar_url ? `<img src="${u.avatar_url}" class="w-full h-full object-cover">` : (u.full_name || '?').charAt(0).toUpperCase()}</div>
-                        <div><p class="text-sm font-medium">${u.username || u.full_name || 'User'}</p></div>
-                    </div>`).join('') || '<p class="text-xs text-zinc-600 text-center py-2">No users found</p>';
+                const filtered = users.filter(u => u.id !== myId);
+                
+                if (filtered.length === 0) {
+                    results.innerHTML = '<p class="text-xs text-zinc-600 p-2">No users found</p>';
+                    results.classList.remove('hidden');
+                    return;
+                }
+
+                results.innerHTML = filtered.map(u => `
+                    <div class="conversation-item flex items-center gap-3 px-3 py-2.5 bg-zinc-900/50 hover:bg-zinc-800 rounded-xl cursor-pointer transition-colors" data-partner-id="${u.id}">
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0 overflow-hidden">
+                            ${u.avatar_url ? `<img src="${u.avatar_url}" class="w-full h-full object-cover">` : (u.full_name || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold truncate">${u.full_name || u.username || 'User'}</p>
+                            <p class="text-[11px] text-zinc-500 truncate">@${u.username || 'anon'}</p>
+                        </div>
+                    </div>
+                `).join('');
+                results.classList.remove('hidden');
+                
+                // Re-bind results
                 results.querySelectorAll('.conversation-item').forEach(item => {
-                    item.addEventListener('click', () => { window.location.hash = `#chat/${item.dataset.partnerId}`; });
+                    item.addEventListener('click', () => {
+                        window.location.hash = `#chat/${item.dataset.partnerId}`;
+                    });
                 });
             }, 300);
         });
