@@ -1,10 +1,10 @@
 /* ============================================
-   ICC Social Hub — Auth Modal (OTP Only)
+   ICC Social Hub — Auth Modal (OTP Signup, Password Login)
    Access restricted to approved emails.
    ============================================ */
 const AuthModal = (() => {
     let isOpen = false;
-    let step = 'main'; // main, otp-sent, verifying
+    let step = 'main'; // main, otp-sent, set-password
     let authMode = 'login'; // login, signup
     let email = '';
     let loading = false;
@@ -21,6 +21,10 @@ const AuthModal = (() => {
 
     function render() {
         if (!isOpen) return '';
+        let title = 'Join ICC';
+        if (step === 'otp-sent') title = 'Verify Email';
+        if (step === 'set-password') title = 'Create Password';
+
         return `
         <div class="modal-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4" id="auth-overlay">
             <div class="modal-content bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
@@ -31,16 +35,22 @@ const AuthModal = (() => {
                     <div class="flex items-center gap-3 mb-1">
                         <div class="w-10 h-10 bg-gradient-to-br from-red-600 to-rose-700 rounded-xl flex items-center justify-center font-heading font-bold text-sm">ICC</div>
                         <div>
-                            <h2 class="font-heading font-bold text-lg">${step === 'main' ? 'Join ICC' : 'Verify Email'}</h2>
+                            <h2 class="font-heading font-bold text-lg">${title}</h2>
                             <p class="text-xs text-zinc-500">Innovation Social Hub</p>
                         </div>
                     </div>
                 </div>
                 <div class="px-6 pb-6">
-                    ${step === 'main' ? renderMain() : renderOTP()}
+                    ${renderContent()}
                 </div>
             </div>
         </div>`;
+    }
+
+    function renderContent() {
+        if (step === 'otp-sent') return renderOTP();
+        if (step === 'set-password') return renderSetPassword();
+        return renderMain();
     }
 
     function renderMain() {
@@ -52,7 +62,7 @@ const AuthModal = (() => {
         <div class="px-3 py-2.5 bg-zinc-800/60 border border-zinc-700/50 rounded-xl mb-4">
             <p class="text-[11px] text-zinc-400 text-center">🔒 Access is restricted to approved ICC members only</p>
         </div>
-        <form id="otp-email-form" class="space-y-3">
+        <form id="auth-form" class="space-y-3">
             ${authMode === 'signup' ? `
             <div>
                 <label class="block text-xs font-medium text-zinc-400 mb-1.5">Full Name</label>
@@ -64,11 +74,19 @@ const AuthModal = (() => {
             </div>` : ''}
             <div>
                 <label class="block text-xs font-medium text-zinc-400 mb-1.5">Email address</label>
-                <input type="email" id="auth-email" placeholder="you@example.com" required class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm placeholder-zinc-600">
+                <input type="email" id="auth-email" placeholder="you@example.com" value="${email}" required class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm placeholder-zinc-600">
             </div>
+            ${authMode === 'login' ? `
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="block text-xs font-medium text-zinc-400">Password</label>
+                    <button type="button" class="text-[10px] text-zinc-500 hover:text-white transition-colors" onclick="Toast.info('Contact admin to reset password')">Forgot?</button>
+                </div>
+                <input type="password" id="auth-password" placeholder="••••••••" required class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm placeholder-zinc-600">
+            </div>` : ''}
             ${errorMsg ? `<div class="px-3 py-2 bg-red-900/30 border border-red-800/50 rounded-lg"><p class="text-sm text-red-400">${errorMsg}</p></div>` : ''}
             <button type="submit" class="w-full py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 border border-zinc-700" ${loading ? 'disabled' : ''}>
-                ${loading ? '<div class="spinner spinner-sm"></div>' : 'Send Login Code'}
+                ${loading ? '<div class="spinner spinner-sm"></div>' : (authMode === 'login' ? 'Sign In' : 'Send Code')}
             </button>
         </form>
         <p class="text-[11px] text-zinc-600 text-center mt-4">By signing in, you agree to ICC's community guidelines</p>`;
@@ -78,7 +96,7 @@ const AuthModal = (() => {
         return `
         <div class="text-center mb-5">
             <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center mx-auto mb-3">
-                <svg class="w-6 h-6 text-crimson" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <svg class="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
             </div>
             <p class="text-sm text-zinc-400">We sent a 6-digit code to</p>
             <p class="text-sm font-semibold text-white mt-1">${email}</p>
@@ -89,10 +107,35 @@ const AuthModal = (() => {
             </div>
             ${errorMsg ? `<div class="px-3 py-2 bg-red-900/30 border border-red-800/50 rounded-lg"><p class="text-sm text-red-400">${errorMsg}</p></div>` : ''}
             <button type="submit" class="w-full py-3 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50" ${loading ? 'disabled' : ''}>
-                ${loading ? '<div class="spinner spinner-sm"></div>' : 'Verify & Sign In'}
+                ${loading ? '<div class="spinner spinner-sm"></div>' : 'Verify Code'}
             </button>
         </form>
-        <button id="otp-back-btn" class="w-full mt-3 py-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">← Use a different email</button>`;
+        <button id="otp-back-btn" class="w-full mt-3 py-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">← Go back</button>`;
+    }
+
+    function renderSetPassword() {
+        return `
+        <div class="text-center mb-5">
+            <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <svg class="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </div>
+            <p class="text-sm text-zinc-400">One last step!</p>
+            <p class="text-xs text-zinc-500 mt-1">Create a password for your next login</p>
+        </div>
+        <form id="set-password-form" class="space-y-3">
+            <div>
+                <label class="block text-xs font-medium text-zinc-400 mb-1.5">New Password</label>
+                <input type="password" id="new-password" placeholder="Min 6 characters" required minlength="6" class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-zinc-400 mb-1.5">Confirm Password</label>
+                <input type="password" id="confirm-password" placeholder="Re-type password" required minlength="6" class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm">
+            </div>
+            ${errorMsg ? `<div class="px-3 py-2 bg-red-900/30 border border-red-800/50 rounded-lg"><p class="text-sm text-red-400">${errorMsg}</p></div>` : ''}
+            <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50" ${loading ? 'disabled' : ''}>
+                ${loading ? '<div class="spinner spinner-sm"></div>' : 'Set Password & Finish'}
+            </button>
+        </form>`;
     }
 
     function mount() {
@@ -105,41 +148,52 @@ const AuthModal = (() => {
         document.getElementById('auth-close')?.addEventListener('click', close);
         document.getElementById('auth-overlay')?.addEventListener('click', e => { if (e.target.id === 'auth-overlay') close(); });
 
-        // Google login removed — OTP only with allowlist enforcement
-
         document.getElementById('tab-login')?.addEventListener('click', () => { authMode = 'login'; errorMsg=''; mount(); });
         document.getElementById('tab-signup')?.addEventListener('click', () => { authMode = 'signup'; errorMsg=''; mount(); });
 
-        // OTP email form — allowlist enforced
-        document.getElementById('otp-email-form')?.addEventListener('submit', async e => {
+        // Main Auth Form (Login or Send OTP for Signup)
+        document.getElementById('auth-form')?.addEventListener('submit', async e => {
             e.preventDefault();
             email = document.getElementById('auth-email')?.value?.trim().toLowerCase();
             if (!email) { errorMsg = 'Enter your email'; mount(); return; }
 
-            // Allowlist check — reject emails not in the approved list
+            // Allowlist check
             if (!isEmailAllowed(email)) {
                 errorMsg = 'This email is not registered for ICC access. Contact your admin.';
                 mount();
                 return;
             }
 
-            let metadata = null;
-            if (authMode === 'signup') {
+            if (authMode === 'login') {
+                const password = document.getElementById('auth-password')?.value;
+                if (!password) { errorMsg = 'Enter your password'; mount(); return; }
+                loading = true; errorMsg = ''; mount();
+                const { error } = await ICCSupabase.signInWithPassword(email, password);
+                loading = false;
+                if (error) { 
+                    errorMsg = error.message; 
+                    if (error.message.includes('Invalid login credentials')) {
+                        errorMsg = 'Invalid email or password. If you haven\'t signed up yet, use the Sign Up tab.';
+                    }
+                    mount(); 
+                }
+                else { close(); handleAuthSuccess(); }
+            } else {
+                // Signup: Send OTP
                 const name = document.getElementById('auth-name')?.value?.trim();
                 const username = document.getElementById('auth-username')?.value?.trim().toLowerCase();
                 if (!name || !username) { errorMsg = 'Fill all fields'; mount(); return; }
+                
                 loading = true; errorMsg = ''; mount();
                 const available = await ICCSupabase.checkUsernameAvailable(username);
                 if (!available) { errorMsg = 'Username is already taken'; loading=false; mount(); return; }
-                metadata = { full_name: name, username: username };
-            } else {
-                loading = true; errorMsg = ''; mount();
+                
+                const metadata = { full_name: name, username: username };
+                const { error } = await ICCSupabase.sendOTP(email, metadata);
+                loading = false;
+                if (error) { errorMsg = error.message; mount(); }
+                else { step = 'otp-sent'; mount(); setupOTPInputs(); }
             }
-
-            const { error } = await ICCSupabase.sendOTP(email, metadata);
-            loading = false;
-            if (error) { errorMsg = error.message; mount(); }
-            else { step = 'otp-sent'; mount(); setupOTPInputs(); }
         });
 
         // OTP verify form
@@ -148,10 +202,26 @@ const AuthModal = (() => {
             const inputs = document.querySelectorAll('.otp-input');
             const code = Array.from(inputs).map(i => i.value).join('');
             if (code.length !== 6) { errorMsg = 'Enter the 6-digit code'; mount(); return; }
+            
             loading = true; errorMsg = ''; mount();
             const { error } = await ICCSupabase.verifyOTP(email, code);
             loading = false;
             if (error) { errorMsg = error.message; mount(); setupOTPInputs(); }
+            else { step = 'set-password'; mount(); }
+        });
+
+        // Set Password form
+        document.getElementById('set-password-form')?.addEventListener('submit', async e => {
+            e.preventDefault();
+            const p1 = document.getElementById('new-password').value;
+            const p2 = document.getElementById('confirm-password').value;
+            if (p1 !== p2) { errorMsg = 'Passwords do not match'; mount(); return; }
+            if (p1.length < 6) { errorMsg = 'Password must be at least 6 characters'; mount(); return; }
+
+            loading = true; errorMsg = ''; mount();
+            const { error } = await ICCSupabase.updatePassword(p1);
+            loading = false;
+            if (error) { errorMsg = error.message; mount(); }
             else { close(); handleAuthSuccess(); }
         });
 
@@ -198,3 +268,4 @@ const AuthModal = (() => {
 
     return { open, close, mount };
 })();
+

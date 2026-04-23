@@ -63,6 +63,24 @@ const ICCSupabase = (() => {
         return { data, error };
     }
 
+    // Email/Password: login
+    async function signInWithPassword(email, password) {
+        if (!client) return { error: { message: 'Supabase not configured' } };
+        const { data, error } = await client.auth.signInWithPassword({ email, password });
+        if (!error && data.user) {
+            currentUser = data.user;
+            await fetchProfile();
+        }
+        return { data, error };
+    }
+
+    // Update password (used after OTP verify on signup)
+    async function updatePassword(newPassword) {
+        if (!client) return { error: { message: 'Supabase not configured' } };
+        const { data, error } = await client.auth.updateUser({ password: newPassword });
+        return { data, error };
+    }
+
     async function signOut() {
         if (!client) return;
         cleanupAllChannels();
@@ -771,6 +789,7 @@ const ICCSupabase = (() => {
         getAllProfiles, getAllPosts,
         fetchNotifications, createNotification, markNotificationRead, markAllNotificationsRead, getUnreadNotifCount,
         uploadImage, deleteImage,
+        signInWithPassword, updatePassword,
         subscribeToFeed, subscribeToMessages, subscribeToConversation,
         subscribeToTeam, subscribeToBroadcasts, subscribeToNotifications,
         unsubscribeChannel, cleanupAllChannels,
