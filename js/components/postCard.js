@@ -191,16 +191,23 @@ const PostCard = (() => {
         // Delete comment
         section.querySelectorAll('.delete-comment-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
-                if (!confirm('Delete this comment?')) return;
                 const commentId = btn.dataset.commentId;
-                btn.style.opacity = '0.5';
-                const { error } = await ICCSupabase.deleteComment(commentId);
-                if (error) { 
-                    console.error('Delete comment error:', error);
-                    Toast.error('Failed to delete comment: ' + (error.message || 'Unknown error')); 
-                    btn.style.opacity = '1'; 
+                const commentEl = btn.closest('.flex');
+                
+                if (confirm('Delete this comment?')) {
+                    if (commentEl) commentEl.style.opacity = '0.3';
+                    const { error } = await ICCSupabase.deleteComment(commentId);
+                    if (error) { 
+                        console.error('Delete comment error:', error);
+                        Toast.error('Failed to delete comment: ' + (error.message || 'Unknown error')); 
+                        if (commentEl) commentEl.style.opacity = '1';
+                    } else {
+                        Toast.success('Comment deleted');
+                        if (commentEl) commentEl.remove();
+                        // Re-load to sync count/state
+                        await loadComments(postId, section);
+                    }
                 }
-                else await loadComments(postId, section);
             });
         });
     }

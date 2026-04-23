@@ -318,7 +318,13 @@ const ICCSupabase = (() => {
 
     async function deleteComment(commentId) {
         if (!client) return { error: { message: 'Not configured' } };
-        const { error } = await client.from('comments').delete().eq('id', commentId);
+        const { error, count } = await client.from('comments')
+            .delete({ count: 'exact' })
+            .eq('id', commentId);
+        
+        if (!error && count === 0) {
+            return { error: { message: 'Permission denied or comment not found' } };
+        }
         return { error };
     }
 
