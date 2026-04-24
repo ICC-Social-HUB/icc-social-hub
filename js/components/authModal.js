@@ -154,53 +154,101 @@ const AuthModal = (() => {
         // Main Auth Form (Login or Send OTP for Signup)
         document.getElementById('auth-form')?.addEventListener('submit', async e => {
             e.preventDefault();
-            email = document.getElementById('auth-email')?.value?.trim().toLowerCase();
-            if (!email) { errorMsg = 'Enter your email'; mount(); return; }
 
-            // Allowlist check
-            if (!isEmailAllowed(email)) {
-                errorMsg = 'This email is not registered for ICC access. Contact your admin.';
-                mount();
-                return;
-            }
+            // Helper: highlight an input as invalid
+            const markInvalid = (id) => {
+                const el = document.getElementById(id);
+                if (el) el.style.borderColor = '#f43f5e';
+            };
+            const clearInvalid = (...ids) => {
+                ids.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.borderColor = '';
+                });
+            };
 
             if (authMode === 'login') {
+                const emailVal = document.getElementById('auth-email')?.value?.trim().toLowerCase();
                 const password = document.getElementById('auth-password')?.value;
-                if (!password) { errorMsg = 'Enter your password'; mount(); return; }
+
+                clearInvalid('auth-email', 'auth-password');
+
+                if (!emailVal && !password) {
+                    errorMsg = 'Email and password are required to log in.';
+                    markInvalid('auth-email'); markInvalid('auth-password');
+                    mount(); return;
+                }
+                if (!emailVal) {
+                    errorMsg = 'Please enter your email address.';
+                    markInvalid('auth-email'); mount(); return;
+                }
+                if (!password) {
+                    errorMsg = 'Please enter your password.';
+                    markInvalid('auth-password'); mount(); return;
+                }
+
+                email = emailVal;
+
+                // Allowlist check
+                if (!isEmailAllowed(email)) {
+                    errorMsg = 'This email is not registered for ICC access. Contact your admin.';
+                    markInvalid('auth-email'); mount(); return;
+                }
+
                 loading = true; errorMsg = ''; mount();
                 const { error } = await ICCSupabase.signInWithPassword(email, password);
                 loading = false;
-                if (error) { 
-                    errorMsg = error.message; 
+                if (error) {
+                    errorMsg = error.message;
                     if (error.message.includes('Invalid login credentials')) {
                         errorMsg = 'Invalid email or password. If you haven\'t signed up yet, use the Sign Up tab.';
                     }
-                    mount(); 
-                }
-                else { close(); handleAuthSuccess(); }
+                    mount();
+                } else { close(); handleAuthSuccess(); }
+
             } else {
-                // Signup: Send OTP
-                const name = document.getElementById('auth-name')?.value?.trim();
+                // Signup: validate all fields before sending OTP
+                const name     = document.getElementById('auth-name')?.value?.trim();
                 const username = document.getElementById('auth-username')?.value?.trim().toLowerCase();
-                if (!name || !username) { errorMsg = 'Fill all fields'; mount(); return; }
-                
+                const emailVal = document.getElementById('auth-email')?.value?.trim().toLowerCase();
+
+                clearInvalid('auth-name', 'auth-username', 'auth-email');
+
+                if (!name) {
+                    errorMsg = 'Full name is required.';
+                    markInvalid('auth-name'); mount(); return;
+                }
+                if (!username) {
+                    errorMsg = 'Username is required.';
+                    markInvalid('auth-username'); mount(); return;
+                }
+                if (!emailVal) {
+                    errorMsg = 'Email address is required.';
+                    markInvalid('auth-email'); mount(); return;
+                }
+
+                email = emailVal;
+
+                // Allowlist check
+                if (!isEmailAllowed(email)) {
+                    errorMsg = 'This email is not registered for ICC access. Contact your admin.';
+                    markInvalid('auth-email'); mount(); return;
+                }
+
                 loading = true; errorMsg = ''; mount();
-                
+
                 // Check if user already exists
                 const existingProfile = await ICCSupabase.fetchProfileByEmail(email);
                 if (existingProfile && existingProfile.username) {
-                    // They already have an account!
                     if (username !== existingProfile.username.toLowerCase()) {
                         errorMsg = `You already have an account with username "${existingProfile.username}". Please use that to sign up/reset or just log in.`;
                         loading = false; mount(); return;
                     }
-                    // If it matches, we can proceed to OTP (to reset password)
                 } else {
-                    // New user or missing username: check availability
                     const available = await ICCSupabase.checkUsernameAvailable(username, email);
-                    if (!available) { errorMsg = 'Username is already taken by another member'; loading=false; mount(); return; }
+                    if (!available) { errorMsg = 'Username is already taken by another member'; loading = false; mount(); return; }
                 }
-                
+
                 const metadata = { full_name: name, username: username };
                 const { error } = await ICCSupabase.sendOTP(email, metadata);
                 loading = false;
