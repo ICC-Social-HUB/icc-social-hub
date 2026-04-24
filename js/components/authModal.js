@@ -4,7 +4,7 @@
    ============================================ */
 const AuthModal = (() => {
     let isOpen = false;
-    let step = 'main'; // main, otp-sent, set-password
+    let step = 'main'; // main, otp-sent, set-password, forgot-email, forgot-otp, forgot-reset
     let authMode = 'login'; // login, signup
     let email = '';
     let loading = false;
@@ -24,6 +24,9 @@ const AuthModal = (() => {
         let title = 'Join ICC';
         if (step === 'otp-sent') title = 'Verify Email';
         if (step === 'set-password') title = 'Create Password';
+        if (step === 'forgot-email') title = 'Reset Password';
+        if (step === 'forgot-otp') title = 'Verify Email';
+        if (step === 'forgot-reset') title = 'New Password';
 
         return `
         <div class="modal-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4" id="auth-overlay">
@@ -50,6 +53,9 @@ const AuthModal = (() => {
     function renderContent() {
         if (step === 'otp-sent') return renderOTP();
         if (step === 'set-password') return renderSetPassword();
+        if (step === 'forgot-email') return renderForgotEmail();
+        if (step === 'forgot-otp') return renderForgotOTP();
+        if (step === 'forgot-reset') return renderForgotReset();
         return renderMain();
     }
 
@@ -80,7 +86,7 @@ const AuthModal = (() => {
             <div>
                 <div class="flex items-center justify-between mb-1.5">
                     <label class="block text-xs font-medium text-zinc-400">Password</label>
-                    <button type="button" class="text-[10px] text-zinc-500 hover:text-white transition-colors" onclick="Toast.info('Contact admin to reset password')">Forgot?</button>
+                    <button type="button" id="forgot-password-btn" class="text-[10px] text-zinc-500 hover:text-white transition-colors">Forgot?</button>
                 </div>
                 <input type="password" id="auth-password" placeholder="••••••••" required class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm placeholder-zinc-600">
             </div>` : ''}
@@ -134,6 +140,72 @@ const AuthModal = (() => {
             ${errorMsg ? `<div class="px-3 py-2 bg-red-900/30 border border-red-800/50 rounded-lg"><p class="text-sm text-red-400">${errorMsg}</p></div>` : ''}
             <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50" ${loading ? 'disabled' : ''}>
                 ${loading ? '<div class="spinner spinner-sm"></div>' : 'Set Password & Finish'}
+            </button>
+        </form>`;
+    }
+
+    function renderForgotEmail() {
+        return `
+        <div class="text-center mb-5">
+            <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <svg class="w-6 h-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+            </div>
+            <p class="text-sm text-zinc-400">Enter your registered email and we'll send a verification code to reset your password.</p>
+        </div>
+        <form id="forgot-email-form" class="space-y-3">
+            <div>
+                <label class="block text-xs font-medium text-zinc-400 mb-1.5">Email address</label>
+                <input type="email" id="forgot-email-input" placeholder="you@example.com" class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm placeholder-zinc-600">
+            </div>
+            ${errorMsg ? `<div class="px-3 py-2 bg-red-900/30 border border-red-800/50 rounded-lg"><p class="text-sm text-red-400">${errorMsg}</p></div>` : ''}
+            <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-black rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50" ${loading ? 'disabled' : ''}>
+                ${loading ? '<div class="spinner spinner-sm"></div>' : 'Send Reset Code'}
+            </button>
+        </form>
+        <button id="forgot-back-btn" class="w-full mt-3 py-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">← Back to Login</button>`;
+    }
+
+    function renderForgotOTP() {
+        return `
+        <div class="text-center mb-5">
+            <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <svg class="w-6 h-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            </div>
+            <p class="text-sm text-zinc-400">Enter the 6-digit code sent to</p>
+            <p class="text-sm font-semibold text-white mt-1">${email}</p>
+        </div>
+        <form id="forgot-otp-form" class="space-y-4">
+            <div class="flex justify-center gap-2" id="otp-inputs">
+                ${[0,1,2,3,4,5].map(i => `<input type="text" maxlength="1" class="otp-input" data-idx="${i}" inputmode="numeric" autocomplete="one-time-code">`).join('')}
+            </div>
+            ${errorMsg ? `<div class="px-3 py-2 bg-red-900/30 border border-red-800/50 rounded-lg"><p class="text-sm text-red-400">${errorMsg}</p></div>` : ''}
+            <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-black rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50" ${loading ? 'disabled' : ''}>
+                ${loading ? '<div class="spinner spinner-sm"></div>' : 'Verify Code'}
+            </button>
+        </form>
+        <button id="forgot-otp-back-btn" class="w-full mt-3 py-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">← Go back</button>`;
+    }
+
+    function renderForgotReset() {
+        return `
+        <div class="text-center mb-5">
+            <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <svg class="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </div>
+            <p class="text-sm text-zinc-400">Set your new password</p>
+        </div>
+        <form id="forgot-reset-form" class="space-y-3">
+            <div>
+                <label class="block text-xs font-medium text-zinc-400 mb-1.5">New Password</label>
+                <input type="password" id="forgot-new-password" placeholder="Min 6 characters" minlength="6" class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-zinc-400 mb-1.5">Confirm Password</label>
+                <input type="password" id="forgot-confirm-password" placeholder="Re-type password" minlength="6" class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm">
+            </div>
+            ${errorMsg ? `<div class="px-3 py-2 bg-red-900/30 border border-red-800/50 rounded-lg"><p class="text-sm text-red-400">${errorMsg}</p></div>` : ''}
+            <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50" ${loading ? 'disabled' : ''}>
+                ${loading ? '<div class="spinner spinner-sm"></div>' : 'Reset Password'}
             </button>
         </form>`;
     }
@@ -286,16 +358,70 @@ const AuthModal = (() => {
             else { close(); handleAuthSuccess(); }
         });
 
-        // Back to email
+        // Back buttons
         document.getElementById('otp-back-btn')?.addEventListener('click', () => {
             step = 'main'; errorMsg = ''; mount();
+        });
+        document.getElementById('forgot-password-btn')?.addEventListener('click', () => {
+            step = 'forgot-email'; errorMsg = ''; mount();
+        });
+        document.getElementById('forgot-back-btn')?.addEventListener('click', () => {
+            step = 'main'; authMode = 'login'; errorMsg = ''; mount();
+        });
+        document.getElementById('forgot-otp-back-btn')?.addEventListener('click', () => {
+            step = 'forgot-email'; errorMsg = ''; mount();
+        });
+
+        // Forgot password — send OTP
+        document.getElementById('forgot-email-form')?.addEventListener('submit', async e => {
+            e.preventDefault();
+            const emailVal = document.getElementById('forgot-email-input')?.value?.trim().toLowerCase();
+            if (!emailVal) { errorMsg = 'Please enter your email address.'; mount(); return; }
+            if (!isEmailAllowed(emailVal)) {
+                errorMsg = 'This email is not registered for ICC access.';
+                mount(); return;
+            }
+            email = emailVal;
+            loading = true; errorMsg = ''; mount();
+            const { error } = await ICCSupabase.sendOTP(email);
+            loading = false;
+            if (error) { errorMsg = error.message; mount(); }
+            else { step = 'forgot-otp'; mount(); setupOTPInputs(); }
+        });
+
+        // Forgot password — verify OTP
+        document.getElementById('forgot-otp-form')?.addEventListener('submit', async e => {
+            e.preventDefault();
+            const inputs = document.querySelectorAll('.otp-input');
+            const code = Array.from(inputs).map(i => i.value).join('');
+            if (code.length !== 6) { errorMsg = 'Enter the 6-digit code'; mount(); return; }
+            loading = true; errorMsg = ''; mount();
+            const { error } = await ICCSupabase.verifyOTP(email, code);
+            loading = false;
+            if (error) { errorMsg = error.message; mount(); setupOTPInputs(); }
+            else { step = 'forgot-reset'; mount(); }
+        });
+
+        // Forgot password — set new password
+        document.getElementById('forgot-reset-form')?.addEventListener('submit', async e => {
+            e.preventDefault();
+            const p1 = document.getElementById('forgot-new-password').value;
+            const p2 = document.getElementById('forgot-confirm-password').value;
+            if (!p1) { errorMsg = 'Please enter a new password.'; mount(); return; }
+            if (p1.length < 6) { errorMsg = 'Password must be at least 6 characters.'; mount(); return; }
+            if (p1 !== p2) { errorMsg = 'Passwords do not match.'; mount(); return; }
+            loading = true; errorMsg = ''; mount();
+            const { error } = await ICCSupabase.updatePassword(p1);
+            loading = false;
+            if (error) { errorMsg = error.message; mount(); }
+            else { close(); Toast.success('Password reset successfully! 🔑'); handleAuthSuccess(); }
         });
 
         // ESC key
         const escFn = e => { if (e.key === 'Escape' && isOpen) { close(); document.removeEventListener('keydown', escFn); } };
         document.addEventListener('keydown', escFn);
 
-        if (step === 'otp-sent') setupOTPInputs();
+        if (step === 'otp-sent' || step === 'forgot-otp') setupOTPInputs();
     }
 
     function setupOTPInputs() {
