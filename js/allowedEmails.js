@@ -97,6 +97,7 @@ const _ALLOWED_EMAIL_LIST = [
     "dhanushshettyd2007@gmail.com",
     "sinchanarkashyap@gmail.com",
     "mohands0810@gmail.com",
+    "karthikhadapad0@gmail.com",
 
 ];
 // Internal lookup set (auto-built, case-insensitive — don't edit this)

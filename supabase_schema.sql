@@ -200,6 +200,10 @@ CREATE POLICY "Receiver can mark messages as read"
     ON public.messages FOR UPDATE
     USING (auth.uid() = receiver_id);
 
+CREATE POLICY "Sender can delete their own messages"
+    ON public.messages FOR DELETE
+    USING (auth.uid() = sender_id);
+
 -- ==========================================
 -- 6. BROADCASTS TABLE
 -- ==========================================
