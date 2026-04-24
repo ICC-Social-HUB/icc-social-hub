@@ -28,7 +28,10 @@ const ChatPanel = (() => {
                 messages.map(m => {
                     const isSent = m.sender_id === userId;
                     const time = new Date(m.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                    return `<div class="flex ${isSent ? 'justify-end' : 'justify-start'}">
+                    return `<div class="flex ${isSent ? 'justify-end' : 'justify-start'} group" id="msg-${m.id || m.temp_id}">
+                        ${isSent ? `<button type="button" class="delete-msg-btn opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-red-500 transition-all mr-2 self-center" data-msg-id="${m.id || m.temp_id}" title="Delete Message">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>` : ''}
                         <div class="chat-bubble ${isSent ? 'chat-bubble-sent' : 'chat-bubble-received'}">
                             <p>${escapeHtml(m.content)}</p>
                             <p class="text-[10px] ${isSent ? 'text-white/50' : 'text-zinc-500'} mt-1 text-right">${time}</p>
@@ -56,10 +59,27 @@ const ChatPanel = (() => {
         bindEvents(container);
         // Realtime
         ICCSupabase.subscribeToConversation(partnerId, msg => {
-            messages.push(msg);
-            appendMessage(msg);
-            ICCSupabase.markAsRead(partnerId);
+            if (!messages.find(m => m.id === msg.id)) {
+                messages.push(msg);
+                appendMessage(msg);
+                ICCSupabase.markAsRead(partnerId);
+            }
+        }, deletedMsgId => {
+            removeMessage(deletedMsgId);
         });
+    }
+
+    function removeMessage(id) {
+        messages = messages.filter(m => m.id !== id && m.temp_id !== id);
+        const el = document.getElementById(`msg-${id}`);
+        if (el) el.remove();
+        // If empty, show empty state
+        if (messages.length === 0) {
+            const chatMessages = document.getElementById('chat-messages');
+            if (chatMessages && !chatMessages.querySelector('.empty-state')) {
+                chatMessages.innerHTML = '<div class="empty-state"><p class="text-sm text-zinc-600">Start the conversation! 💬</p></div>';
+            }
+        }
     }
 
     function bindEvents(container) {
@@ -70,12 +90,23 @@ const ChatPanel = (() => {
             if (!content) return;
             input.value = '';
             // Optimistic
-            const tempMsg = { sender_id: ICCSupabase.getUser().id, content, created_at: new Date().toISOString() };
+            const temp_id = 'temp_' + Date.now();
+            const tempMsg = { temp_id, sender_id: ICCSupabase.getUser().id, content, created_at: new Date().toISOString() };
             messages.push(tempMsg);
             appendMessage(tempMsg);
-            const { error } = await ICCSupabase.sendMessage(currentPartnerId, content);
-            if (error) Toast.error('Failed to send');
-            else {
+            const { data, error } = await ICCSupabase.sendMessage(currentPartnerId, content);
+            if (error) {
+                Toast.error('Failed to send');
+                removeMessage(temp_id);
+            } else {
+                const idx = messages.findIndex(m => m.temp_id === temp_id);
+                if (idx > -1) messages[idx] = data;
+                const msgEl = document.getElementById(`msg-${temp_id}`);
+                if (msgEl) {
+                    msgEl.id = `msg-${data.id}`;
+                    const btn = msgEl.querySelector('.delete-msg-btn');
+                    if (btn) btn.dataset.msgId = data.id;
+                }
                 // Notify the recipient
                 ICCSupabase.createNotification({
                     userId: currentPartnerId,
@@ -83,6 +114,24 @@ const ChatPanel = (() => {
                     actorId: ICCSupabase.getUser().id,
                     body: content
                 });
+            }
+        });
+        document.getElementById('chat-messages')?.addEventListener('click', async e => {
+            const delBtn = e.target.closest('.delete-msg-btn');
+            if (delBtn) {
+                const msgId = delBtn.dataset.msgId;
+                if (msgId && msgId.startsWith('temp_')) return;
+                if (confirm('Delete this message?')) {
+                    const el = document.getElementById(`msg-${msgId}`);
+                    if (el) el.style.opacity = '0.5';
+                    const { error } = await ICCSupabase.deleteMessage(msgId);
+                    if (error) {
+                        if (window.Toast) Toast.error('Failed to delete message');
+                        if (el) el.style.opacity = '1';
+                    } else {
+                        removeMessage(msgId);
+                    }
+                }
             }
         });
         document.getElementById('chat-back-btn')?.addEventListener('click', () => {
@@ -101,8 +150,13 @@ const ChatPanel = (() => {
         const empty = el.querySelector('.empty-state');
         if (empty) empty.remove();
         const div = document.createElement('div');
-        div.className = `flex ${isSent ? 'justify-end' : 'justify-start'}`;
-        div.innerHTML = `<div class="chat-bubble ${isSent ? 'chat-bubble-sent' : 'chat-bubble-received'}"><p>${escapeHtml(msg.content)}</p><p class="text-[10px] ${isSent ? 'text-white/50' : 'text-zinc-500'} mt-1 text-right">${time}</p></div>`;
+        div.className = `flex ${isSent ? 'justify-end' : 'justify-start'} group`;
+        div.id = `msg-${msg.id || msg.temp_id}`;
+        div.innerHTML = `
+            ${isSent ? `<button type="button" class="delete-msg-btn opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-red-500 transition-all mr-2 self-center" data-msg-id="${msg.id || msg.temp_id}" title="Delete Message">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>` : ''}
+            <div class="chat-bubble ${isSent ? 'chat-bubble-sent' : 'chat-bubble-received'}"><p>${escapeHtml(msg.content)}</p><p class="text-[10px] ${isSent ? 'text-white/50' : 'text-zinc-500'} mt-1 text-right">${time}</p></div>`;
         el.appendChild(div);
         scrollToBottom();
     }

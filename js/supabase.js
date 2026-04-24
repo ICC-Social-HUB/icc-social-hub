@@ -389,6 +389,19 @@ const ICCSupabase = (() => {
         return { data, error };
     }
 
+    async function deleteMessage(messageId) {
+        if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        const { error, count } = await client.from('messages')
+            .delete({ count: 'exact' })
+            .eq('id', messageId)
+            .eq('sender_id', currentUser.id);
+        
+        if (!error && count === 0) {
+            return { error: { message: 'Permission denied or message not found' } };
+        }
+        return { error };
+    }
+
     async function markAsRead(senderId) {
         if (!client || !currentUser) return;
         await client.from('messages')
@@ -712,7 +725,7 @@ const ICCSupabase = (() => {
         return channel;
     }
 
-    function subscribeToConversation(otherUserId, onMessage) {
+    function subscribeToConversation(otherUserId, onMessage, onDelete) {
         if (!client || !currentUser) return null;
         const channelName = `dm-${[currentUser.id, otherUserId].sort().join('-')}`;
         // Remove existing
@@ -731,6 +744,13 @@ const ICCSupabase = (() => {
                 filter: `sender_id=eq.${currentUser.id}`
             }, (payload) => {
                 if (payload.new.receiver_id === otherUserId) onMessage(payload.new);
+            })
+            .on('postgres_changes', {
+                event: 'DELETE', schema: 'public', table: 'messages'
+            }, (payload) => {
+                if (onDelete && payload.old && payload.old.id) {
+                    onDelete(payload.old.id);
+                }
             })
             .subscribe();
         activeChannels.push({ name: channelName, channel });
@@ -820,7 +840,7 @@ const ICCSupabase = (() => {
         fetchPosts, fetchPostById, fetchPostsByTeam, fetchPostsByUser, createPost, deletePost,
         toggleLike, hasLiked, fetchUserLikes,
         fetchComments, addComment, deleteComment,
-        fetchConversations, fetchMessages, sendMessage, markAsRead, getUnreadCount,
+        fetchConversations, fetchMessages, sendMessage, deleteMessage, markAsRead, getUnreadCount,
         joinTeam, cancelJoinRequest, getTeamMembers, getPendingMembers, approveMember, denyMember,
         fetchLeads, createLead, updateLead, deleteLead,
         approveLead, denyLead, getPendingLeads,
