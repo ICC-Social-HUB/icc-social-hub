@@ -491,9 +491,6 @@ const ICCSupabase = (() => {
                         actorId: currentUser.id,
                         referenceId: parseInt(teamId)
                     });
-                    
-                    // 2. Send direct message for better visibility
-                    sendMessage(l.id, `👋 Hello! I've just requested to join ${teamName}. Please review my application in the Teams section.`);
                 });
             }
         }
@@ -535,20 +532,25 @@ const ICCSupabase = (() => {
 
     async function approveMember(userId) {
         if (!client) return { error: { message: 'Not configured' } };
-        // Cleanup join data on approval
+        // 1. Fetch user state before update to ensure we have the team_id for the notification
+        const { data: userBefore } = await client.from('profiles').select('team_id').eq('id', userId).single();
+        
+        // 2. Cleanup join data
         await client.from('team_join_data').delete().eq('user_id', userId);
         
+        // 3. Update status
         const { data, error } = await client.from('profiles')
             .update({ is_pending_member: false })
             .eq('id', userId).select().single();
-        if (!error && data && data.team_id) {
-            const teamName = CORE_LEADS.find(l => l.id === data.team_id)?.team || 'the team';
+
+        if (!error && userBefore?.team_id) {
+            const teamName = CORE_LEADS.find(l => l.id === parseInt(userBefore.team_id))?.team || 'the team';
             createNotification({
                 userId: userId,
                 type: 'team_approve',
                 actorId: currentUser?.id,
                 body: teamName,
-                referenceId: data.team_id
+                referenceId: userBefore.team_id
             });
         }
         return { data, error };

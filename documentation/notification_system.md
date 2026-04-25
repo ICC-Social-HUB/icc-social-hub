@@ -51,8 +51,7 @@ The system uses **Supabase Realtime (Postgres Changes)** to push updates to acti
 When a user clicks "Join Team":
 1.  **Data Capture**: Summary and DISC tag are saved to `team_join_data`.
 2.  **Lead Discovery**: The system queries the `profiles` table for all users with `role = 'lead'` and the matching `team_id`.
-3.  **System Notification**: A notification of type `team_join` is created for every lead.
-4.  **Direct Chat Message**: A standard chat message is automatically sent from the applicant to the lead(s) as a fallback: *"👋 Hello! I've just requested to join [Team Name]..."*
+3.  **System Notification**: A notification of type `team_join` is created for every lead. This appears in the Lead's notification tab with a link to the team's pending members list.
 
 ### B. Approval & Denial
 When a Team Lead resolves a request:
