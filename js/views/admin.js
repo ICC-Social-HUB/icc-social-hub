@@ -169,7 +169,7 @@ const AdminView = (() => {
     }
 
     function renderUsers() {
-        const displayUsers = allUsers.filter(u => u.role !== 'admin');
+        const displayUsers = allUsers.filter(u => u.role !== 'admin' && u.role !== 'lead');
 
         return `
         <div class="glass-card rounded-xl overflow-hidden flex flex-col max-h-[80vh]">
