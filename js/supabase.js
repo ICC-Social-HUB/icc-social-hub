@@ -499,9 +499,9 @@ const ICCSupabase = (() => {
             const teamName = CORE_LEADS.find(l => l.id === data.team_id)?.team || 'the team';
             createNotification({
                 userId: userId,
-                type: 'team_approve',
+                type: 'system',
                 actorId: currentUser?.id,
-                body: teamName,
+                body: `🎉 Approved! You are now a member of ${teamName}`,
                 referenceId: data.team_id
             });
         }
@@ -518,9 +518,9 @@ const ICCSupabase = (() => {
             const teamName = CORE_LEADS.find(l => l.id === userBefore.team_id)?.team || 'the team';
             createNotification({
                 userId: userId,
-                type: 'team_deny',
+                type: 'system',
                 actorId: currentUser?.id,
-                body: teamName,
+                body: `Your request to join ${teamName} was declined.`,
                 referenceId: userBefore.team_id
             });
         }

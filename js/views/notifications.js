@@ -209,22 +209,6 @@ const NotificationsView = (() => {
                     created_at: profile.updated_at || new Date().toISOString(),
                     is_read: true
                 });
-            } else if (!profile.is_pending_member && profile.team_id && profile.role !== 'lead' && profile.role !== 'admin') {
-                // If updated in the last 48 hours, show approval notification
-                const updated = new Date(profile.updated_at || new Date());
-                if (new Date() - updated < 48 * 60 * 60 * 1000) {
-                    const teamName = CORE_LEADS?.find(l => l.id === profile.team_id)?.team || 'the team';
-                    notifications.unshift({
-                        id: 'approve_self',
-                        type: 'team_approve',
-                        user_id: profile.id,
-                        actor_name: 'Team Lead',
-                        body: teamName,
-                        reference_id: profile.team_id,
-                        created_at: profile.updated_at || new Date().toISOString(),
-                        is_read: true
-                    });
-                }
             }
         }
         
