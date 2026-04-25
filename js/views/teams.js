@@ -78,7 +78,7 @@ const TeamsView = (() => {
                 <div class="text-center mb-6">
                     <h1 class="font-heading font-bold text-2xl">${lead.team}</h1>
                     <div class="flex flex-col items-center justify-center gap-1 mt-2">
-                        <span class="text-zinc-400 text-sm font-medium">Lead: <span class="text-white">${lead.name}</span></span>
+                        <span class="text-zinc-400 text-sm font-medium">Lead: <span id="lead-profile-link" class="text-emerald-400 hover:text-emerald-300 cursor-pointer underline decoration-dotted transition-colors" title="View Profile">${lead.name}</span></span>
                         <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-semibold mt-1">
                             Project: <span class="${lead.project_name ? 'text-emerald-400' : 'text-zinc-500'}">${lead.project_name || 'Yet to choose'}</span>
                         </span>
@@ -222,6 +222,14 @@ const TeamsView = (() => {
 
     function bindDetailEvents(lead) {
         document.getElementById('team-back-btn')?.addEventListener('click', () => { window.location.hash = '#teams'; });
+        document.getElementById('lead-profile-link')?.addEventListener('click', () => {
+            const leadMember = teamMembers.find(m => m.role === 'lead');
+            if (leadMember) {
+                UserProfileModal.open(leadMember.id);
+            } else {
+                Toast.info("This lead hasn't set up their profile yet");
+            }
+        });
         document.getElementById('team-join-btn')?.addEventListener('click', async () => {
             if (!ICCSupabase.getUser()) { AuthModal.open(); return; }
             const btn = document.getElementById('team-join-btn');
