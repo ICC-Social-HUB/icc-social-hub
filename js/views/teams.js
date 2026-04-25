@@ -29,7 +29,8 @@ const TeamsView = (() => {
                                     </div>
                                 </div>
                                 <div class="absolute inset-0 bg-gradient-to-t from-zinc-900 via-transparent to-transparent opacity-60"></div>
-                                ${isMember ? `<div class="absolute top-2 right-2 px-2 py-0.5 bg-emerald-600 rounded-full text-[10px] font-bold flex items-center gap-1 z-10">✓ You</div>` : ''}
+                                ${isMember && !profile?.is_pending_member ? `<div class="absolute top-2 right-2 px-2 py-0.5 bg-emerald-600 rounded-full text-[10px] font-bold flex items-center gap-1 z-10">✓ You</div>` : ''}
+                                ${profile?.team_id === lead.id && profile?.is_pending_member ? `<div class="absolute top-2 right-2 px-2 py-0.5 bg-amber-600 rounded-full text-[10px] font-bold flex items-center gap-1 z-10 animate-pulse">⏳ Pending</div>` : ''}
                             </div>
                             <div class="p-3">
                                 <h3 class="font-heading font-semibold text-sm truncate">${lead.team}</h3>
