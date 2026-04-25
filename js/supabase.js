@@ -671,15 +671,9 @@ const ICCSupabase = (() => {
 
             if (error) throw error;
             
-            // Fetch global posts and comments from last 24 hours
+            // Fetch global posts from last 24 hours
             const { data: globalPosts } = await client.from('posts')
                 .select('id, user_id, caption, created_at, profiles:user_id(id, full_name, username, avatar_url)')
-                .gt('created_at', oneDayAgo)
-                .neq('user_id', currentUser.id)
-                .limit(50);
-                
-            const { data: globalComments } = await client.from('comments')
-                .select('id, post_id, user_id, content, created_at, profiles:user_id(id, full_name, username, avatar_url)')
                 .gt('created_at', oneDayAgo)
                 .neq('user_id', currentUser.id)
                 .limit(50);
@@ -702,23 +696,6 @@ const ICCSupabase = (() => {
                         body: p.caption,
                         reference_id: p.id,
                         created_at: p.created_at,
-                        is_read: true
-                    });
-                });
-            }
-
-            if (globalComments) {
-                globalComments.forEach(c => {
-                    formattedNotifs.push({
-                        id: 'comment_' + c.id,
-                        type: 'comment',
-                        user_id: currentUser.id,
-                        actor_id: c.user_id,
-                        actor_name: c.profiles?.full_name || c.profiles?.username || 'Someone',
-                        actor_avatar: c.profiles?.avatar_url,
-                        body: c.content,
-                        reference_id: c.post_id,
-                        created_at: c.created_at,
                         is_read: true
                     });
                 });
