@@ -81,6 +81,8 @@ const AdminView = (() => {
 
     function renderLeads() {
         if (editingLead) {
+            const assignedUser = editingLead.id ? allUsers.find(u => u.team_id === editingLead.id && u.role === 'lead') : null;
+            const currentEmail = assignedUser ? (assignedUser.email || '') : '';
             return `
             <div class="glass-card rounded-xl p-5">
                 <div class="flex items-center justify-between mb-4">
@@ -92,7 +94,8 @@ const AdminView = (() => {
                         <div><label class="block text-xs font-medium text-zinc-400 mb-1">Name</label><input type="text" id="lead-name" value="${editingLead.name || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
                         <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team</label><input type="text" id="lead-team" value="${editingLead.team || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
                         <div><label class="block text-xs font-medium text-zinc-400 mb-1">Initials</label><input type="text" id="lead-initials" value="${editingLead.initials || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
-                        <div><label class="block text-xs font-medium text-zinc-400 mb-1">Specialties (comma-separated)</label><input type="text" id="lead-specialties" value="${(editingLead.specialties || []).join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                        <div><label class="block text-xs font-medium text-zinc-400 mb-1">Assign User Email</label><input type="email" id="lead-email" value="${currentEmail}" placeholder="User email to make lead" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                        <div class="col-span-2"><label class="block text-xs font-medium text-zinc-400 mb-1">Specialties (comma-separated)</label><input type="text" id="lead-specialties" value="${(editingLead.specialties || []).join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
                     </div>
                     <div><label class="block text-xs font-medium text-zinc-400 mb-1">Bio</label><textarea id="lead-bio" rows="2" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${editingLead.bio || ''}</textarea></div>
                     <div class="grid grid-cols-2 gap-4">
@@ -166,7 +169,7 @@ const AdminView = (() => {
     }
 
     function renderUsers() {
-        const displayUsers = allUsers.filter(u => u.role !== 'lead' && u.role !== 'admin');
+        const displayUsers = allUsers.filter(u => u.role !== 'admin');
 
         return `
         <div class="glass-card rounded-xl overflow-hidden flex flex-col max-h-[80vh]">
@@ -400,13 +403,27 @@ const AdminView = (() => {
                 color: document.getElementById('lead-color').value.trim()
             };
 
+            const userEmailToAssign = document.getElementById('lead-email')?.value.trim();
+
             let error;
+            let teamId;
             if (editingLead.id) {
                 const res = await ICCSupabase.updateLead(editingLead.id, fields);
                 error = res.error;
+                teamId = editingLead.id;
             } else {
                 const res = await ICCSupabase.createLead(fields);
                 error = res.error;
+                if (res.data) teamId = res.data.id;
+            }
+
+            if (!error && userEmailToAssign && teamId) {
+                const targetUser = allUsers.find(u => u.email === userEmailToAssign);
+                if (targetUser) {
+                    await ICCSupabase.adminUpdateUser(targetUser.id, { role: 'lead', team_id: teamId, is_pending_member: false });
+                } else {
+                    Toast.error('Team saved, but no user found with email: ' + userEmailToAssign);
+                }
             }
 
             if (error) {
@@ -415,6 +432,7 @@ const AdminView = (() => {
             } else {
                 Toast.success('Lead saved successfully');
                 await loadLeads(); // refresh global data from DB
+                allUsers = await ICCSupabase.getAllProfiles(); // Refresh users too
                 editingLead = null;
                 container.innerHTML = render(); bindEvents(container);
             }
