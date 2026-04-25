@@ -386,6 +386,17 @@ const ICCSupabase = (() => {
         const { data, error } = await client.from('messages')
             .insert({ sender_id: currentUser.id, receiver_id: receiverId, content })
             .select().single();
+            
+        if (!error && data) {
+            createNotification({
+                userId: receiverId,
+                type: 'message',
+                actorId: currentUser.id,
+                referenceId: data.id,
+                body: content
+            });
+        }
+            
         return { data, error };
     }
 

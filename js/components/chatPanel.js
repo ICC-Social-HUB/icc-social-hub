@@ -107,13 +107,7 @@ const ChatPanel = (() => {
                     const btn = msgEl.querySelector('.delete-msg-btn');
                     if (btn) btn.dataset.msgId = data.id;
                 }
-                // Notify the recipient
-                ICCSupabase.createNotification({
-                    userId: currentPartnerId,
-                    type: 'message',
-                    actorId: ICCSupabase.getUser().id,
-                    body: content
-                });
+                // Notification is now handled by ICCSupabase.sendMessage internally
             }
         });
         document.getElementById('chat-messages')?.addEventListener('click', async e => {
