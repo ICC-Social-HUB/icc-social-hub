@@ -388,12 +388,22 @@ const ICCSupabase = (() => {
             .select().single();
             
         if (!error && data) {
+            // Notify receiver
             createNotification({
                 userId: receiverId,
                 type: 'message',
                 actorId: currentUser.id,
                 referenceId: data.id,
                 body: content
+            });
+            
+            // Notify sender (to confirm it was sent in their notification tab)
+            createNotification({
+                userId: currentUser.id,
+                type: 'system',
+                actorId: null,
+                referenceId: data.id,
+                body: `Message sent successfully: "${content.length > 20 ? content.slice(0, 20) + '...' : content}"`
             });
         }
             
@@ -662,12 +672,14 @@ const ICCSupabase = (() => {
 
     async function createNotification({ userId, type, actorId = null, referenceId = null, body = null }) {
         if (!client || !userId) return { error: { message: 'Invalid target' } };
-        // Avoid self-notification unless it's a system message
-        if (actorId && userId === actorId && type !== 'system' && type !== 'welcome') return { data: null, error: null };
-
-        return await client.from('notifications')
-            .insert({ user_id: userId, type, actor_id: actorId, reference_id: referenceId, body })
+        // Allow self-notification for testing purposes, but log it
+        
+        const { data, error } = await client.from('notifications')
+            .insert({ user_id: userId, type, actor_id: actorId, reference_id: referenceId ? String(referenceId) : null, body })
             .select().single();
+            
+        if (error) console.error('Notification error:', error);
+        return { data, error };
     }
 
     async function markNotificationRead(notifId) {
