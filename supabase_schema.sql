@@ -471,6 +471,36 @@ CREATE POLICY "Users can delete their own post images."
     USING (bucket_id = 'posts' AND auth.uid() = owner);
 
 -- ==========================================
+-- 13. TEAM JOIN DATA (Private details)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.team_join_data (
+    user_id UUID PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
+    summary TEXT,
+    disc_tag TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.team_join_data ENABLE ROW LEVEL SECURITY;
+
+-- Users can manage their own join data
+CREATE POLICY "Users can manage their own join data"
+    ON public.team_join_data FOR ALL
+    USING (auth.uid() = user_id);
+
+-- Leads and admins can view join data for applicants
+CREATE POLICY "Leads and admins can view join data"
+    ON public.team_join_data FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid() AND (
+                p.role = 'admin' OR 
+                (p.role = 'lead' AND p.team_id = (SELECT team_id FROM public.profiles WHERE id = team_join_data.user_id))
+            )
+        )
+    );
+
+-- ==========================================
 -- DONE! ✅
 -- ==========================================
 -- Your database is now ready.

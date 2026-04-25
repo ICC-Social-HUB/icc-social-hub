@@ -139,14 +139,23 @@ const TeamsView = (() => {
                             <h3 class="font-heading font-semibold text-sm mb-3">Pending Requests (${pendingMembers.length})</h3>
                             <div class="space-y-2 max-h-48 overflow-y-auto">
                                 ${pendingMembers.length === 0 ? '<p class="text-xs text-zinc-600">No pending requests</p>' : pendingMembers.map(m => `
-                                <div class="flex items-center justify-between px-2 py-1.5 bg-zinc-950 rounded-lg border border-zinc-800">
-                                    <div class="min-w-0 pr-2">
-                                        <p class="text-xs font-medium truncate">${m.full_name||'Anon'}</p>
-                                        <p class="text-[10px] text-zinc-500 truncate">@${m.username||''}</p>
+                                <div class="bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden mb-3">
+                                    <div class="flex items-center justify-between px-3 py-2 bg-zinc-900/50">
+                                        <div class="min-w-0 pr-2">
+                                            <p class="text-xs font-bold truncate">${m.full_name||'Anon'}</p>
+                                            <p class="text-[10px] text-zinc-500 truncate">@${m.username||''}</p>
+                                        </div>
+                                        <div class="flex gap-1.5 flex-shrink-0">
+                                            <button class="approve-member-btn px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-[10px] font-bold transition-colors" data-id="${m.id}">Approve</button>
+                                            <button class="deny-member-btn px-3 py-1 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-[10px] transition-colors" data-id="${m.id}">Deny</button>
+                                        </div>
                                     </div>
-                                    <div class="flex gap-1 flex-shrink-0">
-                                        <button class="approve-member-btn px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-[10px] font-semibold transition-colors" data-id="${m.id}">Approve</button>
-                                        <button class="deny-member-btn px-2 py-1 bg-zinc-800 hover:bg-zinc-700 rounded text-[10px] transition-colors" data-id="${m.id}">Deny</button>
+                                    <div class="p-3">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="px-2 py-0.5 bg-red-600/10 text-red-400 border border-red-500/20 rounded text-[9px] font-bold uppercase tracking-wider">${m.disc_tag || 'No Tag'}</span>
+                                            <span class="text-[10px] text-zinc-500 italic">DISC Personality</span>
+                                        </div>
+                                        <p class="text-[11px] text-zinc-400 leading-relaxed italic bg-zinc-900/30 p-2 rounded-lg border border-zinc-800/50">"${m.summary || 'No summary provided.'}"</p>
                                     </div>
                                 </div>
                                 `).join('')}
@@ -232,21 +241,7 @@ const TeamsView = (() => {
         });
         document.getElementById('team-join-btn')?.addEventListener('click', async () => {
             if (!ICCSupabase.getUser()) { AuthModal.open(); return; }
-            const btn = document.getElementById('team-join-btn');
-            btn.disabled = true; btn.innerHTML = '<div class="spinner spinner-sm"></div>';
-            const { error } = await ICCSupabase.joinTeam(lead.id);
-            if (error) { Toast.error('Failed to request: ' + error.message); btn.disabled = false; btn.textContent = `Request to Join`; }
-            else { 
-                Toast.success(`Join request sent! The Team Lead will review it shortly.`); 
-                // Notify the Team Lead
-                const leadProfile = CORE_LEADS.find(l => l.id === lead.id);
-                // We need to find the user_id of the lead. 
-                // Since CORE_LEADS is hardcoded in data.js, let's see if we can find the lead user_id.
-                // In this app, the lead is a user with role='lead' and team_id=lead.id.
-                // We can't easily find the lead's UUID here without a query, 
-                // but we can at least try to get team members and find the lead.
-                const c = document.getElementById('app'); mount(c, lead.id); 
-            }
+            JoinTeamModal.open(lead);
         });
         
         document.getElementById('team-cancel-btn')?.addEventListener('click', async () => {

@@ -460,12 +460,22 @@ const ICCSupabase = (() => {
 
     // ==================== TEAMS ====================
 
-    async function joinTeam(teamId) {
+    async function joinTeam(teamId, summary, discTag) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
         // Prevent leads from switching
         const profile = getProfile();
         if (profile?.role === 'lead') return { error: { message: 'Team Leads cannot switch teams.' } };
         
+        // 1. Insert join data
+        const { error: dataError } = await client.from('team_join_data').upsert({
+            user_id: currentUser.id,
+            summary,
+            disc_tag: discTag
+        });
+        
+        if (dataError) return { error: dataError };
+
+        // 2. Update profile
         const res = await updateProfile({ team_id: parseInt(teamId), is_pending_member: true });
         if (!res.error) {
             const { data: leads } = await client.from('profiles')
@@ -484,6 +494,7 @@ const ICCSupabase = (() => {
 
     async function cancelJoinRequest() {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        await client.from('team_join_data').delete().eq('user_id', currentUser.id);
         return await updateProfile({ team_id: null, is_pending_member: false });
     }
 
@@ -499,16 +510,26 @@ const ICCSupabase = (() => {
 
     async function getPendingMembers(teamId) {
         if (!client) return [];
+        // Join with team_join_data to get summary and DISC tag
         const { data } = await client.from('profiles')
-            .select('id, username, full_name, avatar_url, role, updated_at')
+            .select('id, username, full_name, avatar_url, role, updated_at, team_join_data(summary, disc_tag)')
             .eq('team_id', teamId)
             .eq('is_pending_member', true)
             .order('updated_at', { ascending: false });
-        return data || [];
+        
+        // Flatten the data for easier use
+        return (data || []).map(m => ({
+            ...m,
+            summary: m.team_join_data?.summary,
+            disc_tag: m.team_join_data?.disc_tag
+        }));
     }
 
     async function approveMember(userId) {
         if (!client) return { error: { message: 'Not configured' } };
+        // Cleanup join data on approval
+        await client.from('team_join_data').delete().eq('user_id', userId);
+        
         const { data, error } = await client.from('profiles')
             .update({ is_pending_member: false })
             .eq('id', userId).select().single();
@@ -527,6 +548,9 @@ const ICCSupabase = (() => {
 
     async function denyMember(userId) {
         if (!client) return { error: { message: 'Not configured' } };
+        // Cleanup join data on denial
+        await client.from('team_join_data').delete().eq('user_id', userId);
+        
         const { data: userBefore } = await client.from('profiles').select('team_id, is_pending_member').eq('id', userId).single();
         const { data, error } = await client.from('profiles')
             .update({ team_id: null, is_pending_member: false })
