@@ -480,12 +480,20 @@ const ICCSupabase = (() => {
         if (!res.error) {
             const { data: leads } = await client.from('profiles')
                 .select('id').eq('team_id', parseInt(teamId)).eq('role', 'lead');
+            
             if (leads && leads.length > 0) {
-                createNotification({
-                    userId: leads[0].id,
-                    type: 'team_join',
-                    actorId: currentUser.id,
-                    referenceId: parseInt(teamId)
+                const teamName = CORE_LEADS.find(l => l.id === parseInt(teamId))?.team || 'the team';
+                leads.forEach(l => {
+                    // 1. Create system notification
+                    createNotification({
+                        userId: l.id,
+                        type: 'team_join',
+                        actorId: currentUser.id,
+                        referenceId: parseInt(teamId)
+                    });
+                    
+                    // 2. Send direct message for better visibility
+                    sendMessage(l.id, `👋 Hello! I've just requested to join ${teamName}. Please review my application in the Teams section.`);
                 });
             }
         }
