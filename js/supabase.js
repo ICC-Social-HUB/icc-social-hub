@@ -427,7 +427,21 @@ const ICCSupabase = (() => {
         // Prevent leads from switching
         const profile = getProfile();
         if (profile?.role === 'lead') return { error: { message: 'Team Leads cannot switch teams.' } };
-        return await updateProfile({ team_id: parseInt(teamId), is_pending_member: true });
+        
+        const res = await updateProfile({ team_id: parseInt(teamId), is_pending_member: true });
+        if (!res.error) {
+            const { data: leads } = await client.from('profiles')
+                .select('id').eq('team_id', parseInt(teamId)).eq('role', 'lead');
+            if (leads && leads.length > 0) {
+                createNotification({
+                    userId: leads[0].id,
+                    type: 'team_join',
+                    actorId: currentUser.id,
+                    referenceId: parseInt(teamId)
+                });
+            }
+        }
+        return res;
     }
 
     async function cancelJoinRequest() {
@@ -460,14 +474,35 @@ const ICCSupabase = (() => {
         const { data, error } = await client.from('profiles')
             .update({ is_pending_member: false })
             .eq('id', userId).select().single();
+        if (!error && data && data.team_id) {
+            const teamName = CORE_LEADS.find(l => l.id === data.team_id)?.team || 'the team';
+            createNotification({
+                userId: userId,
+                type: 'team_approve',
+                actorId: currentUser?.id,
+                body: teamName,
+                referenceId: data.team_id
+            });
+        }
         return { data, error };
     }
 
     async function denyMember(userId) {
         if (!client) return { error: { message: 'Not configured' } };
+        const { data: userBefore } = await client.from('profiles').select('team_id').eq('id', userId).single();
         const { data, error } = await client.from('profiles')
             .update({ team_id: null, is_pending_member: false })
             .eq('id', userId).select().single();
+        if (!error && userBefore?.team_id) {
+            const teamName = CORE_LEADS.find(l => l.id === userBefore.team_id)?.team || 'the team';
+            createNotification({
+                userId: userId,
+                type: 'team_deny',
+                actorId: currentUser?.id,
+                body: teamName,
+                referenceId: userBefore.team_id
+            });
+        }
         return { data, error };
     }
 

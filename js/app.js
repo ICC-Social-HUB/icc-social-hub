@@ -36,6 +36,7 @@
                     ICCSupabase.subscribeToMessages(() => {
                         BottomNav.updateUnreadCount();
                     });
+                    NotifBell.update();
                 }
             }
 
@@ -47,6 +48,7 @@
 
         // 5. Mount components
         BottomNav.mount();
+        NotifBell.mount();
 
         // 6. Initialize router
         Router.init();

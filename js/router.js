@@ -64,6 +64,9 @@ const Router = (() => {
             } else if (hash === '#admin') {
                 previousView = 'admin';
                 AdminView.mount(container);
+            } else if (hash === '#notifications') {
+                previousView = 'notifications';
+                NotificationsView.mount(container);
             } else {
                 previousView = 'feed';
                 FeedView.mount(container);
