@@ -396,15 +396,6 @@ const ICCSupabase = (() => {
                 referenceId: data.id,
                 body: content
             });
-            
-            // Notify sender (to confirm it was sent in their notification tab)
-            createNotification({
-                userId: currentUser.id,
-                type: 'system',
-                actorId: null,
-                referenceId: data.id,
-                body: `Message sent successfully: "${content.length > 20 ? content.slice(0, 20) + '...' : content}"`
-            });
         }
             
         return { data, error };
