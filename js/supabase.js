@@ -636,7 +636,7 @@ const ICCSupabase = (() => {
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
         try {
-            const { data, error } = await client.from('notifications')
+            const { data: dbNotifs, error } = await client.from('notifications')
                 .select('*, actor:actor_id(id, full_name, username, avatar_url)')
                 .eq('user_id', currentUser.id)
                 .gt('created_at', oneDayAgo)
@@ -644,12 +644,63 @@ const ICCSupabase = (() => {
                 .limit(limit);
 
             if (error) throw error;
+            
+            // Fetch global posts and comments from last 24 hours
+            const { data: globalPosts } = await client.from('posts')
+                .select('id, user_id, caption, created_at, profiles:user_id(id, full_name, username, avatar_url)')
+                .gt('created_at', oneDayAgo)
+                .neq('user_id', currentUser.id)
+                .limit(50);
+                
+            const { data: globalComments } = await client.from('comments')
+                .select('id, post_id, user_id, content, created_at, profiles:user_id(id, full_name, username, avatar_url)')
+                .gt('created_at', oneDayAgo)
+                .neq('user_id', currentUser.id)
+                .limit(50);
 
-            return (data || []).map(n => ({
+            const formattedNotifs = (dbNotifs || []).map(n => ({
                 ...n,
                 actor_name: n.actor ? (n.actor.full_name || n.actor.username || 'Someone') : null,
                 actor_avatar: n.actor?.avatar_url || null
             }));
+
+            if (globalPosts) {
+                globalPosts.forEach(p => {
+                    formattedNotifs.push({
+                        id: 'post_' + p.id,
+                        type: 'post',
+                        user_id: currentUser.id,
+                        actor_id: p.user_id,
+                        actor_name: p.profiles?.full_name || p.profiles?.username || 'Someone',
+                        actor_avatar: p.profiles?.avatar_url,
+                        body: p.caption,
+                        reference_id: p.id,
+                        created_at: p.created_at,
+                        is_read: true
+                    });
+                });
+            }
+
+            if (globalComments) {
+                globalComments.forEach(c => {
+                    formattedNotifs.push({
+                        id: 'comment_' + c.id,
+                        type: 'comment',
+                        user_id: currentUser.id,
+                        actor_id: c.user_id,
+                        actor_name: c.profiles?.full_name || c.profiles?.username || 'Someone',
+                        actor_avatar: c.profiles?.avatar_url,
+                        body: c.content,
+                        reference_id: c.post_id,
+                        created_at: c.created_at,
+                        is_read: true
+                    });
+                });
+            }
+
+            formattedNotifs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            return formattedNotifs;
         } catch (err) {
             console.error('❌ fetchNotifications failed:', err);
             return [];
@@ -683,13 +734,13 @@ const ICCSupabase = (() => {
 
     async function getUnreadNotifCount() {
         if (!client || !currentUser) return 0;
-        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         
         const { count, error } = await client.from('notifications')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', currentUser.id)
             .eq('is_read', false)
-            .gt('created_at', thirtyDaysAgo);
+            .gt('created_at', oneDayAgo);
 
         return error ? 0 : (count || 0);
     }

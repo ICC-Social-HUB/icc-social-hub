@@ -367,7 +367,7 @@ const NotificationsView = (() => {
                 const url = el.dataset.url;
                 const notif = notifications.find(n => n.id === id);
                 if (notif && !notif.is_read) {
-                    if (!id.startsWith('pending_') && !id.startsWith('approve_') && !id.startsWith('deny_') && !id.startsWith('removed_')) {
+                    if (!id.startsWith('pending_') && !id.startsWith('approve_') && !id.startsWith('deny_') && !id.startsWith('removed_') && !id.startsWith('post_') && !id.startsWith('comment_')) {
                         await ICCSupabase.markNotificationRead(id);
                     }
                     notif.is_read = true;
