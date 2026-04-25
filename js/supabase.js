@@ -537,9 +537,9 @@ const ICCSupabase = (() => {
             const teamName = CORE_LEADS.find(l => l.id === data.team_id)?.team || 'the team';
             createNotification({
                 userId: userId,
-                type: 'system',
+                type: 'team_approve',
                 actorId: currentUser?.id,
-                body: `🎉 Approved! You are now a member of ${teamName}`,
+                body: teamName,
                 referenceId: data.team_id
             });
         }
@@ -560,9 +560,9 @@ const ICCSupabase = (() => {
             const wasPending = userBefore.is_pending_member;
             createNotification({
                 userId: userId,
-                type: 'system',
+                type: wasPending ? 'team_deny' : 'system',
                 actorId: currentUser?.id,
-                body: wasPending ? `Your request to join ${teamName} was declined.` : `You have been removed from ${teamName}.`,
+                body: wasPending ? teamName : `You have been removed from ${teamName}.`,
                 referenceId: userBefore.team_id
             });
         }

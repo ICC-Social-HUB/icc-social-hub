@@ -36,6 +36,10 @@
                     ICCSupabase.subscribeToMessages(() => {
                         BottomNav.updateUnreadCount();
                     });
+                    ICCSupabase.subscribeToNotifications(() => {
+                        NotifBell.update();
+                        BottomNav.updateAllBadges();
+                    });
                     NotifBell.update();
                 }
             }
