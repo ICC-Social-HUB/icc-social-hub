@@ -691,7 +691,8 @@ const ICCSupabase = (() => {
 
     async function fetchNotifications(limit = 100) {
         if (!client || !currentUser) return [];
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        // Calculate 24h ago with a 1-hour "drift buffer" to account for client/server clock mismatch
+        const oneDayAgo = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(); 
 
         try {
             const { data: dbNotifs, error } = await client.from('notifications')
@@ -916,16 +917,39 @@ const ICCSupabase = (() => {
 
     function subscribeToNotifications(onNotif) {
         if (!client || !currentUser) return null;
-        const channelName = `notifs-${currentUser.id}`;
-        const existing = activeChannels.find(c => c.name === channelName);
-        if (existing) { client.removeChannel(existing.channel); activeChannels = activeChannels.filter(c => c.name !== channelName); }
+        
+        const channelName = `notifs_realtime_${currentUser.id}`;
+        
+        // Cleanup existing if any
+        unsubscribeChannel(channelName);
 
         const channel = client.channel(channelName)
             .on('postgres_changes', {
-                event: 'INSERT', schema: 'public', table: 'notifications',
+                event: 'INSERT',
+                schema: 'public',
+                table: 'notifications',
                 filter: `user_id=eq.${currentUser.id}`
-            }, (payload) => onNotif(payload.new))
-            .subscribe();
+            }, async (payload) => {
+                console.log('🔔 Real-time notification received:', payload);
+                
+                // Fetch actor info if missing (Replication usually only sends the row)
+                const newNotif = payload.new;
+                if (newNotif.actor_id && !newNotif.actor_name) {
+                    const actor = await fetchUserById(newNotif.actor_id);
+                    newNotif.actor_name = actor?.full_name || actor?.username || 'Someone';
+                    newNotif.actor_avatar = actor?.avatar_url;
+                }
+                
+                onNotif(newNotif);
+            })
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ Notification WebSocket: SUBSCRIBED');
+                } else {
+                    console.warn(`⚠️ Notification WebSocket status: ${status}`);
+                }
+            });
+
         activeChannels.push({ name: channelName, channel });
         return channel;
     }

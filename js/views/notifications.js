@@ -319,6 +319,9 @@ const NotificationsView = (() => {
 
         // Instant Live Updates
         ICCSupabase.subscribeToNotifications((newNotif) => {
+            // Prevent duplicates if fetch and realtime overlap
+            if (notifications.find(n => n.id === newNotif.id)) return;
+            
             notifications.unshift(newNotif);
             const list = document.getElementById('notif-container');
             if (list) {
