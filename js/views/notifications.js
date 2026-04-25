@@ -310,6 +310,9 @@ const NotificationsView = (() => {
             }
         }
         
+        // Ensure strictly ordered by newest first, even after virtual injections
+        notifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        
         loading = false;
         container.innerHTML = render();
         bindEvents(container);
