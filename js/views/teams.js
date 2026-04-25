@@ -161,19 +161,23 @@ const TeamsView = (() => {
                                 `).join('')}
                             </div>
                             
-                            <h3 class="font-heading font-semibold text-sm mt-6 mb-3">Team Configuration</h3>
-                            <form id="lead-edit-team-form" class="space-y-3">
-                                <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team Profile Picture (Optional)</label><input type="file" id="lead-avatar-input" accept="image/jpeg, image/png, image/webp" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
-                                <div><label class="block text-xs font-medium text-zinc-400 mb-1">Project Name</label><input type="text" id="lead-project-name" value="${lead.project_name || ''}" placeholder="Yet to choose" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
-                                <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team Name</label><input type="text" id="lead-team-name" value="${lead.team}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
-                                <div><label class="block text-xs font-medium text-zinc-400 mb-1">Bio</label><textarea id="lead-bio" rows="3" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${lead.bio}</textarea></div>
-                                <div><label class="block text-xs font-medium text-zinc-400 mb-1">Specialties (comma-separated)</label><input type="text" id="lead-specialties" value="${lead.specialties.join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Gradient</label><input type="text" id="lead-gradient" value="${lead.gradient}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
-                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Color (Hex)</label><input type="color" id="lead-color" value="${lead.color}" class="form-input w-full h-9 p-0 bg-zinc-950 border border-zinc-800 rounded-lg cursor-pointer"></div>
-                                </div>
-                                <button type="submit" class="w-full py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-semibold mt-2 transition-colors border border-zinc-700">Save Configuration</button>
-                            </form>
+                            <div class="flex items-center justify-between mt-6 mb-3">
+                                <h3 class="font-heading font-semibold text-sm">Team Configuration</h3>
+                                <button id="toggle-config-btn" class="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500 hover:text-emerald-400" title="Edit Configuration">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                </button>
+                            </div>
+                            
+                            <div id="team-config-expandable" class="hidden animate-slide-down overflow-hidden">
+                                <form id="lead-edit-team-form" class="space-y-3 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team Profile Picture (Optional)</label><input type="file" id="lead-avatar-input" accept="image/jpeg, image/png, image/webp" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Project Name</label><input type="text" id="lead-project-name" value="${lead.project_name || ''}" placeholder="Yet to choose" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team Name</label><input type="text" id="lead-team-name" value="${lead.team}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Bio</label><textarea id="lead-bio" rows="3" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${lead.bio}</textarea></div>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Specialties (comma-separated)</label><input type="text" id="lead-specialties" value="${lead.specialties.join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                                    <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold mt-2 transition-all shadow-lg shadow-emerald-600/20">Save Configuration</button>
+                                </form>
+                            </div>
                         </div>
                         ` : ''}
                     </div>
@@ -296,6 +300,12 @@ const TeamsView = (() => {
             });
         });
 
+        // Toggle config
+        document.getElementById('toggle-config-btn')?.addEventListener('click', () => {
+            const el = document.getElementById('team-config-expandable');
+            if (el) el.classList.toggle('hidden');
+        });
+
         document.getElementById('lead-edit-team-form')?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button[type="submit"]');
@@ -317,8 +327,6 @@ const TeamsView = (() => {
                 project_name: document.getElementById('lead-project-name').value.trim(),
                 bio: document.getElementById('lead-bio').value.trim(),
                 specialties: document.getElementById('lead-specialties').value.split(',').map(s => s.trim()).filter(Boolean),
-                gradient: document.getElementById('lead-gradient').value.trim(),
-                color: document.getElementById('lead-color').value.trim(),
                 avatar_url: newAvatarUrl
             };
 

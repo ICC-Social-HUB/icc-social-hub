@@ -26,7 +26,7 @@ const JoinTeamModal = (() => {
         if (!isOpen || !currentTeam) return '';
         return `
         <div class="modal-backdrop fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4" id="join-team-overlay">
-            <div class="modal-content bg-zinc-900 border border-zinc-800 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-slideUp">
+            <div class="modal-content bg-zinc-900 border border-zinc-800 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up">
                 <div class="p-6">
                     <div class="flex items-center justify-between mb-6">
                         <div>
@@ -50,7 +50,7 @@ const JoinTeamModal = (() => {
                         <div>
                             <div class="flex items-center justify-between mb-2">
                                 <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">DISC Personality (Choose One)</label>
-                                <a href="https://personalityatwork.com/disc/test" target="_blank" class="text-[10px] text-red-400 hover:text-red-300 underline underline-offset-2">Get your DISC tag here</a>
+                                <a href="https://share.google/NP4CxZ5kDxJoMuxd0" target="_blank" class="text-[10px] text-red-400 hover:text-red-300 underline underline-offset-2">Source: DISC Personality Testing</a>
                             </div>
                             <div class="grid grid-cols-2 gap-2">
                                 <label class="disc-option relative">
