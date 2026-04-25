@@ -166,22 +166,29 @@ const AdminView = (() => {
     }
 
     function renderUsers() {
+        const displayUsers = allUsers.filter(u => u.role !== 'lead' && u.role !== 'admin');
+
         return `
-        <div class="glass-card rounded-xl overflow-hidden">
-            <div class="flex items-center justify-between p-4 border-b border-zinc-800/50">
-                <h3 class="font-heading font-semibold text-sm">User Management</h3>
-                <span class="text-xs text-zinc-500">${allUsers.length} total</span>
+        <div class="glass-card rounded-xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div class="flex items-center justify-between p-4 border-b border-zinc-800/50 flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <h3 class="font-heading font-semibold text-sm">User Management</h3>
+                    <span class="text-xs text-zinc-500" id="users-count-badge">${displayUsers.length} members</span>
+                </div>
+                <div class="relative w-full sm:w-64">
+                    <input type="text" id="admin-user-search" placeholder="Search users..." class="form-input w-full pl-9 pr-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white">
+                    <svg class="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
             </div>
-            <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
+            <div class="overflow-x-auto overflow-y-auto flex-1">
                 <table class="w-full text-left text-sm relative">
                     <thead class="sticky top-0 bg-zinc-950 z-10"><tr class="border-b border-zinc-800">
                         <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">User</th>
                         <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">Email</th>
-                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">Role</th>
                         <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">Team</th>
                         <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase text-right">Actions</th>
                     </tr></thead>
-                    <tbody>${allUsers.map(u => `
+                    <tbody id="users-table-body">${displayUsers.map(u => `
                         <tr class="border-b border-zinc-800/30 hover:bg-zinc-800/20 transition-colors">
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-2">
@@ -199,13 +206,6 @@ const AdminView = (() => {
                                     ? `<span class="text-xs text-zinc-300 font-mono">${u.email}</span>`
                                     : `<span class="text-[10px] text-zinc-600 italic">No email</span>`
                                 }
-                            </td>
-                            <td class="px-4 py-3">
-                                <select class="user-role-select bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 w-24" data-id="${u.id}">
-                                    <option value="member" ${u.role==='member'?'selected':''}>Member</option>
-                                    <option value="lead" ${u.role==='lead'?'selected':''}>Lead</option>
-                                    <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
-                                </select>
                             </td>
                             <td class="px-4 py-3">
                                 <select class="user-team-select bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 w-32" data-id="${u.id}">
@@ -315,15 +315,34 @@ const AdminView = (() => {
         container.querySelectorAll('.save-user-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const userId = btn.dataset.id;
-                const role = document.querySelector(`.user-role-select[data-id="${userId}"]`).value;
                 const teamVal = document.querySelector(`.user-team-select[data-id="${userId}"]`).value;
                 const team_id = teamVal ? parseInt(teamVal) : null;
                 btn.textContent = '...';
-                const { error } = await ICCSupabase.adminUpdateUser(userId, { role, team_id, is_pending_member: false });
+                const { error } = await ICCSupabase.adminUpdateUser(userId, { team_id, is_pending_member: false });
                 if (error) Toast.error('Failed to update user: ' + error.message);
                 else Toast.success('User updated!');
                 btn.textContent = 'Save';
             });
+        });
+
+        // User Search
+        document.getElementById('admin-user-search')?.addEventListener('input', e => {
+            const query = e.target.value.toLowerCase();
+            const table = document.getElementById('users-table-body');
+            if (!table) return;
+            const rows = table.querySelectorAll('tr');
+            let visibleCount = 0;
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                if (text.includes(query)) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            const countBadge = document.getElementById('users-count-badge');
+            if (countBadge) countBadge.textContent = visibleCount + ' members';
         });
         container.querySelectorAll('.delete-user-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
