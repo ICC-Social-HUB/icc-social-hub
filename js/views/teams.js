@@ -67,7 +67,7 @@ const TeamsView = (() => {
                 </button>
                 <!-- Avatar now free to overflow below the banner -->
                 <div class="absolute -bottom-12 left-1/2 -translate-x-1/2 z-10">
-                    <div class="avatar-ring"><div class="w-24 h-24 rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden">
+                    <div class="avatar-ring"><div class="w-24 h-24 rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden ${lead.avatar_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}" ${lead.avatar_url ? `data-full-image="${lead.avatar_url}"` : ''}>
                         ${lead.avatar_url 
                             ? `<img src="${lead.avatar_url}" class="w-full h-full object-cover">` 
                             : `<span class="font-heading font-bold text-3xl" style="color:${lead.color}">${lead.initials}</span>`}

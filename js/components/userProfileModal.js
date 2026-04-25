@@ -41,7 +41,7 @@ const UserProfileModal = (() => {
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                     <div class="absolute -bottom-10 left-1/2 -translate-x-1/2">
-                        <div class="avatar-ring"><div class="w-20 h-20 rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden">
+                        <div class="avatar-ring"><div class="w-20 h-20 rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden ${profile.avatar_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}" ${profile.avatar_url ? `data-full-image="${profile.avatar_url}"` : ''}>
                             ${profile.avatar_url ? `<img src="${profile.avatar_url}" class="w-full h-full object-cover">` : `<span class="font-heading font-bold text-2xl text-red-500">${(profile.full_name || '?').charAt(0).toUpperCase()}</span>`}
                         </div></div>
                     </div>

@@ -51,6 +51,9 @@
         // 6. Initialize router
         Router.init();
 
+        // 6.5. Init image viewer
+        ImageViewer.init();
+
         // 7. Init particles
         initParticles();
 

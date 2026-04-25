@@ -20,7 +20,7 @@ const ProfileView = (() => {
                 </div>
                 <div class="glass-card rounded-xl p-5 mb-4">
                     <div class="flex items-center gap-4">
-                        <div class="avatar-ring"><div class="w-16 h-16 rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden">
+                        <div class="avatar-ring"><div class="w-16 h-16 rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden ${profile.avatar_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}" ${profile.avatar_url ? `data-full-image="${profile.avatar_url}"` : ''}>
                             ${profile.avatar_url ? `<img src="${profile.avatar_url}" class="w-full h-full object-cover">` : `<span class="font-heading font-bold text-xl text-red-500">${(profile.full_name || '?').charAt(0).toUpperCase()}</span>`}
                         </div></div>
                         <div class="flex-1 min-w-0">

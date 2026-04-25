@@ -18,8 +18,8 @@ const PostCard = (() => {
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </button>` : ''}
             <div class="flex items-center gap-3 p-4 pb-2">
-                <button class="user-link w-9 h-9 rounded-full bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center text-xs font-bold flex-shrink-0 overflow-hidden" data-user-id="${p.id || post.user_id}">
-                    ${p.avatar_url ? `<img src="${p.avatar_url}" class="w-full h-full object-cover" alt="">` : (p.full_name || 'U').charAt(0).toUpperCase()}
+                <button class="user-link w-9 h-9 rounded-full bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center text-xs font-bold flex-shrink-0 overflow-hidden ${p.avatar_url ? 'cursor-pointer' : ''}" data-user-id="${p.id || post.user_id}">
+                    ${p.avatar_url ? `<img src="${p.avatar_url}" class="w-full h-full object-cover" alt="" data-full-image="${p.avatar_url}">` : (p.full_name || 'U').charAt(0).toUpperCase()}
                 </button>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
