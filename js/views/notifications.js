@@ -173,6 +173,61 @@ const NotificationsView = (() => {
         container.innerHTML = render();
         
         notifications = await ICCSupabase.fetchNotifications();
+        
+        // Inject pending team requests for leads (Dynamic fallback)
+        const profile = ICCSupabase.getProfile();
+        if (profile?.role === 'lead' && profile.team_id) {
+            const pending = await ICCSupabase.getPendingMembers(profile.team_id);
+            pending.forEach(p => {
+                if (!notifications.find(n => n.type === 'team_join' && n.actor_id === p.id)) {
+                    notifications.unshift({
+                        id: 'pending_' + p.id,
+                        type: 'team_join',
+                        user_id: profile.id,
+                        actor_id: p.id,
+                        actor_name: p.full_name || p.username,
+                        actor_avatar: p.avatar_url,
+                        body: null,
+                        reference_id: profile.team_id,
+                        created_at: p.updated_at || new Date().toISOString(),
+                        is_read: false
+                    });
+                }
+            });
+        }
+
+        // Virtual notifications for the user's own status
+        if (profile) {
+            if (profile.is_pending_member && profile.team_id) {
+                const teamName = CORE_LEADS?.find(l => l.id === profile.team_id)?.team || 'the team';
+                notifications.unshift({
+                    id: 'pending_self',
+                    type: 'system',
+                    user_id: profile.id,
+                    actor_name: 'System',
+                    body: `Your request to join ${teamName} is pending approval.`,
+                    created_at: profile.updated_at || new Date().toISOString(),
+                    is_read: true
+                });
+            } else if (!profile.is_pending_member && profile.team_id && profile.role !== 'lead' && profile.role !== 'admin') {
+                // If updated in the last 48 hours, show approval notification
+                const updated = new Date(profile.updated_at || new Date());
+                if (new Date() - updated < 48 * 60 * 60 * 1000) {
+                    const teamName = CORE_LEADS?.find(l => l.id === profile.team_id)?.team || 'the team';
+                    notifications.unshift({
+                        id: 'approve_self',
+                        type: 'team_approve',
+                        user_id: profile.id,
+                        actor_name: 'Team Lead',
+                        body: teamName,
+                        reference_id: profile.team_id,
+                        created_at: profile.updated_at || new Date().toISOString(),
+                        is_read: true
+                    });
+                }
+            }
+        }
+        
         loading = false;
         container.innerHTML = render();
         bindEvents(container);
@@ -230,7 +285,9 @@ const NotificationsView = (() => {
                 const url = el.dataset.url;
                 const notif = notifications.find(n => n.id === id);
                 if (notif && !notif.is_read) {
-                    await ICCSupabase.markNotificationRead(id);
+                    if (!id.startsWith('pending_') && !id.startsWith('approve_')) {
+                        await ICCSupabase.markNotificationRead(id);
+                    }
                     notif.is_read = true;
                     BottomNav.updateNotifCount();
                     NotifBell.update();
