@@ -199,10 +199,12 @@ const NotificationsView = (() => {
         // Virtual notifications for the user's own status (using localStorage state tracking)
         if (profile) {
             const wasPending = localStorage.getItem('was_pending_team');
+            const lastActiveTeam = localStorage.getItem('last_active_team');
             
             if (profile.is_pending_member && profile.team_id) {
                 // Currently pending
                 localStorage.setItem('was_pending_team', profile.team_id);
+                localStorage.removeItem('last_active_team');
                 const teamName = CORE_LEADS?.find(l => l.id === profile.team_id)?.team || 'the team';
                 notifications.unshift({
                     id: 'pending_self',
@@ -213,17 +215,27 @@ const NotificationsView = (() => {
                     created_at: profile.updated_at || new Date().toISOString(),
                     is_read: true
                 });
-            } else if (!profile.is_pending_member) {
-                // No longer pending. Did state just change?
+            } else if (!profile.is_pending_member && profile.team_id) {
+                // Currently active member
+                localStorage.setItem('last_active_team', profile.team_id);
                 if (wasPending) {
                     if (profile.team_id == wasPending) {
                         localStorage.setItem('virtual_approved_team', wasPending);
                         localStorage.setItem('virtual_approved_time', Date.now());
-                    } else if (profile.team_id === null) {
-                        localStorage.setItem('virtual_denied_team', wasPending);
-                        localStorage.setItem('virtual_denied_time', Date.now());
                     }
                     localStorage.removeItem('was_pending_team');
+                }
+            } else if (!profile.is_pending_member && !profile.team_id) {
+                // No team, not pending
+                if (wasPending) {
+                    localStorage.setItem('virtual_denied_team', wasPending);
+                    localStorage.setItem('virtual_denied_time', Date.now());
+                    localStorage.removeItem('was_pending_team');
+                } else if (lastActiveTeam) {
+                    // Was an active member, but now removed
+                    localStorage.setItem('virtual_removed_team', lastActiveTeam);
+                    localStorage.setItem('virtual_removed_time', Date.now());
+                    localStorage.removeItem('last_active_team');
                 }
             }
 
@@ -266,6 +278,27 @@ const NotificationsView = (() => {
                 } else {
                     localStorage.removeItem('virtual_denied_team');
                     localStorage.removeItem('virtual_denied_time');
+                }
+            }
+
+            // Show removed virtual notification (lasts 48 hours)
+            const removedTeam = localStorage.getItem('virtual_removed_team');
+            const removedTime = localStorage.getItem('virtual_removed_time');
+            if (removedTeam && removedTime) {
+                if (Date.now() - parseInt(removedTime) < 48 * 60 * 60 * 1000) {
+                    const teamName = CORE_LEADS?.find(l => l.id == removedTeam)?.team || 'the team';
+                    notifications.unshift({
+                        id: 'removed_self',
+                        type: 'system',
+                        user_id: profile.id,
+                        actor_name: 'System',
+                        body: `You have been removed from ${teamName}.`,
+                        created_at: new Date(parseInt(removedTime)).toISOString(),
+                        is_read: true
+                    });
+                } else {
+                    localStorage.removeItem('virtual_removed_team');
+                    localStorage.removeItem('virtual_removed_time');
                 }
             }
         }
@@ -327,7 +360,7 @@ const NotificationsView = (() => {
                 const url = el.dataset.url;
                 const notif = notifications.find(n => n.id === id);
                 if (notif && !notif.is_read) {
-                    if (!id.startsWith('pending_') && !id.startsWith('approve_') && !id.startsWith('deny_')) {
+                    if (!id.startsWith('pending_') && !id.startsWith('approve_') && !id.startsWith('deny_') && !id.startsWith('removed_')) {
                         await ICCSupabase.markNotificationRead(id);
                     }
                     notif.is_read = true;

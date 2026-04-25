@@ -510,17 +510,18 @@ const ICCSupabase = (() => {
 
     async function denyMember(userId) {
         if (!client) return { error: { message: 'Not configured' } };
-        const { data: userBefore } = await client.from('profiles').select('team_id').eq('id', userId).single();
+        const { data: userBefore } = await client.from('profiles').select('team_id, is_pending_member').eq('id', userId).single();
         const { data, error } = await client.from('profiles')
             .update({ team_id: null, is_pending_member: false })
             .eq('id', userId).select().single();
         if (!error && userBefore?.team_id) {
             const teamName = CORE_LEADS.find(l => l.id === userBefore.team_id)?.team || 'the team';
+            const wasPending = userBefore.is_pending_member;
             createNotification({
                 userId: userId,
                 type: 'system',
                 actorId: currentUser?.id,
-                body: `Your request to join ${teamName} was declined.`,
+                body: wasPending ? `Your request to join ${teamName} was declined.` : `You have been removed from ${teamName}.`,
                 referenceId: userBefore.team_id
             });
         }
