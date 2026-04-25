@@ -280,6 +280,18 @@ const ICCSupabase = (() => {
         } else {
             // Like
             await client.from('likes').insert({ post_id: postId, user_id: currentUser.id });
+            
+            // Notify post author
+            const { data: post } = await client.from('posts').select('user_id').eq('id', postId).single();
+            if (post && post.user_id !== currentUser.id) {
+                createNotification({
+                    userId: post.user_id,
+                    type: 'like',
+                    actorId: currentUser.id,
+                    referenceId: postId,
+                    body: null
+                });
+            }
             return { liked: true };
         }
     }
@@ -317,6 +329,20 @@ const ICCSupabase = (() => {
             .insert({ post_id: postId, user_id: currentUser.id, content })
             .select('*, profiles:user_id(id, username, full_name, avatar_url)')
             .single();
+            
+        if (!error && data) {
+            // Notify post author
+            const { data: post } = await client.from('posts').select('user_id').eq('id', postId).single();
+            if (post && post.user_id !== currentUser.id) {
+                createNotification({
+                    userId: post.user_id,
+                    type: 'comment',
+                    actorId: currentUser.id,
+                    referenceId: postId,
+                    body: content
+                });
+            }
+        }
         return { data, error };
     }
 
