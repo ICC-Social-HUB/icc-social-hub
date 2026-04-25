@@ -633,25 +633,19 @@ const ICCSupabase = (() => {
 
     async function fetchNotifications(limit = 100) {
         if (!client || !currentUser) return [];
-        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
         try {
             const { data, error } = await client.from('notifications')
                 .select('*, actor:actor_id(id, full_name, username, avatar_url)')
                 .eq('user_id', currentUser.id)
-                .gt('created_at', thirtyDaysAgo)
+                .gt('created_at', oneDayAgo)
                 .order('created_at', { ascending: false })
                 .limit(limit);
 
             if (error) throw error;
 
-            const filtered = (data || []).filter(n => {
-                if (n.type === 'broadcast') return n.created_at > oneDayAgo;
-                return true;
-            });
-
-            return filtered.map(n => ({
+            return (data || []).map(n => ({
                 ...n,
                 actor_name: n.actor ? (n.actor.full_name || n.actor.username || 'Someone') : null,
                 actor_avatar: n.actor?.avatar_url || null

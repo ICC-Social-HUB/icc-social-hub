@@ -179,19 +179,22 @@ const NotificationsView = (() => {
         if (profile?.role === 'lead' && profile.team_id) {
             const pending = await ICCSupabase.getPendingMembers(profile.team_id);
             pending.forEach(p => {
-                if (!notifications.find(n => n.type === 'team_join' && n.actor_id === p.id)) {
-                    notifications.unshift({
-                        id: 'pending_' + p.id,
-                        type: 'team_join',
-                        user_id: profile.id,
-                        actor_id: p.id,
-                        actor_name: p.full_name || p.username,
-                        actor_avatar: p.avatar_url,
-                        body: null,
-                        reference_id: profile.team_id,
-                        created_at: p.updated_at || new Date().toISOString(),
-                        is_read: false
-                    });
+                // Only show pending requests that occurred in the last 24 hours
+                if (new Date() - new Date(p.updated_at || Date.now()) < 24 * 60 * 60 * 1000) {
+                    if (!notifications.find(n => n.type === 'team_join' && n.actor_id === p.id)) {
+                        notifications.unshift({
+                            id: 'pending_' + p.id,
+                            type: 'team_join',
+                            user_id: profile.id,
+                            actor_id: p.id,
+                            actor_name: p.full_name || p.username,
+                            actor_avatar: p.avatar_url,
+                            body: null,
+                            reference_id: profile.team_id,
+                            created_at: p.updated_at || new Date().toISOString(),
+                            is_read: false
+                        });
+                    }
                 }
             });
         }
@@ -205,16 +208,20 @@ const NotificationsView = (() => {
                 // Currently pending
                 localStorage.setItem('was_pending_team', profile.team_id);
                 localStorage.removeItem('last_active_team');
-                const teamName = CORE_LEADS?.find(l => l.id === profile.team_id)?.team || 'the team';
-                notifications.unshift({
-                    id: 'pending_self',
-                    type: 'system',
-                    user_id: profile.id,
-                    actor_name: 'System',
-                    body: `Your request to join ${teamName} is pending approval.`,
-                    created_at: profile.updated_at || new Date().toISOString(),
-                    is_read: true
-                });
+                
+                // Only show self pending request if it occurred in the last 24 hours
+                if (new Date() - new Date(profile.updated_at || Date.now()) < 24 * 60 * 60 * 1000) {
+                    const teamName = CORE_LEADS?.find(l => l.id === profile.team_id)?.team || 'the team';
+                    notifications.unshift({
+                        id: 'pending_self',
+                        type: 'system',
+                        user_id: profile.id,
+                        actor_name: 'System',
+                        body: `Your request to join ${teamName} is pending approval.`,
+                        created_at: profile.updated_at || new Date().toISOString(),
+                        is_read: true
+                    });
+                }
             } else if (!profile.is_pending_member && profile.team_id) {
                 // Currently active member
                 localStorage.setItem('last_active_team', profile.team_id);
@@ -239,11 +246,11 @@ const NotificationsView = (() => {
                 }
             }
 
-            // Show approval virtual notification (lasts 48 hours)
+            // Show approval virtual notification (lasts 24 hours)
             const approvedTeam = localStorage.getItem('virtual_approved_team');
             const approvedTime = localStorage.getItem('virtual_approved_time');
             if (approvedTeam && approvedTime) {
-                if (Date.now() - parseInt(approvedTime) < 48 * 60 * 60 * 1000) {
+                if (Date.now() - parseInt(approvedTime) < 24 * 60 * 60 * 1000) {
                     const teamName = CORE_LEADS?.find(l => l.id == approvedTeam)?.team || 'the team';
                     notifications.unshift({
                         id: 'approve_self',
@@ -260,11 +267,11 @@ const NotificationsView = (() => {
                 }
             }
 
-            // Show denial virtual notification (lasts 48 hours)
+            // Show denial virtual notification (lasts 24 hours)
             const deniedTeam = localStorage.getItem('virtual_denied_team');
             const deniedTime = localStorage.getItem('virtual_denied_time');
             if (deniedTeam && deniedTime) {
-                if (Date.now() - parseInt(deniedTime) < 48 * 60 * 60 * 1000) {
+                if (Date.now() - parseInt(deniedTime) < 24 * 60 * 60 * 1000) {
                     const teamName = CORE_LEADS?.find(l => l.id == deniedTeam)?.team || 'the team';
                     notifications.unshift({
                         id: 'deny_self',
@@ -281,11 +288,11 @@ const NotificationsView = (() => {
                 }
             }
 
-            // Show removed virtual notification (lasts 48 hours)
+            // Show removed virtual notification (lasts 24 hours)
             const removedTeam = localStorage.getItem('virtual_removed_team');
             const removedTime = localStorage.getItem('virtual_removed_time');
             if (removedTeam && removedTime) {
-                if (Date.now() - parseInt(removedTime) < 48 * 60 * 60 * 1000) {
+                if (Date.now() - parseInt(removedTime) < 24 * 60 * 60 * 1000) {
                     const teamName = CORE_LEADS?.find(l => l.id == removedTeam)?.team || 'the team';
                     notifications.unshift({
                         id: 'removed_self',
