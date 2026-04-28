@@ -102,10 +102,10 @@ const NotificationsView = (() => {
                 </p>
                 <span class="text-[10px] text-zinc-600 mt-1 block">${time}</span>
             </div>
-            <div class="flex flex-col items-center justify-center gap-2">
-                ${isUnread ? '<div class="w-1.5 h-1.5 bg-red-600 rounded-full shadow-[0_0_8px_rgba(220,38,38,0.5)]"></div>' : ''}
-                <button class="notif-delete-btn opacity-0 group-hover:opacity-100 p-1.5 text-zinc-600 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all" data-id="${n.id}" title="Delete">
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            <div class="flex flex-col items-center justify-center gap-2 pr-1">
+                ${isUnread ? '<div class="w-1.5 h-1.5 bg-red-600 rounded-full shadow-[0_0_12px_rgba(220,38,38,0.6)]"></div>' : ''}
+                <button class="notif-delete-btn md:opacity-0 group-hover:opacity-100 p-2 text-zinc-600 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all duration-200" data-id="${n.id}" title="Delete">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
         </div>`;
@@ -275,27 +275,34 @@ const NotificationsView = (() => {
         // Individual delete
         container.querySelectorAll('.notif-delete-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                e.stopPropagation(); // Don't trigger the click on the item
+                e.stopPropagation();
                 const id = btn.dataset.id;
                 const item = btn.closest('.notif-item');
-                if (item) item.style.opacity = '0.5';
+                if (!item) return;
+
+                // 1. Optimistic UI update
+                item.classList.add('animate-slide-out');
                 
-                const res = await ICCSupabase.deleteNotification(id);
-                if (res.error) {
-                    Toast.error('Failed to delete');
-                    if (item) item.style.opacity = '1';
-                } else {
+                // 2. Background DB call
+                ICCSupabase.deleteNotification(id).then(res => {
+                    if (res.error) {
+                        Toast.error('Failed to delete on server');
+                        // In a real app we might revert the UI here, 
+                        // but for UX we usually just notify the error.
+                    }
+                });
+
+                // 3. Remove from local state and re-render after animation
+                setTimeout(() => {
                     notifications = notifications.filter(n => n.id !== id);
-                    if (item) {
-                        item.classList.add('animate-slide-out');
-                        setTimeout(() => {
-                            container.innerHTML = renderList();
-                            bindListEvents(container);
-                        }, 300);
+                    const list = document.getElementById('notif-container');
+                    if (list) {
+                        list.innerHTML = renderList();
+                        bindListEvents(list);
                     }
                     BottomNav.updateNotifCount();
                     NotifBell.update();
-                }
+                }, 250);
             });
         });
     }
