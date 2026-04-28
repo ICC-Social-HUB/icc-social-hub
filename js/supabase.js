@@ -590,7 +590,7 @@ const ICCSupabase = (() => {
             // Trigger Email Notification
             const user = await fetchUserById(userId);
             if (user?.email) {
-                fetch('http://localhost:5000/api/otp/team-status', {
+                fetch('/api/team-status-email', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: user.email, type: 'approve', teamName })
@@ -626,7 +626,7 @@ const ICCSupabase = (() => {
             // Trigger Email Notification
             const user = await fetchUserById(userId);
             if (user?.email) {
-                fetch('http://localhost:5000/api/otp/team-status', {
+                fetch('/api/team-status-email', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: user.email, type: 'deny', teamName })
