@@ -174,63 +174,7 @@ const NotificationsView = (() => {
         
         notifications = await ICCSupabase.fetchNotifications();
         
-        // Inject pending team requests for leads (Dynamic fallback)
-        const profile = ICCSupabase.getProfile();
-        if (profile?.role === 'lead' && profile.team_id) {
-            const pending = await ICCSupabase.getPendingMembers(profile.team_id);
-            pending.forEach(p => {
-                // Only show pending requests that occurred in the last 24 hours
-                if (new Date() - new Date(p.updated_at || Date.now()) < 24 * 60 * 60 * 1000) {
-                    if (!notifications.find(n => n.type === 'team_join' && n.actor_id === p.id)) {
-                        notifications.unshift({
-                            id: 'pending_' + p.id,
-                            type: 'team_join',
-                            user_id: profile.id,
-                            actor_id: p.id,
-                            actor_name: p.full_name || p.username,
-                            actor_avatar: p.avatar_url,
-                            body: null,
-                            reference_id: profile.team_id,
-                            created_at: p.updated_at || new Date().toISOString(),
-                            is_read: false
-                        });
-                    }
-                }
-            });
-        }
-
-        // Virtual notifications for the user's own status
-        if (profile) {
-            // Show self pending requests
-            (profile.pending_teams || []).forEach(tid => {
-                const teamName = CORE_LEADS?.find(l => l.id === tid)?.team || 'the team';
-                notifications.unshift({
-                    id: 'pending_self_' + tid,
-                    type: 'system',
-                    user_id: profile.id,
-                    actor_name: 'System',
-                    body: `Your request to join ${teamName} is pending approval.`,
-                    created_at: new Date().toISOString(),
-                    is_read: true
-                });
-            });
-
-            // Show membership confirmations
-            (profile.memberships || []).forEach(tid => {
-                const teamName = CORE_LEADS?.find(l => l.id === tid)?.team || 'the team';
-                notifications.unshift({
-                    id: 'member_self_' + tid,
-                    type: 'system',
-                    user_id: profile.id,
-                    actor_name: 'System',
-                    body: `You are a member of ${teamName}.`,
-                    created_at: new Date().toISOString(),
-                    is_read: true
-                });
-            });
-        }
-        
-        // Ensure strictly ordered by newest first, even after virtual injections
+        // Ensure strictly ordered by newest first
         notifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         
         loading = false;

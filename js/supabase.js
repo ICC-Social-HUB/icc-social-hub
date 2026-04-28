@@ -482,9 +482,9 @@ const ICCSupabase = (() => {
     async function joinTeam(teamId, summary, discTag) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
         
-        // 1. Check if already in a team
-        if (currentProfile?.memberships?.length > 0) {
-            return { error: { message: 'You are already a member of a team. You cannot join multiple teams.' } };
+        // 1. Check if already in a team or is a lead
+        if (currentProfile?.memberships?.length > 0 || currentProfile?.role === 'lead') {
+            return { error: { message: 'You are already a member or lead of a team. You cannot join multiple teams.' } };
         }
         
         // 1. Insert join data
@@ -607,9 +607,9 @@ const ICCSupabase = (() => {
             const teamName = CORE_LEADS.find(l => l.id === parseInt(teamId))?.team || 'the team';
             createNotification({
                 userId: userId,
-                type: 'system',
+                type: 'team_deny',
                 actorId: currentUser?.id,
-                body: `You have been removed from ${teamName} or your request was denied.`,
+                body: teamName,
                 referenceId: teamId
             });
         }
