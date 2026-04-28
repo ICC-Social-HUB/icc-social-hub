@@ -65,7 +65,7 @@ module.exports = async (req, res) => {
         // We return the hashed_token, and the frontend calls ICCSupabase.client.auth.verifyOtp
         
         return res.status(200).json({ 
-            token: data.hashed_token,
+            token: data.properties.hashed_token,
             type: 'magiclink',
             email: email
         });
