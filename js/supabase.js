@@ -738,6 +738,16 @@ const ICCSupabase = (() => {
                     user_id: userId,
                     team_id: fields.team_id
                 });
+            } else {
+                // Trigger Removal Email Notification
+                const user = await fetchUserById(userId);
+                if (user?.email) {
+                    fetch('/api/team-status-email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: user.email, type: 'remove', teamName: 'your team' })
+                    }).catch(err => console.error('Failed to trigger removal email:', err));
+                }
             }
         }
         return { data, error };
