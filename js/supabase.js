@@ -798,36 +798,11 @@ const ICCSupabase = (() => {
 
             if (error) throw error;
             
-            // Fetch global posts from last 24 hours to show as "New Post" notifications
-            const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-            const { data: globalPosts } = await client.from('posts')
-                .select('id, user_id, caption, created_at, profiles:user_id(id, full_name, username, avatar_url)')
-                .gt('created_at', oneDayAgo)
-                .neq('user_id', currentUser.id)
-                .limit(50);
-
             const formattedNotifs = (dbNotifs || []).map(n => ({
                 ...n,
                 actor_name: n.actor ? (n.actor.full_name || n.actor.username || 'Someone') : null,
                 actor_avatar: n.actor?.avatar_url || null
             }));
-
-            if (globalPosts) {
-                globalPosts.forEach(p => {
-                    formattedNotifs.push({
-                        id: 'post_' + p.id,
-                        type: 'post',
-                        user_id: currentUser.id,
-                        actor_id: p.user_id,
-                        actor_name: p.profiles?.full_name || p.profiles?.username || 'Someone',
-                        actor_avatar: p.profiles?.avatar_url,
-                        body: p.caption,
-                        reference_id: p.id,
-                        created_at: p.created_at,
-                        is_read: true
-                    });
-                });
-            }
 
             formattedNotifs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
@@ -1023,6 +998,7 @@ const ICCSupabase = (() => {
                 const newNotif = payload.new;
                 if (newNotif.actor_id && !newNotif.actor_name) {
                     const actor = await fetchUserById(newNotif.actor_id);
+                    newNotif.actor = actor; // Fix: include actor object for role/verified tick
                     newNotif.actor_name = actor?.full_name || actor?.username || 'Someone';
                     newNotif.actor_avatar = actor?.avatar_url;
                 }
