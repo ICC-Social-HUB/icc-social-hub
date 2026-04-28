@@ -32,16 +32,21 @@ module.exports = async (req, res) => {
     const supabase = createClient(url, key);
 
     try {
-        console.log(`🔍 Checking user: ${email}`);
+        console.log(`🔍 Checking user in profiles: ${email}`);
         
-        // Ensure user exists first
-        const { data: userCheck, error: checkError } = await supabase.auth.admin.getUserByEmail(email);
-        if (checkError || !userCheck?.user) {
-            console.error('❌ User not found in Auth:', email);
+        // 4. Check if user exists in the profiles table
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', email)
+            .single();
+
+        if (profileError || !profile) {
+            console.error('❌ User not found in profiles:', email);
             return res.status(404).json({ error: 'User does not exist in the database' });
         }
 
-        // 4. Generate a magic link for the target user
+        // 5. Generate a magic link for the target user
         // This doesn't send an email because we are using the Admin API generateLink
         const { data, error } = await supabase.auth.admin.generateLink({
             type: 'magiclink',
