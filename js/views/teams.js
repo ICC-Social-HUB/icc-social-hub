@@ -19,10 +19,10 @@ const TeamsView = (() => {
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" id="leads-grid">
                     ${CORE_LEADS.map((lead, i) => {
-                        const isMember = profile?.memberships?.includes(lead.id);
-                        const isPending = profile?.pending_teams?.includes(lead.id);
-                        return `
-                        <div class="lead-card bg-zinc-900/60 border border-zinc-800/50 rounded-xl overflow-hidden cursor-pointer group" data-lead-id="${lead.id}" style="animation:slideUp 0.4s ease-out ${i*0.05}s both">
+            const isMember = profile?.memberships?.includes(lead.id);
+            const isPending = profile?.pending_teams?.includes(lead.id);
+            return `
+                        <div class="lead-card bg-zinc-900/60 border border-zinc-800/50 rounded-xl overflow-hidden cursor-pointer group" data-lead-id="${lead.id}" style="animation:slideUp 0.4s ease-out ${i * 0.05}s both">
                             <div class="relative h-28 sm:h-36 overflow-hidden bg-gradient-to-br ${lead.gradient}">
                                 <div class="portrait absolute inset-0 flex items-center justify-center">
                                     <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-zinc-950/40 backdrop-blur-sm border-2 border-white/20 flex items-center justify-center overflow-hidden">
@@ -40,7 +40,7 @@ const TeamsView = (() => {
                                 <div class="card-accent h-0.5 bg-gradient-to-r ${lead.gradient} rounded-full mt-2"></div>
                             </div>
                         </div>`;
-                    }).join('')}
+        }).join('')}
                 </div>
             </div>
         </section>`;
@@ -69,9 +69,9 @@ const TeamsView = (() => {
                 <!-- Avatar now free to overflow below the banner -->
                 <div class="absolute -bottom-12 left-1/2 -translate-x-1/2 z-10">
                     <div class="avatar-ring"><div class="w-24 h-24 rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden ${lead.avatar_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}" ${lead.avatar_url ? `data-full-image="${lead.avatar_url}"` : ''}>
-                        ${lead.avatar_url 
-                            ? `<img src="${lead.avatar_url}" class="w-full h-full object-cover">` 
-                            : `<span class="font-heading font-bold text-3xl" style="color:${lead.color}">${lead.initials}</span>`}
+                        ${lead.avatar_url
+                ? `<img src="${lead.avatar_url}" class="w-full h-full object-cover">`
+                : `<span class="font-heading font-bold text-3xl" style="color:${lead.color}">${lead.initials}</span>`}
                     </div></div>
                 </div>
             </div>
@@ -91,10 +91,10 @@ const TeamsView = (() => {
                         <div><h3 class="font-heading font-semibold text-sm mb-2 text-zinc-400">Specialties</h3><div class="flex flex-wrap gap-2">${lead.specialties.map(s => `<span class="specialty-pill px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-400">${s}</span>`).join('')}</div></div>
                         <div class="pt-2">
                             ${(() => {
-                                if (!user) return `<button id="team-join-btn" class="join-btn px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Join ${lead.team}</button><p class="text-[11px] text-zinc-600 mt-1.5">Sign in to join</p>`;
-                                if (isMember) return `<div class="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600/15 border border-emerald-600/30 rounded-xl"><svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="text-emerald-400 text-sm font-semibold">You're a Member</span></div>`;
-                                if (profile?.memberships?.length > 0 || profile?.role === 'lead') return `<div class="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60"><svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span class="text-zinc-500 text-sm font-semibold">Already in a Team</span></div><p class="text-[10px] text-zinc-600 mt-2">You can only be in one team at a time.</p>`;
-                                if (isPending) return `
+                if (!user) return `<button id="team-join-btn" class="join-btn px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Join ${lead.team}</button><p class="text-[11px] text-zinc-600 mt-1.5">Sign in to join</p>`;
+                if (isMember) return `<div class="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600/15 border border-emerald-600/30 rounded-xl"><svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="text-emerald-400 text-sm font-semibold">You're a Member</span></div>`;
+                if (profile?.memberships?.length > 0 || profile?.role === 'lead') return `<div class="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60"><svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span class="text-zinc-500 text-sm font-semibold">Already in a Team</span></div><p class="text-[10px] text-zinc-600 mt-2">You can only be in one team at a time.</p>`;
+                if (isPending) return `
                                     <div class="flex flex-col gap-2">
                                         <div class="inline-flex items-center gap-2 px-6 py-3 bg-amber-500/15 border border-amber-500/30 rounded-xl">
                                             <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -102,8 +102,8 @@ const TeamsView = (() => {
                                         </div>
                                         <button id="team-cancel-btn" class="text-[11px] text-zinc-500 hover:text-red-400 transition-colors w-fit mx-auto underline decoration-dotted">Cancel Request</button>
                                     </div>`;
-                                
-                                if (profile?.pending_teams?.length > 0) return `
+
+                if (profile?.pending_teams?.length > 0) return `
                                     <div class="flex flex-col gap-1.5">
                                         <div class="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60">
                                             <svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -111,9 +111,9 @@ const TeamsView = (() => {
                                         </div>
                                         <p class="text-[10px] text-zinc-600 mt-0.5">You already have a pending request for another team. Cancel it to apply here.</p>
                                     </div>`;
-                                
-                                return `<button id="team-join-btn" class="join-btn px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Request to Join ${lead.team}</button>`;
-                            })()}
+
+                return `<button id="team-join-btn" class="join-btn px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Request to Join ${lead.team}</button>`;
+            })()}
                         </div>
                     </div>
                     <div>
@@ -125,11 +125,11 @@ const TeamsView = (() => {
                             <div class="flex items-center gap-1.5 mb-3 px-2 py-1.5 bg-zinc-950 rounded-lg"><span class="relative flex h-1.5 w-1.5"><span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative rounded-full h-1.5 w-1.5 bg-emerald-500"></span></span><span class="text-[10px] text-zinc-500">Live</span></div>
                             <div id="team-roster" class="space-y-1.5 max-h-60 overflow-y-auto">
                                 ${teamMembers.length === 0 ? '<p class="text-xs text-zinc-600 text-center py-4">No members yet — be first!</p>'
-                                : teamMembers.map((m, i) => `
-                                <div class="roster-item flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i*0.04}s">
-                                    <a href="#chat/${m.id}" class="flex items-center gap-2 flex-1 min-w-0 hover:opacity-80 transition-opacity" title="Message ${m.full_name||'User'}">
-                                        <div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name||'?').charAt(0).toUpperCase()}</div>
-                                        <p class="text-xs font-medium truncate">${m.full_name||'Anonymous'}</p>
+                : teamMembers.map((m, i) => `
+                                <div class="roster-item flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i * 0.04}s">
+                                    <a href="#chat/${m.id}" class="flex items-center gap-2 flex-1 min-w-0 hover:opacity-80 transition-opacity" title="Message ${m.full_name || 'User'}">
+                                        <div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name || '?').charAt(0).toUpperCase()}</div>
+                                        <p class="text-xs font-medium truncate">${m.full_name || 'Anonymous'}</p>
                                     </a>
                                     ${(isLeadOrAdmin && m.id !== profile?.id) ? `<button class="remove-member-btn px-1.5 py-1 bg-red-900/30 text-red-400 hover:bg-red-900/60 rounded text-[10px] font-medium transition-colors" data-id="${m.id}">Remove</button>` : ''}
                                 </div>
@@ -145,8 +145,8 @@ const TeamsView = (() => {
                                 <div class="bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden mb-3">
                                     <div class="flex items-center justify-between px-3 py-2 bg-zinc-900/50">
                                         <div class="min-w-0 pr-2">
-                                            <p class="text-xs font-bold truncate">${m.full_name||'Anon'}</p>
-                                            <p class="text-[10px] text-zinc-500 truncate">@${m.username||''}</p>
+                                            <p class="text-xs font-bold truncate">${m.full_name || 'Anon'}</p>
+                                            <p class="text-[10px] text-zinc-500 truncate">@${m.username || ''}</p>
                                         </div>
                                         <div class="flex gap-1.5 flex-shrink-0">
                                             <button class="approve-member-btn px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-[10px] font-bold transition-colors" data-id="${m.id}">Approve</button>
@@ -209,11 +209,11 @@ const TeamsView = (() => {
                 if (roster) {
                     const isLeadOrAdmin = (profile?.role === 'lead' && profile.team_id === currentTeamId) || ICCSupabase.isAdmin();
                     roster.innerHTML = teamMembers.length === 0 ? '<p class="text-xs text-zinc-600 text-center py-4">No members yet — be first!</p>'
-                                : teamMembers.map((m, i) => `
-                                <div class="roster-item flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i*0.04}s">
-                                    <a href="#chat/${m.id}" class="flex items-center gap-2 flex-1 min-w-0 hover:opacity-80 transition-opacity" title="Message ${m.full_name||'User'}">
-                                        <div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name||'?').charAt(0).toUpperCase()}</div>
-                                        <p class="text-xs font-medium truncate">${m.full_name||'Anonymous'}</p>
+                        : teamMembers.map((m, i) => `
+                                <div class="roster-item flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i * 0.04}s">
+                                    <a href="#chat/${m.id}" class="flex items-center gap-2 flex-1 min-w-0 hover:opacity-80 transition-opacity" title="Message ${m.full_name || 'User'}">
+                                        <div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name || '?').charAt(0).toUpperCase()}</div>
+                                        <p class="text-xs font-medium truncate">${m.full_name || 'Anonymous'}</p>
                                     </a>
                                     ${(isLeadOrAdmin && m.id !== profile?.id) ? `<button class="remove-member-btn px-1.5 py-1 bg-red-900/30 text-red-400 hover:bg-red-900/60 rounded text-[10px] font-medium transition-colors" data-id="${m.id}">Remove</button>` : ''}
                                 </div>
@@ -233,8 +233,8 @@ const TeamsView = (() => {
                                 <div class="bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden mb-3">
                                     <div class="flex items-center justify-between px-3 py-2 bg-zinc-900/50">
                                         <div class="min-w-0 pr-2">
-                                            <p class="text-xs font-bold truncate">${m.full_name||'Anon'}</p>
-                                            <p class="text-[10px] text-zinc-500 truncate">@${m.username||''}</p>
+                                            <p class="text-xs font-bold truncate">${m.full_name || 'Anon'}</p>
+                                            <p class="text-[10px] text-zinc-500 truncate">@${m.username || ''}</p>
                                         </div>
                                         <div class="flex gap-1.5 flex-shrink-0">
                                             <button class="approve-member-btn px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-[10px] font-bold transition-colors" data-id="${m.id}">Approve</button>
@@ -304,7 +304,7 @@ const TeamsView = (() => {
             if (!ICCSupabase.getUser()) { AuthModal.open(); return; }
             JoinTeamModal.open(lead);
         });
-        
+
         document.getElementById('team-cancel-btn')?.addEventListener('click', async () => {
             if (!confirm('Cancel your join request?')) return;
             const btn = document.getElementById('team-cancel-btn');
@@ -323,9 +323,9 @@ const TeamsView = (() => {
                 if (error) {
                     console.error('Removal error:', error);
                     Toast.error('Error: Could not remove member.');
-                } else { 
-                    Toast.success('Member removed successfully'); 
-                    const c = document.getElementById('app'); mount(c, lead.id); 
+                } else {
+                    Toast.success('Member removed successfully');
+                    const c = document.getElementById('app'); mount(c, lead.id);
                 }
             }
         });
@@ -336,9 +336,9 @@ const TeamsView = (() => {
                 const userId = btn.dataset.id;
                 const { error } = await ICCSupabase.approveMember(userId, lead.id);
                 if (error) Toast.error('Failed to approve member');
-                else { 
-                    Toast.success('Member approved!'); 
-                    const c = document.getElementById('app'); mount(c, lead.id); 
+                else {
+                    Toast.success('Member approved!');
+                    const c = document.getElementById('app'); mount(c, lead.id);
                 }
             });
         });
@@ -350,9 +350,9 @@ const TeamsView = (() => {
                 if (error) {
                     console.error('Denial error:', error);
                     Toast.error('Error: Could not deny request');
-                } else { 
-                    Toast.info('Join request denied'); 
-                    const c = document.getElementById('app'); mount(c, lead.id); 
+                } else {
+                    Toast.info('Join request denied');
+                    const c = document.getElementById('app'); mount(c, lead.id);
                 }
             });
         });
@@ -367,10 +367,10 @@ const TeamsView = (() => {
             e.preventDefault();
             const btn = e.target.querySelector('button[type="submit"]');
             btn.disabled = true; btn.textContent = 'Saving...';
-            
+
             const fileInput = document.getElementById('lead-avatar-input');
             let newAvatarUrl = lead.avatar_url;
-            
+
             if (fileInput.files && fileInput.files[0]) {
                 const file = fileInput.files[0];
                 if (file.size > 2 * 1024 * 1024) { Toast.error('Image must be under 2MB'); btn.disabled = false; btn.textContent = 'Save Configuration'; return; }

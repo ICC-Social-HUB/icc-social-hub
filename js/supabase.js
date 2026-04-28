@@ -336,7 +336,7 @@ const ICCSupabase = (() => {
     async function fetchComments(postId) {
         if (!client) return [];
         const { data } = await client.from('comments')
-            .select('*, profiles:user_id(id, username, full_name, avatar_url)')
+            .select('*, profiles:user_id(id, username, full_name, avatar_url, role)')
             .eq('post_id', postId)
             .order('created_at', { ascending: true });
         return data || [];
@@ -346,7 +346,7 @@ const ICCSupabase = (() => {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
         const { data, error } = await client.from('comments')
             .insert({ post_id: postId, user_id: currentUser.id, content })
-            .select('*, profiles:user_id(id, username, full_name, avatar_url)')
+            .select('*, profiles:user_id(id, username, full_name, avatar_url, role)')
             .single();
             
         if (!error && data) {

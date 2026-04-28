@@ -31,7 +31,7 @@ const JoinTeamModal = (() => {
                     <div class="flex items-center justify-between mb-6">
                         <div>
                             <h3 class="font-heading font-bold text-xl">Join ${currentTeam.team}</h3>
-                            <p class="text-zinc-500 text-sm mt-1">Tell the team lead a bit about yourself</p>
+                            <p class="text-zinc-500 text-sm mt-1">Lead: <span class="text-zinc-300 font-medium">${currentTeam.name}${ICC_CONFIG.VERIFIED_TICK}</span></p>
                         </div>
                         <button id="join-modal-close" class="p-2 hover:bg-zinc-800 rounded-full transition-colors">
                             <svg class="w-5 h-5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>

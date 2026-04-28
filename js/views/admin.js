@@ -122,7 +122,7 @@ const AdminView = (() => {
                     </tr></thead>
                     <tbody>${CORE_LEADS.map(l => `
                         <tr class="border-b border-zinc-800/30 hover:bg-zinc-800/20 transition-colors">
-                            <td class="px-4 py-3"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-gradient-to-br ${l.gradient} flex items-center justify-center text-xs font-bold flex-shrink-0">${l.initials}</div><span class="text-sm font-medium">${l.name}</span></div></td>
+                            <td class="px-4 py-3"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-gradient-to-br ${l.gradient} flex items-center justify-center text-xs font-bold flex-shrink-0">${l.initials}</div><span class="text-sm font-medium">${l.name}${ICC_CONFIG.VERIFIED_TICK}</span></div></td>
                             <td class="px-4 py-3 text-zinc-500 text-xs hidden md:table-cell">${l.team}</td>
                             <td class="px-4 py-3 text-right">
                                 <button class="edit-lead-btn text-xs text-blue-400 hover:text-blue-300 transition-colors mr-3" data-id="${l.id}">Edit</button>
@@ -137,7 +137,7 @@ const AdminView = (() => {
             <h3 class="font-heading font-semibold text-sm mb-3">Pending Lead Requests (${pendingLeads.length})</h3>
             <div class="space-y-2">${pendingLeads.map(p => `
                 <div class="flex items-center justify-between px-3 py-2.5 bg-zinc-900 rounded-lg">
-                    <div><p class="text-sm font-medium">${p.full_name || p.username || 'User'}</p><p class="text-[11px] text-zinc-500">${p.username ? '@'+p.username : ''}</p></div>
+                    <div><p class="text-sm font-medium">${p.full_name || p.username || 'User'}</p><p class="text-[11px] text-zinc-500">${p.username ? '@' + p.username : ''}</p></div>
                     <div class="flex items-center gap-2">
                         <select class="assign-team-select text-[11px] bg-zinc-950 border border-zinc-800 rounded px-2 py-1 outline-none text-zinc-300" data-user-id="${p.id}">
                             <option value="">Select Team...</option>
@@ -155,16 +155,16 @@ const AdminView = (() => {
         return `
         <div class="space-y-2">
             ${allPosts.slice(0, 30).map(p => {
-                const prof = p.profiles || {};
-                return `<div class="flex items-center gap-3 px-4 py-3 glass-card rounded-xl">
+            const prof = p.profiles || {};
+            return `<div class="flex items-center gap-3 px-4 py-3 glass-card rounded-xl">
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium truncate">${prof.username || prof.full_name || 'Anon'}</p>
+                        <p class="text-sm font-medium truncate">${prof.username || prof.full_name || 'Anon'}${prof.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</p>
                         <p class="text-xs text-zinc-500 truncate">${(p.caption || 'No caption').slice(0, 60)}</p>
                         <p class="text-[10px] text-zinc-600 mt-0.5">${formatTimeAgo(p.created_at)}</p>
                     </div>
                     <button class="admin-delete-post px-3 py-1.5 bg-red-900/30 hover:bg-red-900/60 text-red-400 rounded-lg text-[11px] font-medium transition-colors" data-post-id="${p.id}">Delete</button>
                 </div>`;
-            }).join('')}
+        }).join('')}
         </div>`;
     }
 
@@ -205,15 +205,15 @@ const AdminView = (() => {
                                 </div>
                             </td>
                             <td class="px-4 py-3">
-                                ${u.email 
-                                    ? `<span class="text-xs text-zinc-300 font-mono">${u.email}</span>`
-                                    : `<span class="text-[10px] text-zinc-600 italic">No email</span>`
-                                }
+                                ${u.email
+                ? `<span class="text-xs text-zinc-300 font-mono">${u.email}</span>`
+                : `<span class="text-[10px] text-zinc-600 italic">No email</span>`
+            }
                             </td>
                             <td class="px-4 py-3">
                                 <select class="user-team-select bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 w-32" data-id="${u.id}">
                                     <option value="">None</option>
-                                    ${CORE_LEADS.map(l => `<option value="${l.id}" ${u.team_id===l.id?'selected':''}>${l.team}</option>`).join('')}
+                                    ${CORE_LEADS.map(l => `<option value="${l.id}" ${u.team_id === l.id ? 'selected' : ''}>${l.team}</option>`).join('')}
                                 </select>
                             </td>
                             <td class="px-4 py-3 text-right flex justify-end gap-2">
@@ -257,8 +257,8 @@ const AdminView = (() => {
             if (!msg) return;
             const { error } = await ICCSupabase.createBroadcast(msg);
             if (error) Toast.error('Broadcast failed: ' + error.message);
-            else { 
-                Toast.success('Broadcast sent! 📢'); 
+            else {
+                Toast.success('Broadcast sent! 📢');
                 document.getElementById('broadcast-msg').value = '';
                 // Notify everyone
                 ICCSupabase.getAllProfiles().then(profiles => {
@@ -279,11 +279,11 @@ const AdminView = (() => {
                 const userId = btn.dataset.id;
                 const teamId = container.querySelector(`.assign-team-select[data-user-id="${userId}"]`)?.value;
                 if (!teamId) { Toast.error('Please select a team first'); return; }
-                
+
                 const { error } = await ICCSupabase.approveLead(userId, parseInt(teamId));
                 if (error) Toast.error('Failed to approve lead');
-                else { 
-                    Toast.success('Lead approved!'); 
+                else {
+                    Toast.success('Lead approved!');
                     // Notify the user
                     const teamName = CORE_LEADS.find(l => l.id === parseInt(teamId))?.team || 'a team';
                     ICCSupabase.createNotification({
@@ -292,7 +292,7 @@ const AdminView = (() => {
                         actorId: ICCSupabase.getUser().id,
                         body: `Congratulations! You have been appointed as the Team Lead for ${teamName}.`
                     });
-                    mount(container); 
+                    mount(container);
                 }
             });
         });
@@ -313,7 +313,7 @@ const AdminView = (() => {
                 else { Toast.success('Post deleted'); allPosts = await ICCSupabase.getAllPosts(); container.innerHTML = render(); bindEvents(container); }
             });
         });
-        
+
         // User management
         container.querySelectorAll('.save-user-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
@@ -354,10 +354,10 @@ const AdminView = (() => {
                 btn.textContent = '...';
                 const { error } = await ICCSupabase.adminDeleteUser(userId);
                 if (error) { Toast.error('Delete failed: ' + error.message); btn.textContent = 'Delete'; }
-                else { 
-                    Toast.success('User deleted!'); 
-                    allUsers = await ICCSupabase.getAllProfiles(); 
-                    container.innerHTML = render(); bindEvents(container); 
+                else {
+                    Toast.success('User deleted!');
+                    allUsers = await ICCSupabase.getAllProfiles();
+                    container.innerHTML = render(); bindEvents(container);
                 }
             });
         });
@@ -392,7 +392,7 @@ const AdminView = (() => {
             e.preventDefault();
             const submitBtn = e.target.querySelector('button[type="submit"]');
             submitBtn.disabled = true; submitBtn.textContent = 'Saving...';
-            
+
             const fields = {
                 name: document.getElementById('lead-name').value.trim(),
                 team: document.getElementById('lead-team').value.trim(),
