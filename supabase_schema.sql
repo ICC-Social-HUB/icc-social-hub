@@ -522,7 +522,7 @@ CREATE POLICY "Leads and admins can delete join data"
 -- 14. TEAM MEMBERSHIPS (Multi-team support)
 -- ==========================================
 CREATE TABLE IF NOT EXISTS public.team_memberships (
-    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE UNIQUE,
     team_id INTEGER NOT NULL,
     created_at TIMESTAMPTZ DEFAULT now(),
     PRIMARY KEY (user_id, team_id)

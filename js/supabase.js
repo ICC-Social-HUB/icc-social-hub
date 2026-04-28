@@ -482,6 +482,11 @@ const ICCSupabase = (() => {
     async function joinTeam(teamId, summary, discTag) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
         
+        // 1. Check if already in a team
+        if (currentProfile?.memberships?.length > 0) {
+            return { error: { message: 'You are already a member of a team. You cannot join multiple teams.' } };
+        }
+        
         // 1. Insert join data
         const { error: dataError } = await client.from('team_join_data').upsert({
             user_id: currentUser.id,
@@ -552,6 +557,12 @@ const ICCSupabase = (() => {
 
     async function approveMember(userId, teamId) {
         if (!client) return { error: { message: 'Not configured' } };
+
+        // 0. Check if user is already in ANY team
+        const { data: existing } = await client.from('team_memberships').select('team_id').eq('user_id', userId);
+        if (existing && existing.length > 0) {
+            return { error: { message: 'This user is already a member of another team.' } };
+        }
         
         // 1. Cleanup join data
         const { error: delError } = await client.from('team_join_data').delete().eq('user_id', userId).eq('team_id', teamId);
@@ -698,12 +709,16 @@ const ICCSupabase = (() => {
         const { data, error } = await client.from('profiles')
             .update(fields).eq('id', userId).select().single();
         
-        // If team_id was updated, ensure it exists in memberships
-        if (!error && fields.team_id) {
-            await client.from('team_memberships').upsert({
-                user_id: userId,
-                team_id: fields.team_id
-            });
+        // If team_id was updated, enforce one-team rule by clearing old ones first
+        if (!error && fields.hasOwnProperty('team_id')) {
+            await client.from('team_memberships').delete().eq('user_id', userId);
+            
+            if (fields.team_id !== null) {
+                await client.from('team_memberships').insert({
+                    user_id: userId,
+                    team_id: fields.team_id
+                });
+            }
         }
         return { data, error };
     }
