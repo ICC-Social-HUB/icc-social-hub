@@ -417,6 +417,19 @@ CREATE POLICY "Users can update their own notifications"
     ON public.notifications FOR UPDATE
     USING (auth.uid() = user_id);
 
+CREATE POLICY "Users can delete their own notifications"
+    ON public.notifications FOR DELETE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins can delete any notification"
+    ON public.notifications FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created ON public.notifications(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_unread ON public.notifications(user_id, is_read);
