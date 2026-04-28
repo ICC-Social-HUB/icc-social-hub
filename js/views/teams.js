@@ -51,7 +51,7 @@ const TeamsView = (() => {
         const profile = ICCSupabase.getProfile();
         const isMember = profile?.memberships?.includes(lead.id);
         const isPending = profile?.pending_teams?.includes(lead.id);
-        const isLeadUser = profile?.role === 'lead' && profile.team_id === lead.id;
+        const isLeadUser = profile?.role === 'lead' && Number(profile.team_id) === Number(lead.id);
         const isLeadOrAdmin = isLeadUser || ICCSupabase.isAdmin();
 
         return `
@@ -128,7 +128,7 @@ const TeamsView = (() => {
                         </div>
                         
                         ${isLeadUser ? `
-                        <div class="glass-card rounded-xl p-4 mt-4">
+                        <div class="glass-card rounded-xl p-4 mt-4" id="pending-requests-container">
                             <h3 class="font-heading font-semibold text-sm mb-3">Pending Requests (${pendingMembers.length})</h3>
                             <div class="space-y-2 max-h-48 overflow-y-auto">
                                 ${pendingMembers.length === 0 ? '<p class="text-xs text-zinc-600">No pending requests</p>' : pendingMembers.map(m => `
@@ -210,6 +210,60 @@ const TeamsView = (() => {
                                 `).join('');
                 }
                 if (count) count.textContent = teamMembers.length;
+
+                // Also update pending requests if lead
+                if (profile?.role === 'lead' && profile.team_id === currentTeamId) {
+                    pendingMembers = await ICCSupabase.getPendingMembers(currentTeamId);
+                    const pendingContainer = document.getElementById('pending-requests-container');
+                    if (pendingContainer) {
+                        pendingContainer.innerHTML = `
+                            <h3 class="font-heading font-semibold text-sm mb-3">Pending Requests (${pendingMembers.length})</h3>
+                            <div class="space-y-2 max-h-48 overflow-y-auto">
+                                ${pendingMembers.length === 0 ? '<p class="text-xs text-zinc-600">No pending requests</p>' : pendingMembers.map(m => `
+                                <div class="bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden mb-3">
+                                    <div class="flex items-center justify-between px-3 py-2 bg-zinc-900/50">
+                                        <div class="min-w-0 pr-2">
+                                            <p class="text-xs font-bold truncate">${m.full_name||'Anon'}</p>
+                                            <p class="text-[10px] text-zinc-500 truncate">@${m.username||''}</p>
+                                        </div>
+                                        <div class="flex gap-1.5 flex-shrink-0">
+                                            <button class="approve-member-btn px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-[10px] font-bold transition-colors" data-id="${m.id}">Approve</button>
+                                            <button class="deny-member-btn px-3 py-1 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-[10px] transition-colors" data-id="${m.id}">Deny</button>
+                                        </div>
+                                    </div>
+                                    <div class="p-3">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="px-2 py-0.5 bg-red-600/10 text-red-400 border border-red-500/20 rounded text-[9px] font-bold uppercase tracking-wider">${m.disc_tag || 'No Tag'}</span>
+                                            <span class="text-[10px] text-zinc-500 italic">DISC Personality</span>
+                                        </div>
+                                        <p class="text-[11px] text-zinc-400 leading-relaxed italic bg-zinc-900/30 p-2 rounded-lg border border-zinc-800/50">"${m.summary || 'No summary provided.'}"</p>
+                                    </div>
+                                </div>
+                                `).join('')}
+                            </div>
+                            
+                            <div class="flex items-center justify-between mt-6 mb-3">
+                                <h3 class="font-heading font-semibold text-sm">Team Configuration</h3>
+                                <button id="toggle-config-btn" class="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500 hover:text-emerald-400" title="Edit Configuration">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                </button>
+                            </div>
+                            
+                            <div id="team-config-expandable" class="hidden animate-slide-down overflow-hidden">
+                                <form id="lead-edit-team-form" class="space-y-3 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team Profile Picture (Optional)</label><input type="file" id="lead-avatar-input" accept="image/jpeg, image/png, image/webp" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Project Name</label><input type="text" id="lead-project-name" value="${lead.project_name || ''}" placeholder="Yet to choose" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team Name</label><input type="text" id="lead-team-name" value="${lead.team}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Bio</label><textarea id="lead-bio" rows="3" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${lead.bio}</textarea></div>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Specialties (comma-separated)</label><input type="text" id="lead-specialties" value="${lead.specialties.join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                                    <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold mt-2 transition-all shadow-lg shadow-emerald-600/20">Save Configuration</button>
+                                </form>
+                            </div>
+                        `;
+                        // Re-bind events for the new buttons
+                        bindDetailEvents(lead);
+                    }
+                }
             });
         } else {
             currentTeamId = null;

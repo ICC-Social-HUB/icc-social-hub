@@ -505,6 +505,19 @@ CREATE POLICY "Leads and admins can view join data"
         )
     );
 
+-- Leads and admins can delete join data (when approving/denying)
+CREATE POLICY "Leads and admins can delete join data"
+    ON public.team_join_data FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid() AND (
+                p.role = 'admin' OR 
+                (p.role = 'lead' AND p.team_id = team_join_data.team_id)
+            )
+        )
+    );
+
 -- ==========================================
 -- 14. TEAM MEMBERSHIPS (Multi-team support)
 -- ==========================================
@@ -524,6 +537,18 @@ CREATE POLICY "Team memberships are viewable by everyone"
 CREATE POLICY "Leads and admins can remove members"
     ON public.team_memberships FOR DELETE
     USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid() AND (
+                p.role = 'admin' OR 
+                (p.role = 'lead' AND p.team_id = team_memberships.team_id)
+            )
+        )
+    );
+
+CREATE POLICY "Leads and admins can add members"
+    ON public.team_memberships FOR INSERT
+    WITH CHECK (
         EXISTS (
             SELECT 1 FROM public.profiles p
             WHERE p.id = auth.uid() AND (

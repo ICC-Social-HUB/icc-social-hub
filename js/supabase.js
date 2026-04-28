@@ -554,7 +554,11 @@ const ICCSupabase = (() => {
         if (!client) return { error: { message: 'Not configured' } };
         
         // 1. Cleanup join data
-        await client.from('team_join_data').delete().eq('user_id', userId).eq('team_id', teamId);
+        const { error: delError } = await client.from('team_join_data').delete().eq('user_id', userId).eq('team_id', teamId);
+        if (delError) {
+            console.error('Error removing join request:', delError);
+            return { error: delError };
+        }
         
         // 2. Add to memberships
         const { error } = await client.from('team_memberships').insert({
@@ -579,7 +583,11 @@ const ICCSupabase = (() => {
         if (!client) return { error: { message: 'Not configured' } };
         
         // 1. Cleanup join data
-        await client.from('team_join_data').delete().eq('user_id', userId).eq('team_id', teamId);
+        const { error: delError } = await client.from('team_join_data').delete().eq('user_id', userId).eq('team_id', teamId);
+        if (delError) {
+            console.error('Error removing join request:', delError);
+            // We continue anyway to try and remove from memberships if they were already added
+        }
         
         // 2. Remove from memberships
         const { error } = await client.from('team_memberships').delete().eq('user_id', userId).eq('team_id', teamId);
@@ -631,6 +639,13 @@ const ICCSupabase = (() => {
         const { data, error } = await client.from('profiles')
             .update({ role: 'lead', is_pending_lead: false, team_id: teamId })
             .eq('id', userId).select().single();
+        
+        if (!error && teamId) {
+            await client.from('team_memberships').upsert({
+                user_id: userId,
+                team_id: teamId
+            });
+        }
         return { data, error };
     }
 
@@ -919,15 +934,19 @@ const ICCSupabase = (() => {
     function subscribeToTeam(teamId, onUpdate) {
         if (!client) return null;
         const channelName = `team-${teamId}`;
-        const existing = activeChannels.find(c => c.name === channelName);
-        if (existing) { client.removeChannel(existing.channel); activeChannels = activeChannels.filter(c => c.name !== channelName); }
+        unsubscribeChannel(channelName);
 
         const channel = client.channel(channelName)
             .on('postgres_changes', {
-                event: '*', schema: 'public', table: 'profiles',
+                event: '*', schema: 'public', table: 'team_memberships',
+                filter: `team_id=eq.${teamId}`
+            }, (payload) => onUpdate(payload))
+            .on('postgres_changes', {
+                event: '*', schema: 'public', table: 'team_join_data',
                 filter: `team_id=eq.${teamId}`
             }, (payload) => onUpdate(payload))
             .subscribe();
+        
         activeChannels.push({ name: channelName, channel });
         return channel;
     }
