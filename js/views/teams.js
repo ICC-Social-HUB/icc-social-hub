@@ -103,6 +103,15 @@ const TeamsView = (() => {
                                         <button id="team-cancel-btn" class="text-[11px] text-zinc-500 hover:text-red-400 transition-colors w-fit mx-auto underline decoration-dotted">Cancel Request</button>
                                     </div>`;
                                 
+                                if (profile?.pending_teams?.length > 0) return `
+                                    <div class="flex flex-col gap-1.5">
+                                        <div class="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60">
+                                            <svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <span class="text-zinc-500 text-sm font-semibold">Request Pending Elsewhere</span>
+                                        </div>
+                                        <p class="text-[10px] text-zinc-600 mt-0.5">You already have a pending request for another team. Cancel it to apply here.</p>
+                                    </div>`;
+                                
                                 return `<button id="team-join-btn" class="join-btn px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Request to Join ${lead.team}</button>`;
                             })()}
                         </div>

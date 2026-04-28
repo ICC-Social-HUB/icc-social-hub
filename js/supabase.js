@@ -486,6 +486,11 @@ const ICCSupabase = (() => {
         if (currentProfile?.memberships?.length > 0 || currentProfile?.role === 'lead') {
             return { error: { message: 'You are already a member or lead of a team. You cannot join multiple teams.' } };
         }
+
+        // 2. Check if they already have a pending request elsewhere
+        if (currentProfile?.pending_teams?.length > 0) {
+            return { error: { message: 'You already have a pending request for another team. Please cancel it before applying to this one.' } };
+        }
         
         // 1. Insert join data
         const { error: dataError } = await client.from('team_join_data').upsert({
