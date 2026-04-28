@@ -540,18 +540,24 @@ const ICCSupabase = (() => {
 
     async function getPendingMembers(teamId) {
         if (!client) return [];
-        // Fetch from team_join_data table
-        const { data } = await client.from('team_join_data')
+        console.log('🔍 Fetching pending members for team:', teamId);
+        const { data, error } = await client.from('team_join_data')
             .select('*, user:user_id(id, username, full_name, avatar_url, role, updated_at)')
             .eq('team_id', teamId)
             .order('created_at', { ascending: false });
         
+        if (error) {
+            console.error('❌ Error fetching pending members:', error);
+            return [];
+        }
+
+        console.log(`✅ Found ${data?.length || 0} pending requests`);
         return (data || []).map(m => ({
             ...m.user,
             summary: m.summary,
             disc_tag: m.disc_tag,
             request_at: m.created_at,
-            updated_at: m.created_at // Use request time so leads see it in notifications
+            updated_at: m.created_at
         })).filter(Boolean);
     }
 
