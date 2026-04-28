@@ -542,7 +542,7 @@ const ICCSupabase = (() => {
         if (!client) return [];
         // Fetch from team_join_data table
         const { data } = await client.from('team_join_data')
-            .select('user:user_id(id, username, full_name, avatar_url, role, updated_at), summary, disc_tag')
+            .select('*, user:user_id(id, username, full_name, avatar_url, role, updated_at)')
             .eq('team_id', teamId)
             .order('created_at', { ascending: false });
         

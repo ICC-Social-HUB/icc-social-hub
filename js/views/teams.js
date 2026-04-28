@@ -188,7 +188,7 @@ const TeamsView = (() => {
             if (!lead) { container.innerHTML = '<div class="empty-state"><p class="text-zinc-500">Team not found</p></div>'; return; }
             teamMembers = await ICCSupabase.getTeamMembers(currentTeamId);
             const profile = ICCSupabase.getProfile();
-            if (profile?.role === 'lead' && profile.team_id === currentTeamId) {
+            if (profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) {
                 pendingMembers = await ICCSupabase.getPendingMembers(currentTeamId);
             }
             container.innerHTML = renderDetail(lead);
@@ -213,7 +213,7 @@ const TeamsView = (() => {
                 if (count) count.textContent = teamMembers.length;
 
                 // Also update pending requests if lead
-                if (profile?.role === 'lead' && profile.team_id === currentTeamId) {
+                if (profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) {
                     pendingMembers = await ICCSupabase.getPendingMembers(currentTeamId);
                     const pendingContainer = document.getElementById('pending-requests-container');
                     if (pendingContainer) {
