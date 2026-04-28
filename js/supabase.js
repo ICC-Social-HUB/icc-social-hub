@@ -757,7 +757,8 @@ const ICCSupabase = (() => {
 
             if (error) throw error;
             
-            // Fetch global posts from last 24 hours
+            // Fetch global posts from last 24 hours to show as "New Post" notifications
+            const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
             const { data: globalPosts } = await client.from('posts')
                 .select('id, user_id, caption, created_at, profiles:user_id(id, full_name, username, avatar_url)')
                 .gt('created_at', oneDayAgo)
