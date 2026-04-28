@@ -586,6 +586,16 @@ const ICCSupabase = (() => {
                 body: teamName,
                 referenceId: teamId
             });
+
+            // Trigger Email Notification
+            const user = await fetchUserById(userId);
+            if (user?.email) {
+                fetch('http://localhost:5000/api/otp/team-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: user.email, type: 'approve', teamName })
+                }).catch(err => console.error('Failed to trigger approve email:', err));
+            }
         }
         return { error };
     }
@@ -612,6 +622,16 @@ const ICCSupabase = (() => {
                 body: teamName,
                 referenceId: teamId
             });
+
+            // Trigger Email Notification
+            const user = await fetchUserById(userId);
+            if (user?.email) {
+                fetch('http://localhost:5000/api/otp/team-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: user.email, type: 'deny', teamName })
+                }).catch(err => console.error('Failed to trigger deny email:', err));
+            }
         }
         return { error };
     }

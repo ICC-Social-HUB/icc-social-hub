@@ -125,4 +125,28 @@ router.post('/verify', async (req, res) => {
     }
 });
 
+// @route   POST /api/otp/team-status
+// @desc    Send a team status update email (approve, deny, remove)
+router.post('/team-status', async (req, res) => {
+    try {
+        const { email, type, teamName } = req.body;
+
+        if (!email || !type || !teamName) {
+            return res.status(400).json({ error: 'Email, type, and team name are required' });
+        }
+
+        const { sendTeamStatusEmail } = require('./mailer');
+        const emailSent = await sendTeamStatusEmail(email, type, teamName);
+        
+        if (!emailSent) {
+            return res.status(500).json({ error: 'Failed to send email' });
+        }
+
+        res.status(200).json({ message: 'Email sent successfully' });
+    } catch (error) {
+        console.error('Team Status Email Error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 module.exports = router;
