@@ -19,7 +19,8 @@ const TeamsView = (() => {
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" id="leads-grid">
                     ${CORE_LEADS.map((lead, i) => {
-                        const isMember = userTeamId === lead.id;
+                        const isMember = profile?.memberships?.includes(lead.id);
+                        const isPending = profile?.pending_teams?.includes(lead.id);
                         return `
                         <div class="lead-card bg-zinc-900/60 border border-zinc-800/50 rounded-xl overflow-hidden cursor-pointer group" data-lead-id="${lead.id}" style="animation:slideUp 0.4s ease-out ${i*0.05}s both">
                             <div class="relative h-28 sm:h-36 overflow-hidden bg-gradient-to-br ${lead.gradient}">
@@ -29,8 +30,8 @@ const TeamsView = (() => {
                                     </div>
                                 </div>
                                 <div class="absolute inset-0 bg-gradient-to-t from-zinc-900 via-transparent to-transparent opacity-60"></div>
-                                ${isMember && !profile?.is_pending_member ? `<div class="absolute top-2 right-2 px-2 py-0.5 bg-emerald-600 rounded-full text-[10px] font-bold flex items-center gap-1 z-10">✓ You</div>` : ''}
-                                ${profile?.team_id === lead.id && profile?.is_pending_member ? `<div class="absolute top-2 right-2 px-2 py-0.5 bg-amber-600 rounded-full text-[10px] font-bold flex items-center gap-1 z-10 animate-pulse">⏳ Pending</div>` : ''}
+                                ${isMember ? `<div class="absolute top-2 right-2 px-2 py-0.5 bg-emerald-600 rounded-full text-[10px] font-bold flex items-center gap-1 z-10">✓ Member</div>` : ''}
+                                ${isPending ? `<div class="absolute top-2 right-2 px-2 py-0.5 bg-amber-600 rounded-full text-[10px] font-bold flex items-center gap-1 z-10 animate-pulse">⏳ Pending</div>` : ''}
                             </div>
                             <div class="p-3">
                                 <h3 class="font-heading font-semibold text-sm truncate">${lead.team}</h3>
@@ -48,9 +49,8 @@ const TeamsView = (() => {
     function renderDetail(lead) {
         const user = ICCSupabase.getUser();
         const profile = ICCSupabase.getProfile();
-        const isMember = profile?.team_id === lead.id && !profile?.is_pending_member;
-        const isPending = profile?.team_id === lead.id && profile?.is_pending_member;
-        const isOther = profile?.team_id && profile.team_id !== lead.id && !profile?.is_pending_member;
+        const isMember = profile?.memberships?.includes(lead.id);
+        const isPending = profile?.pending_teams?.includes(lead.id);
         const isLeadUser = profile?.role === 'lead' && profile.team_id === lead.id;
         const isLeadOrAdmin = isLeadUser || ICCSupabase.isAdmin();
 
@@ -102,15 +102,7 @@ const TeamsView = (() => {
                                         <button id="team-cancel-btn" class="text-[11px] text-zinc-500 hover:text-red-400 transition-colors w-fit mx-auto underline decoration-dotted">Cancel Request</button>
                                     </div>`;
                                 
-                                // Explicit Lead Check
-                                if (profile?.role === 'lead') {
-                                    return `<div class="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
-                                        <svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                                        <span class="text-zinc-500 text-xs font-medium">Team Leads cannot switch teams</span>
-                                    </div>`;
-                                }
-
-                                return `<button id="team-join-btn" class="join-btn px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">${isOther ? 'Switch to' : 'Request to Join'} ${lead.team}</button>${isOther ? '<p class="text-[11px] text-zinc-600 mt-1.5">You\'ll leave your current team</p>' : ''}`;
+                                return `<button id="team-join-btn" class="join-btn px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Request to Join ${lead.team}</button>`;
                             })()}
                         </div>
                     </div>
@@ -253,7 +245,7 @@ const TeamsView = (() => {
             if (!confirm('Cancel your join request?')) return;
             const btn = document.getElementById('team-cancel-btn');
             btn.disabled = true; btn.textContent = 'Cancelling...';
-            const { error } = await ICCSupabase.cancelJoinRequest();
+            const { error } = await ICCSupabase.cancelJoinRequest(lead.id);
             if (error) { Toast.error('Failed to cancel: ' + error.message); btn.disabled = false; btn.textContent = 'Cancel Request'; }
             else { Toast.success('Request cancelled'); const c = document.getElementById('app'); mount(c, lead.id); }
         });
@@ -263,10 +255,10 @@ const TeamsView = (() => {
             if (btn) {
                 if (!confirm('Are you sure you want to remove this member?')) return;
                 const userId = btn.dataset.id;
-                const { error } = await ICCSupabase.denyMember(userId);
+                const { error } = await ICCSupabase.denyMember(userId, lead.id);
                 if (error) {
                     console.error('Removal error:', error);
-                    Toast.error('Error: Could not remove member. Ensure RLS policies are updated.');
+                    Toast.error('Error: Could not remove member.');
                 } else { 
                     Toast.success('Member removed successfully'); 
                     const c = document.getElementById('app'); mount(c, lead.id); 
@@ -278,7 +270,7 @@ const TeamsView = (() => {
         document.querySelectorAll('.approve-member-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const userId = btn.dataset.id;
-                const { error } = await ICCSupabase.approveMember(userId);
+                const { error } = await ICCSupabase.approveMember(userId, lead.id);
                 if (error) Toast.error('Failed to approve member');
                 else { 
                     Toast.success('Member approved!'); 
@@ -290,7 +282,7 @@ const TeamsView = (() => {
         document.querySelectorAll('.deny-member-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const userId = btn.dataset.id;
-                const { error } = await ICCSupabase.denyMember(userId);
+                const { error } = await ICCSupabase.denyMember(userId, lead.id);
                 if (error) {
                     console.error('Denial error:', error);
                     Toast.error('Error: Could not deny request');

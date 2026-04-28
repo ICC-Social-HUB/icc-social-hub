@@ -27,10 +27,13 @@ const ProfileView = (() => {
                             <h2 class="font-heading font-bold text-lg truncate">${profile.full_name || 'User'}</h2>
                             ${profile.username ? `<p class="text-sm text-zinc-500">@${profile.username}</p>` : ''}
                             ${(profile.email || ICCSupabase.getUser()?.email) ? `<p class="text-xs text-zinc-500 flex items-center gap-1 mt-0.5"><svg class="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>${profile.email || ICCSupabase.getUser()?.email}</p>` : ''}
-                            <div class="flex items-center gap-2 mt-1">
-                                ${teamLead ? `<span class="px-2 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-[10px] text-zinc-300">${teamLead.team}</span>` : ''}
-                                ${(profile.role === 'lead' || profile.role === 'admin') ? `<span class="px-2 py-0.5 bg-red-600/15 text-red-400 rounded text-[10px] font-bold uppercase">${profile.role}</span>` : ''}
-                            </div>
+                                <div class="flex flex-wrap items-center gap-2 mt-1">
+                                    ${(profile.memberships || []).map(tid => {
+                                        const lead = getLeadByTeamId(tid);
+                                        return lead ? `<span class="px-2 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-[10px] text-zinc-300">${lead.team}</span>` : '';
+                                    }).join('')}
+                                    ${(profile.role === 'lead' || profile.role === 'admin') ? `<span class="px-2 py-0.5 bg-red-600/15 text-red-400 rounded text-[10px] font-bold uppercase">${profile.role}</span>` : ''}
+                                </div>
                         </div>
                         <button id="profile-edit-btn" class="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>

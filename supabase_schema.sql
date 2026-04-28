@@ -474,11 +474,16 @@ CREATE POLICY "Users can delete their own post images."
 -- 13. TEAM JOIN DATA (Private details)
 -- ==========================================
 CREATE TABLE IF NOT EXISTS public.team_join_data (
-    user_id UUID PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    team_id INTEGER,
     summary TEXT,
     disc_tag TEXT,
-    created_at TIMESTAMPTZ DEFAULT now()
+    created_at TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (user_id, team_id)
 );
+
+-- Note: We modified team_join_data to have a composite PK (user_id, team_id) 
+-- to allow a user to have pending requests for multiple teams.
 
 ALTER TABLE public.team_join_data ENABLE ROW LEVEL SECURITY;
 
@@ -495,10 +500,41 @@ CREATE POLICY "Leads and admins can view join data"
             SELECT 1 FROM public.profiles p
             WHERE p.id = auth.uid() AND (
                 p.role = 'admin' OR 
-                (p.role = 'lead' AND p.team_id = (SELECT team_id FROM public.profiles WHERE id = team_join_data.user_id))
+                (p.role = 'lead' AND p.team_id = team_join_data.team_id)
             )
         )
     );
+
+-- ==========================================
+-- 14. TEAM MEMBERSHIPS (Multi-team support)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.team_memberships (
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    team_id INTEGER NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (user_id, team_id)
+);
+
+ALTER TABLE public.team_memberships ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Team memberships are viewable by everyone"
+    ON public.team_memberships FOR SELECT
+    USING (true);
+
+CREATE POLICY "Leads and admins can remove members"
+    ON public.team_memberships FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid() AND (
+                p.role = 'admin' OR 
+                (p.role = 'lead' AND p.team_id = team_memberships.team_id)
+            )
+        )
+    );
+
+-- Users can NOT delete their own memberships (Only leads can remove them)
+-- This enforces the "only the team lead can remove them" rule.
 
 -- ==========================================
 -- DONE! ✅

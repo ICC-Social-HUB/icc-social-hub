@@ -10,11 +10,16 @@
         // 1. Initialize Supabase
         ICCSupabase.init();
 
-        // 2. Check existing session
-        const { session } = await ICCSupabase.getSession();
+        // 4. Initialize Router immediately so UI shows up (skeletons/loading states)
+        Router.init();
 
-        // 3. Load leads data
-        await loadLeads();
+        // 5. Check existing session and load data (background-ish)
+        try {
+            await ICCSupabase.getSession();
+            await loadLeads();
+        } catch (err) {
+            console.error('⚠️ Initialization error:', err);
+        }
 
         let subscriptionsStarted = false;
 
@@ -53,9 +58,6 @@
         // 5. Mount components
         BottomNav.mount();
         NotifBell.mount();
-
-        // 6. Initialize router
-        Router.init();
 
         // 6.5. Init image viewer
         ImageViewer.init();

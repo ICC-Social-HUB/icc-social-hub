@@ -26,6 +26,7 @@ const Router = (() => {
 
         setTimeout(() => {
             container.classList.remove('view-exit');
+            container.innerHTML = ''; // Clear immediately to avoid ghosting
 
             // Route matching
             if (hash === '#feed' || hash === '' || hash === '#') {

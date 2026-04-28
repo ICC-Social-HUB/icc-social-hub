@@ -199,115 +199,35 @@ const NotificationsView = (() => {
             });
         }
 
-        // Virtual notifications for the user's own status (using localStorage state tracking)
+        // Virtual notifications for the user's own status
         if (profile) {
-            const wasPending = localStorage.getItem('was_pending_team');
-            const lastActiveTeam = localStorage.getItem('last_active_team');
-            
-            if (profile.is_pending_member && profile.team_id) {
-                // Currently pending
-                localStorage.setItem('was_pending_team', profile.team_id);
-                localStorage.removeItem('last_active_team');
-                
-                // Only show self pending request if it occurred in the last 24 hours
-                if (new Date() - new Date(profile.updated_at || Date.now()) < 24 * 60 * 60 * 1000) {
-                    const teamName = CORE_LEADS?.find(l => l.id === profile.team_id)?.team || 'the team';
-                    notifications.unshift({
-                        id: 'pending_self',
-                        type: 'system',
-                        user_id: profile.id,
-                        actor_name: 'System',
-                        body: `Your request to join ${teamName} is pending approval.`,
-                        created_at: profile.updated_at || new Date().toISOString(),
-                        is_read: true
-                    });
-                }
-            } else if (!profile.is_pending_member && profile.team_id) {
-                // Currently active member
-                localStorage.setItem('last_active_team', profile.team_id);
-                if (wasPending) {
-                    if (profile.team_id == wasPending) {
-                        localStorage.setItem('virtual_approved_team', wasPending);
-                        localStorage.setItem('virtual_approved_time', Date.now());
-                    }
-                    localStorage.removeItem('was_pending_team');
-                }
-            } else if (!profile.is_pending_member && !profile.team_id) {
-                // No team, not pending
-                if (wasPending) {
-                    localStorage.setItem('virtual_denied_team', wasPending);
-                    localStorage.setItem('virtual_denied_time', Date.now());
-                    localStorage.removeItem('was_pending_team');
-                } else if (lastActiveTeam) {
-                    // Was an active member, but now removed
-                    localStorage.setItem('virtual_removed_team', lastActiveTeam);
-                    localStorage.setItem('virtual_removed_time', Date.now());
-                    localStorage.removeItem('last_active_team');
-                }
-            }
+            // Show self pending requests
+            (profile.pending_teams || []).forEach(tid => {
+                const teamName = CORE_LEADS?.find(l => l.id === tid)?.team || 'the team';
+                notifications.unshift({
+                    id: 'pending_self_' + tid,
+                    type: 'system',
+                    user_id: profile.id,
+                    actor_name: 'System',
+                    body: `Your request to join ${teamName} is pending approval.`,
+                    created_at: new Date().toISOString(),
+                    is_read: true
+                });
+            });
 
-            // Show approval virtual notification (lasts 24 hours)
-            const approvedTeam = localStorage.getItem('virtual_approved_team');
-            const approvedTime = localStorage.getItem('virtual_approved_time');
-            if (approvedTeam && approvedTime) {
-                if (Date.now() - parseInt(approvedTime) < 24 * 60 * 60 * 1000) {
-                    const teamName = CORE_LEADS?.find(l => l.id == approvedTeam)?.team || 'the team';
-                    notifications.unshift({
-                        id: 'approve_self',
-                        type: 'system',
-                        user_id: profile.id,
-                        actor_name: 'System',
-                        body: `🎉 Approved! You are now a member of ${teamName}`,
-                        created_at: new Date(parseInt(approvedTime)).toISOString(),
-                        is_read: true
-                    });
-                } else {
-                    localStorage.removeItem('virtual_approved_team');
-                    localStorage.removeItem('virtual_approved_time');
-                }
-            }
-
-            // Show denial virtual notification (lasts 24 hours)
-            const deniedTeam = localStorage.getItem('virtual_denied_team');
-            const deniedTime = localStorage.getItem('virtual_denied_time');
-            if (deniedTeam && deniedTime) {
-                if (Date.now() - parseInt(deniedTime) < 24 * 60 * 60 * 1000) {
-                    const teamName = CORE_LEADS?.find(l => l.id == deniedTeam)?.team || 'the team';
-                    notifications.unshift({
-                        id: 'deny_self',
-                        type: 'system',
-                        user_id: profile.id,
-                        actor_name: 'System',
-                        body: `Your request to join ${teamName} was declined.`,
-                        created_at: new Date(parseInt(deniedTime)).toISOString(),
-                        is_read: true
-                    });
-                } else {
-                    localStorage.removeItem('virtual_denied_team');
-                    localStorage.removeItem('virtual_denied_time');
-                }
-            }
-
-            // Show removed virtual notification (lasts 24 hours)
-            const removedTeam = localStorage.getItem('virtual_removed_team');
-            const removedTime = localStorage.getItem('virtual_removed_time');
-            if (removedTeam && removedTime) {
-                if (Date.now() - parseInt(removedTime) < 24 * 60 * 60 * 1000) {
-                    const teamName = CORE_LEADS?.find(l => l.id == removedTeam)?.team || 'the team';
-                    notifications.unshift({
-                        id: 'removed_self',
-                        type: 'system',
-                        user_id: profile.id,
-                        actor_name: 'System',
-                        body: `You have been removed from ${teamName}.`,
-                        created_at: new Date(parseInt(removedTime)).toISOString(),
-                        is_read: true
-                    });
-                } else {
-                    localStorage.removeItem('virtual_removed_team');
-                    localStorage.removeItem('virtual_removed_time');
-                }
-            }
+            // Show membership confirmations
+            (profile.memberships || []).forEach(tid => {
+                const teamName = CORE_LEADS?.find(l => l.id === tid)?.team || 'the team';
+                notifications.unshift({
+                    id: 'member_self_' + tid,
+                    type: 'system',
+                    user_id: profile.id,
+                    actor_name: 'System',
+                    body: `You are a member of ${teamName}.`,
+                    created_at: new Date().toISOString(),
+                    is_read: true
+                });
+            });
         }
         
         // Ensure strictly ordered by newest first, even after virtual injections

@@ -24,7 +24,7 @@ const FeedView = (() => {
                 <div class="flex gap-2 mb-4 overflow-x-auto pb-1 px-1 no-scrollbar" id="feed-filters">
                     <button class="filter-pill ${filter === 'all' ? 'active' : ''}" data-filter="all">All</button>
                     <button class="filter-pill ${filter === 'announcements' ? 'active' : ''}" data-filter="announcements">📢 Official</button>
-                    ${CORE_LEADS.slice(0, 6).map(l => `<button class="filter-pill ${filter === String(l.id) ? 'active' : ''}" data-filter="${l.id}">${l.team.replace('Team ', '')}</button>`).join('')}
+                    ${CORE_LEADS.slice(0, 6).map(l => `<button class="filter-pill ${filter === String(l.id) ? 'active' : ''}" data-filter="${l.id}">${(l.team || 'Team').replace('Team ', '')}</button>`).join('')}
                 </div>
                 <div id="feed-posts"></div>
                 <div id="feed-load-more" class="text-center py-4"></div>
@@ -51,10 +51,9 @@ const FeedView = (() => {
         bindEvents();
         ICCSupabase.subscribeToFeed(async newPost => {
             const enriched = await enrichPost(newPost);
-            if (enriched && matchesFilter(enriched)) {
+            if (enriched) {
                 posts.unshift(enriched);
-                const postsEl = document.getElementById('feed-posts');
-                if (postsEl) { postsEl.innerHTML = renderPosts() + postsEl.innerHTML.replace(renderPosts(), ''); renderFeed(); }
+                renderFeed();
             }
         });
     }

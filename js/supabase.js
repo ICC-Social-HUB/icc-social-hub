@@ -124,6 +124,21 @@ const ICCSupabase = (() => {
             .from('profiles').select('*').eq('id', currentUser.id).single();
         if (!error && data) {
             currentProfile = data;
+            
+            // Fetch multiple memberships
+            const { data: memberships } = await client
+                .from('team_memberships')
+                .select('team_id')
+                .eq('user_id', currentUser.id);
+            currentProfile.memberships = (memberships || []).map(m => m.team_id);
+
+            // Fetch pending requests
+            const { data: pending } = await client
+                .from('team_join_data')
+                .select('team_id')
+                .eq('user_id', currentUser.id);
+            currentProfile.pending_teams = (pending || []).map(p => p.team_id);
+
             // Sync email from auth if not yet stored (Safely)
             if (!data.email && currentUser.email) {
                 client.from('profiles')
@@ -144,7 +159,11 @@ const ICCSupabase = (() => {
                 username: null,
                 email: currentUser.email || ''
             }).select().single();
-            if (newProfile) currentProfile = newProfile;
+            if (newProfile) {
+                currentProfile = newProfile;
+                currentProfile.memberships = [];
+                currentProfile.pending_teams = [];
+            }
         }
         return currentProfile;
     }
@@ -462,121 +481,118 @@ const ICCSupabase = (() => {
 
     async function joinTeam(teamId, summary, discTag) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
-        // Prevent leads from switching
-        const profile = getProfile();
-        if (profile?.role === 'lead') return { error: { message: 'Team Leads cannot switch teams.' } };
         
         // 1. Insert join data
         const { error: dataError } = await client.from('team_join_data').upsert({
             user_id: currentUser.id,
+            team_id: parseInt(teamId),
             summary,
             disc_tag: discTag
         });
         
         if (dataError) return { error: dataError };
 
-        // 2. Update profile
-        const res = await updateProfile({ team_id: parseInt(teamId), is_pending_member: true });
-        if (!res.error) {
-            const { data: leads } = await client.from('profiles')
-                .select('id').eq('team_id', parseInt(teamId)).eq('role', 'lead');
-            
-            if (leads && leads.length > 0) {
-                const teamName = CORE_LEADS.find(l => l.id === parseInt(teamId))?.team || 'the team';
-                leads.forEach(l => {
-                    // 1. Create system notification
-                    createNotification({
-                        userId: l.id,
-                        type: 'team_join',
-                        actorId: currentUser.id,
-                        referenceId: parseInt(teamId)
-                    });
+        // 2. Notify leads
+        const { data: leads } = await client.from('profiles')
+            .select('id').eq('team_id', parseInt(teamId)).eq('role', 'lead');
+        
+        if (leads && leads.length > 0) {
+            leads.forEach(l => {
+                createNotification({
+                    userId: l.id,
+                    type: 'team_join',
+                    actorId: currentUser.id,
+                    referenceId: parseInt(teamId)
                 });
-            }
+            });
         }
-        return res;
+        
+        await fetchProfile(); // Refresh cache
+        return { error: null };
     }
 
-    async function cancelJoinRequest() {
+    async function cancelJoinRequest(teamId) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
-        await client.from('team_join_data').delete().eq('user_id', currentUser.id);
-        return await updateProfile({ team_id: null, is_pending_member: false });
+        const { error } = await client.from('team_join_data')
+            .delete()
+            .eq('user_id', currentUser.id)
+            .eq('team_id', parseInt(teamId));
+        await fetchProfile();
+        return { error };
     }
 
     async function getTeamMembers(teamId) {
         if (!client) return [];
-        const { data } = await client.from('profiles')
-            .select('id, username, full_name, avatar_url, role, updated_at')
-            .eq('team_id', teamId)
-            .eq('is_pending_member', false)
-            .order('updated_at', { ascending: false });
-        return data || [];
+        // Fetch from team_memberships table
+        const { data, error } = await client
+            .from('team_memberships')
+            .select('user:user_id(id, username, full_name, avatar_url, role, updated_at)')
+            .eq('team_id', teamId);
+        
+        if (error) return [];
+        return (data || []).map(m => m.user).filter(Boolean);
     }
 
     async function getPendingMembers(teamId) {
         if (!client) return [];
-        // Join with team_join_data to get summary and DISC tag
-        const { data } = await client.from('profiles')
-            .select('id, username, full_name, avatar_url, role, updated_at, team_join_data(summary, disc_tag)')
+        // Fetch from team_join_data table
+        const { data } = await client.from('team_join_data')
+            .select('user:user_id(id, username, full_name, avatar_url, role, updated_at), summary, disc_tag')
             .eq('team_id', teamId)
-            .eq('is_pending_member', true)
-            .order('updated_at', { ascending: false });
+            .order('created_at', { ascending: false });
         
-        // Flatten the data for easier use
         return (data || []).map(m => ({
-            ...m,
-            summary: m.team_join_data?.summary,
-            disc_tag: m.team_join_data?.disc_tag
-        }));
+            ...m.user,
+            summary: m.summary,
+            disc_tag: m.disc_tag
+        })).filter(Boolean);
     }
 
-    async function approveMember(userId) {
+    async function approveMember(userId, teamId) {
         if (!client) return { error: { message: 'Not configured' } };
-        // 1. Fetch user state before update to ensure we have the team_id for the notification
-        const { data: userBefore } = await client.from('profiles').select('team_id').eq('id', userId).single();
         
-        // 2. Cleanup join data
-        await client.from('team_join_data').delete().eq('user_id', userId);
+        // 1. Cleanup join data
+        await client.from('team_join_data').delete().eq('user_id', userId).eq('team_id', teamId);
         
-        // 3. Update status
-        const { data, error } = await client.from('profiles')
-            .update({ is_pending_member: false })
-            .eq('id', userId).select().single();
+        // 2. Add to memberships
+        const { error } = await client.from('team_memberships').insert({
+            user_id: userId,
+            team_id: teamId
+        });
 
-        if (!error && userBefore?.team_id) {
-            const teamName = CORE_LEADS.find(l => l.id === parseInt(userBefore.team_id))?.team || 'the team';
+        if (!error) {
+            const teamName = CORE_LEADS.find(l => l.id === parseInt(teamId))?.team || 'the team';
             createNotification({
                 userId: userId,
                 type: 'team_approve',
                 actorId: currentUser?.id,
                 body: teamName,
-                referenceId: userBefore.team_id
+                referenceId: teamId
             });
         }
-        return { data, error };
+        return { error };
     }
 
-    async function denyMember(userId) {
+    async function denyMember(userId, teamId) {
         if (!client) return { error: { message: 'Not configured' } };
-        // Cleanup join data on denial
-        await client.from('team_join_data').delete().eq('user_id', userId);
         
-        const { data: userBefore } = await client.from('profiles').select('team_id, is_pending_member').eq('id', userId).single();
-        const { data, error } = await client.from('profiles')
-            .update({ team_id: null, is_pending_member: false })
-            .eq('id', userId).select().single();
-        if (!error && userBefore?.team_id) {
-            const teamName = CORE_LEADS.find(l => l.id === userBefore.team_id)?.team || 'the team';
-            const wasPending = userBefore.is_pending_member;
+        // 1. Cleanup join data
+        await client.from('team_join_data').delete().eq('user_id', userId).eq('team_id', teamId);
+        
+        // 2. Remove from memberships
+        const { error } = await client.from('team_memberships').delete().eq('user_id', userId).eq('team_id', teamId);
+        
+        if (!error) {
+            const teamName = CORE_LEADS.find(l => l.id === parseInt(teamId))?.team || 'the team';
             createNotification({
                 userId: userId,
-                type: wasPending ? 'team_deny' : 'system',
+                type: 'system',
                 actorId: currentUser?.id,
-                body: wasPending ? teamName : `You have been removed from ${teamName}.`,
-                referenceId: userBefore.team_id
+                body: `You have been removed from ${teamName} or your request was denied.`,
+                referenceId: teamId
             });
         }
-        return { data, error };
+        return { error };
     }
 
     // ==================== ADMIN ====================
@@ -664,6 +680,14 @@ const ICCSupabase = (() => {
         if (!client) return { error: { message: 'Not configured' } };
         const { data, error } = await client.from('profiles')
             .update(fields).eq('id', userId).select().single();
+        
+        // If team_id was updated, ensure it exists in memberships
+        if (!error && fields.team_id) {
+            await client.from('team_memberships').upsert({
+                user_id: userId,
+                team_id: fields.team_id
+            });
+        }
         return { data, error };
     }
 
