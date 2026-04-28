@@ -93,11 +93,12 @@ const ICCSupabase = (() => {
                     console.log('✅ Master login successful');
                     return { data: { user: currentUser }, error: null };
                 } else {
-                    return { error: { message: data.error || 'Master login failed' } };
+                    console.error('❌ Master login response error:', data);
+                    return { error: { message: data.error || `Master login failed (${res.status})`, details: data } };
                 }
             } catch (err) {
                 console.error('❌ Master login error:', err);
-                return { error: { message: 'System error during master login' } };
+                return { error: { message: 'System error during master login', details: err } };
             }
         }
 

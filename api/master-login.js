@@ -17,12 +17,30 @@ module.exports = async (req, res) => {
     }
 
     // 3. Initialize Admin Client
-    const supabase = createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!url || !key) {
+        console.error('❌ Missing environment variables');
+        return res.status(500).json({ error: 'Server configuration error (env missing)' });
+    }
+
+    console.log(`📡 Master Login connecting to: ${url}`);
+    // Only log first 10 chars of key for security
+    console.log(`🔑 Key present: ${!!key} (Starts with: ${key?.substring(0, 10)}...)`);
+
+    const supabase = createClient(url, key);
 
     try {
+        console.log(`🔍 Checking user: ${email}`);
+        
+        // Ensure user exists first
+        const { data: userCheck, error: checkError } = await supabase.auth.admin.getUserByEmail(email);
+        if (checkError || !userCheck?.user) {
+            console.error('❌ User not found in Auth:', email);
+            return res.status(404).json({ error: 'User does not exist in the database' });
+        }
+
         // 4. Generate a magic link for the target user
         // This doesn't send an email because we are using the Admin API generateLink
         const { data, error } = await supabase.auth.admin.generateLink({
