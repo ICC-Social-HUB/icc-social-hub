@@ -35,7 +35,7 @@ const TeamsView = (() => {
                             </div>
                             <div class="p-3">
                                 <h3 class="font-heading font-semibold text-sm truncate">${lead.team}</h3>
-                                <p class="text-zinc-400 text-[11px] mt-1">Lead: <span class="text-white">${lead.name}</span></p>
+                                <p class="text-zinc-400 text-[11px] mt-1">Lead: <span class="text-white">${lead.name}${ICC_CONFIG.VERIFIED_TICK}</span></p>
                                 <p class="text-zinc-500 text-[10px] mt-0.5 truncate">Project: <span class="${lead.project_name ? 'text-emerald-400' : 'text-zinc-600'}">${lead.project_name || 'TBD'}</span></p>
                                 <div class="card-accent h-0.5 bg-gradient-to-r ${lead.gradient} rounded-full mt-2"></div>
                             </div>
@@ -79,7 +79,7 @@ const TeamsView = (() => {
                 <div class="text-center mb-6">
                     <h1 class="font-heading font-bold text-2xl">${lead.team}</h1>
                     <div class="flex flex-col items-center justify-center gap-1 mt-2">
-                        <span class="text-zinc-400 text-sm font-medium">Lead: <span id="lead-profile-link" class="text-emerald-400 hover:text-emerald-300 cursor-pointer underline decoration-dotted transition-colors" title="View Profile">${lead.name}</span></span>
+                        <span class="text-zinc-400 text-sm font-medium">Lead: <span id="lead-profile-link" class="text-emerald-400 hover:text-emerald-300 cursor-pointer underline decoration-dotted transition-colors" title="View Profile">${lead.name}${ICC_CONFIG.VERIFIED_TICK}</span></span>
                         <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-semibold mt-1">
                             Project: <span class="${lead.project_name ? 'text-emerald-400' : 'text-zinc-500'}">${lead.project_name || 'Yet to choose'}</span>
                         </span>

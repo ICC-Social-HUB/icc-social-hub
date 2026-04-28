@@ -23,7 +23,7 @@ const PostCard = (() => {
                 </button>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
-                        <button class="user-link font-semibold text-sm hover:text-red-400 transition-colors truncate" data-user-id="${p.id || post.user_id}">${p.username || p.full_name || 'Anonymous'}</button>
+                        <button class="user-link font-semibold text-sm hover:text-red-400 transition-colors truncate" data-user-id="${p.id || post.user_id}">${p.username || p.full_name || 'Anonymous'}${p.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</button>
                         ${(p.role === 'lead' || p.role === 'admin') ? `<span class="px-1.5 py-0.5 bg-red-600/15 text-red-400 rounded text-[10px] font-bold uppercase">${p.role}</span>` : ''}
                         ${isAnnounce ? '<span class="announcement-badge">Official</span>' : ''}
                     </div>

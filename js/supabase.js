@@ -195,7 +195,7 @@ const ICCSupabase = (() => {
     async function searchUsers(query) {
         if (!client) return [];
         const { data } = await client.from('profiles')
-            .select('id, username, full_name, avatar_url, team_id')
+            .select('id, username, full_name, avatar_url, team_id, role')
             .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
             .limit(20);
         return data || [];
@@ -385,7 +385,7 @@ const ICCSupabase = (() => {
 
         // Get all messages involving this user, ordered by most recent
         const { data: messages } = await client.from('messages')
-            .select('*, sender:sender_id(id, username, full_name, avatar_url), receiver:receiver_id(id, username, full_name, avatar_url)')
+            .select('*, sender:sender_id(id, username, full_name, avatar_url, role), receiver:receiver_id(id, username, full_name, avatar_url, role)')
             .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
             .order('created_at', { ascending: false });
 
@@ -791,7 +791,7 @@ const ICCSupabase = (() => {
 
         try {
             const { data: dbNotifs, error } = await client.from('notifications')
-                .select('*, actor:actor_id(id, full_name, username, avatar_url)')
+                .select('*, actor:actor_id(id, full_name, username, avatar_url, role)')
                 .eq('user_id', currentUser.id)
                 .order('created_at', { ascending: false })
                 .limit(limit);

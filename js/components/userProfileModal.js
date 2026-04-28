@@ -47,7 +47,7 @@ const UserProfileModal = (() => {
                     </div>
                 </div>
                 <div class="pt-14 pb-6 px-6 text-center">
-                    <h3 class="font-heading font-bold text-lg">${profile.full_name || 'User'}</h3>
+                    <h3 class="font-heading font-bold text-lg">${profile.full_name || 'User'}${profile.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</h3>
                     ${profile.username ? `<p class="text-sm text-zinc-500">@${profile.username}</p>` : ''}
                     ${profile.email ? `<p class="text-xs text-zinc-500 flex items-center justify-center gap-1 mt-1"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>${escapeHtml(profile.email)}</p>` : ''}
                     ${profile.bio ? `<p class="text-xs text-zinc-400 mt-2 max-w-xs mx-auto">${escapeHtml(profile.bio)}</p>` : ''}
