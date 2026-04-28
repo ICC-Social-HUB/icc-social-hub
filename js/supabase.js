@@ -497,14 +497,14 @@ const ICCSupabase = (() => {
             .select('id').eq('team_id', parseInt(teamId)).eq('role', 'lead');
         
         if (leads && leads.length > 0) {
-            leads.forEach(l => {
-                createNotification({
+            for (const l of leads) {
+                await createNotification({
                     userId: l.id,
                     type: 'team_join',
                     actorId: currentUser.id,
                     referenceId: parseInt(teamId)
                 });
-            });
+            }
         }
         
         await fetchProfile(); // Refresh cache
@@ -544,7 +544,9 @@ const ICCSupabase = (() => {
         return (data || []).map(m => ({
             ...m.user,
             summary: m.summary,
-            disc_tag: m.disc_tag
+            disc_tag: m.disc_tag,
+            request_at: m.created_at,
+            updated_at: m.created_at // Use request time so leads see it in notifications
         })).filter(Boolean);
     }
 
