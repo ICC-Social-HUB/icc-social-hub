@@ -579,7 +579,7 @@ const ICCSupabase = (() => {
 
         if (!error) {
             const teamName = CORE_LEADS.find(l => l.id === parseInt(teamId))?.team || 'the team';
-            createNotification({
+            await createNotification({
                 userId: userId,
                 type: 'team_approve',
                 actorId: currentUser?.id,
@@ -605,7 +605,7 @@ const ICCSupabase = (() => {
         
         if (!error) {
             const teamName = CORE_LEADS.find(l => l.id === parseInt(teamId))?.team || 'the team';
-            createNotification({
+            await createNotification({
                 userId: userId,
                 type: 'team_deny',
                 actorId: currentUser?.id,
@@ -745,18 +745,13 @@ const ICCSupabase = (() => {
 
     // ==================== NOTIFICATIONS ====================
 
-    // ==================== NOTIFICATIONS ====================
-
     async function fetchNotifications(limit = 100) {
         if (!client || !currentUser) return [];
-        // Calculate 24h ago with a 1-hour "drift buffer" to account for client/server clock mismatch
-        const oneDayAgo = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(); 
 
         try {
             const { data: dbNotifs, error } = await client.from('notifications')
                 .select('*, actor:actor_id(id, full_name, username, avatar_url)')
                 .eq('user_id', currentUser.id)
-                .gt('created_at', oneDayAgo)
                 .order('created_at', { ascending: false })
                 .limit(limit);
 
@@ -802,15 +797,26 @@ const ICCSupabase = (() => {
     }
 
     async function createNotification({ userId, type, actorId = null, referenceId = null, body = null }) {
-        if (!client || !userId) return { error: { message: 'Invalid target' } };
-        // Allow self-notification for testing purposes, but log it
+        if (!client || !userId) {
+            console.error('❌ createNotification: Invalid target or client missing', { userId, client: !!client });
+            return { error: { message: 'Invalid target' } };
+        }
         
+        console.log(`📣 Creating notification: [${type}] for user ${userId}`, { actorId, referenceId, body });
+
         const { data, error } = await client.from('notifications')
-            .insert({ user_id: userId, type, actor_id: actorId, reference_id: referenceId ? String(referenceId) : null, body })
-            .select().single();
+            .insert({ 
+                user_id: userId, 
+                type, 
+                actor_id: actorId, 
+                reference_id: referenceId ? String(referenceId) : null, 
+                body 
+            }).select();
             
-        if (error) console.error('Notification error:', error);
-        return { data, error };
+        if (error) console.error('❌ Notification DB Error:', error);
+        else console.log('✅ Notification created successfully:', data?.[0]);
+
+        return { data: data?.[0], error };
     }
 
     async function markNotificationRead(notifId) {
@@ -828,39 +834,14 @@ const ICCSupabase = (() => {
 
     async function getUnreadNotifCount() {
         if (!client || !currentUser) return 0;
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         
         const { count, error } = await client.from('notifications')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', currentUser.id)
-            .eq('is_read', false)
-            .gt('created_at', oneDayAgo);
+            .eq('is_read', false);
 
+        if (error) console.error('❌ getUnreadNotifCount Error:', error);
         return error ? 0 : (count || 0);
-    }
-
-    function subscribeToNotifications(callback) {
-        if (!client || !currentUser) return;
-        const channelId = `notifs:${currentUser.id}`;
-        
-        const channel = client.channel(channelId)
-            .on('postgres_changes', { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'notifications', 
-                filter: `user_id=eq.${currentUser.id}` 
-            }, async (payload) => {
-                const newNotif = payload.new;
-                if (newNotif.actor_id) {
-                    const actor = await fetchUserById(newNotif.actor_id);
-                    newNotif.actor_name = actor?.full_name || actor?.username || 'Someone';
-                    newNotif.actor_avatar = actor?.avatar_url;
-                }
-                callback(newNotif);
-            })
-            .subscribe();
-
-        activeChannels.push({ name: channelId, channel });
     }
 
     // ==================== STORAGE ====================
@@ -978,12 +959,15 @@ const ICCSupabase = (() => {
     }
 
     function subscribeToNotifications(onNotif) {
-        if (!client || !currentUser) return null;
+        if (!client || !currentUser) {
+            console.warn('⚠️ Realtime: Cannot subscribe to notifications (Not authenticated)');
+            return null;
+        }
         
         const channelName = `notifs_realtime_${currentUser.id}`;
-        
-        // Cleanup existing if any
         unsubscribeChannel(channelName);
+
+        console.log(`📡 Subscribing to notifications for user ${currentUser.id}...`);
 
         const channel = client.channel(channelName)
             .on('postgres_changes', {
@@ -992,9 +976,8 @@ const ICCSupabase = (() => {
                 table: 'notifications',
                 filter: `user_id=eq.${currentUser.id}`
             }, async (payload) => {
-                console.log('🔔 Real-time notification received:', payload);
+                console.log('🔔 Real-time notification payload:', payload);
                 
-                // Fetch actor info if missing (Replication usually only sends the row)
                 const newNotif = payload.new;
                 if (newNotif.actor_id && !newNotif.actor_name) {
                     const actor = await fetchUserById(newNotif.actor_id);
