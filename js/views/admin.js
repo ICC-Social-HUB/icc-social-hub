@@ -59,7 +59,13 @@ const AdminView = (() => {
                 <button class="admin-tab-switch px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors text-left" data-tab="leads">👥 Manage Leads</button>
                 <button class="admin-tab-switch px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors text-left" data-tab="users">🧑‍💻 Manage Users</button>
                 <button class="admin-tab-switch px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors text-left" data-tab="moderate">🛡️ Moderate Feed</button>
-                <a href="#teams" class="px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors text-left block">🏠 View Teams</a>
+            </div>
+        </div>
+        <div class="glass-card border-red-500/20 rounded-xl p-5 mt-4">
+            <h3 class="font-heading font-semibold text-sm text-red-500 mb-1">Danger Zone</h3>
+            <p class="text-[11px] text-zinc-500 mb-3">Irreversible actions that affect all users.</p>
+            <div class="flex flex-wrap gap-2">
+                <button id="admin-wipe-notifications" class="px-4 py-2 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/30 rounded-lg text-xs font-bold transition-all">Clear All Notifications Everywhere</button>
             </div>
         </div>`;
     }
@@ -246,6 +252,14 @@ const AdminView = (() => {
                 bindEvents(container);
             });
         });
+
+        // Wipe all notifications
+        document.getElementById('admin-wipe-notifications')?.addEventListener('click', async () => {
+            if (!confirm('⚠️ CRITICAL: This will permanently delete ALL notifications for ALL users across the entire platform. This cannot be undone. Proceed?')) return;
+            const res = await ICCSupabase.adminClearAllNotifications();
+            if (res.error) Toast.error('Action failed: ' + res.error.message);
+            else Toast.success('System Wiped: All notifications cleared! 🎉');
+        });
         // Broadcast
         document.getElementById('broadcast-msg')?.addEventListener('input', e => {
             const chars = document.getElementById('broadcast-chars');
@@ -347,6 +361,7 @@ const AdminView = (() => {
             const countBadge = document.getElementById('users-count-badge');
             if (countBadge) countBadge.textContent = visibleCount + ' members';
         });
+
         container.querySelectorAll('.delete-user-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 if (!confirm('Are you sure you want to permanently delete this user? This cannot be undone.')) return;

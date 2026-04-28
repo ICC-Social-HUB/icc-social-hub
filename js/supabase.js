@@ -849,6 +849,24 @@ const ICCSupabase = (() => {
             .eq('is_read', false);
     }
 
+    async function deleteNotification(notifId) {
+        if (!client) return { error: { message: 'Not configured' } };
+        const { error } = await client.from('notifications').delete().eq('id', notifId);
+        return { error };
+    }
+
+    async function deleteAllNotifications() {
+        if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        const { error } = await client.from('notifications').delete().eq('user_id', currentUser.id);
+        return { error };
+    }
+
+    async function adminClearAllNotifications() {
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
+        const { error } = await client.from('notifications').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // Wipe all
+        return { error };
+    }
+
     async function getUnreadNotifCount() {
         if (!client || !currentUser) return 0;
         
@@ -1065,6 +1083,7 @@ const ICCSupabase = (() => {
         adminUpdateUser, adminDeleteUser,
         getAllProfiles, getAllPosts,
         fetchNotifications, createNotification, markNotificationRead, markAllNotificationsRead, getUnreadNotifCount,
+        deleteNotification, deleteAllNotifications, adminClearAllNotifications,
         uploadImage, deleteImage,
         signInWithPassword, updatePassword,
         subscribeToFeed, subscribeToMessages, subscribeToConversation,

@@ -95,7 +95,16 @@ input, select, textarea { font-size: 16px !important; }
     90% { opacity: 0.5; }
     100% { transform: translateY(-100px) rotate(720deg); opacity: 0; }
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* ---------- Animations ---------- */
+@keyframes slide-out {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(20px); }
+}
+.animate-slide-out {
+    animation: slide-out 0.3s ease-out forwards;
+}
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 @keyframes heartBurst {
     0% { transform: scale(1); }

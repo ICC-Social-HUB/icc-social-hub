@@ -32,7 +32,8 @@ const NotificationsView = (() => {
                         ${unreadCount > 0 ? `<span class="px-2 py-0.5 bg-red-600 rounded-full text-[10px] font-bold animate-pulse">${unreadCount}</span>` : ''}
                     </div>
                     <div class="flex items-center gap-2">
-                        ${unreadCount > 0 ? `<button id="notif-read-all" class="text-xs text-zinc-500 hover:text-white transition-colors">Clear all</button>` : ''}
+                        ${notifications.length > 0 ? `<button id="notif-clear-all" class="text-[10px] font-bold text-red-500 hover:text-red-400 uppercase tracking-wider px-2 py-1 hover:bg-red-500/10 rounded-lg transition-all">Delete All</button>` : ''}
+                        ${unreadCount > 0 ? `<button id="notif-read-all" class="text-[10px] font-bold text-zinc-500 hover:text-white uppercase tracking-wider px-2 py-1 hover:bg-zinc-800 rounded-lg transition-all">Read All</button>` : ''}
                         <button id="notif-refresh" class="p-2 hover:bg-zinc-800 rounded-full transition-colors">
                             <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                         </button>
@@ -101,7 +102,12 @@ const NotificationsView = (() => {
                 </p>
                 <span class="text-[10px] text-zinc-600 mt-1 block">${time}</span>
             </div>
-            ${isUnread ? '<div class="absolute right-4 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-red-600 rounded-full shadow-[0_0_8px_rgba(220,38,38,0.5)]"></div>' : ''}
+            <div class="flex flex-col items-center justify-center gap-2">
+                ${isUnread ? '<div class="w-1.5 h-1.5 bg-red-600 rounded-full shadow-[0_0_8px_rgba(220,38,38,0.5)]"></div>' : ''}
+                <button class="notif-delete-btn opacity-0 group-hover:opacity-100 p-1.5 text-zinc-600 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all" data-id="${n.id}" title="Delete">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
         </div>`;
     }
 
@@ -228,6 +234,22 @@ const NotificationsView = (() => {
             NotifBell.update();
         });
 
+        // Delete all
+        document.getElementById('notif-clear-all')?.addEventListener('click', async () => {
+            if (!confirm('Are you sure you want to delete all notifications? This cannot be undone.')) return;
+            const res = await ICCSupabase.deleteAllNotifications();
+            if (res.error) {
+                Toast.error('Failed to clear notifications');
+            } else {
+                notifications = [];
+                container.innerHTML = render();
+                bindEvents(container);
+                BottomNav.updateNotifCount();
+                NotifBell.update();
+                Toast.success('Notifications cleared');
+            }
+        });
+
         bindListEvents(container);
     }
 
@@ -238,14 +260,42 @@ const NotificationsView = (() => {
                 const url = el.dataset.url;
                 const notif = notifications.find(n => n.id === id);
                 if (notif && !notif.is_read) {
-                    if (!id.startsWith('pending_') && !id.startsWith('approve_') && !id.startsWith('deny_') && !id.startsWith('removed_') && !id.startsWith('post_') && !id.startsWith('comment_')) {
-                        await ICCSupabase.markNotificationRead(id);
-                    }
+                    await ICCSupabase.markNotificationRead(id);
                     notif.is_read = true;
                     BottomNav.updateNotifCount();
                     NotifBell.update();
+                    el.classList.remove('bg-zinc-900/40', 'border', 'border-zinc-800/50');
+                    el.classList.add('hover:bg-zinc-900/30');
+                    el.querySelector('.shadow-\\[0_0_8px_rgba\\(220\\,38\\,38\\,0\\.5\\)\\]')?.remove();
                 }
                 if (url && url !== '#') window.location.hash = url;
+            });
+        });
+
+        // Individual delete
+        container.querySelectorAll('.notif-delete-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation(); // Don't trigger the click on the item
+                const id = btn.dataset.id;
+                const item = btn.closest('.notif-item');
+                if (item) item.style.opacity = '0.5';
+                
+                const res = await ICCSupabase.deleteNotification(id);
+                if (res.error) {
+                    Toast.error('Failed to delete');
+                    if (item) item.style.opacity = '1';
+                } else {
+                    notifications = notifications.filter(n => n.id !== id);
+                    if (item) {
+                        item.classList.add('animate-slide-out');
+                        setTimeout(() => {
+                            container.innerHTML = renderList();
+                            bindListEvents(container);
+                        }, 300);
+                    }
+                    BottomNav.updateNotifCount();
+                    NotifBell.update();
+                }
             });
         });
     }
