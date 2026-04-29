@@ -50,18 +50,24 @@ const ICCSupabase = (() => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, metadata })
             });
-            const data = await res.json();
             
-            if (res.ok) {
-                // Store userId in sessionStorage for the verify step
-                sessionStorage.setItem('icc_auth_userid', data.userId);
-                return { data, error: null };
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const data = await res.json();
+                if (res.ok) {
+                    sessionStorage.setItem('icc_auth_userid', data.userId);
+                    return { data, error: null };
+                } else {
+                    return { error: { message: data.error || 'Failed to send OTP' } };
+                }
             } else {
-                return { error: { message: data.error || 'Failed to send OTP' } };
+                const text = await res.text();
+                console.error('❌ Server returned non-JSON:', text);
+                return { error: { message: `Server error (${res.status}). Please check console.` } };
             }
         } catch (err) {
-            console.error('❌ sendOTP error:', err);
-            return { error: { message: 'Connection error while sending OTP' } };
+            console.error('❌ sendOTP fetch error:', err);
+            return { error: { message: 'Network error or service unavailable. Please check your connection.' } };
         }
     }
 
@@ -78,26 +84,31 @@ const ICCSupabase = (() => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, token, userId })
             });
-            const data = await res.json();
 
-            if (res.ok && data.token) {
-                // Use the returned magiclink token to sign in the Supabase client
-                const { data: verifyData, error: verifyError } = await client.auth.verifyOtp({
-                    token_hash: data.token,
-                    type: 'magiclink'
-                });
-
-                if (verifyError) throw verifyError;
-                
-                currentUser = verifyData.user;
-                await fetchProfile();
-                sessionStorage.removeItem('icc_auth_userid');
-                return { data: verifyData, error: null };
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const data = await res.json();
+                if (res.ok && data.token) {
+                    const { data: verifyData, error: verifyError } = await client.auth.verifyOtp({
+                        token_hash: data.token,
+                        type: 'magiclink'
+                    });
+                    if (verifyError) throw verifyError;
+                    
+                    currentUser = verifyData.user;
+                    await fetchProfile();
+                    sessionStorage.removeItem('icc_auth_userid');
+                    return { data: verifyData, error: null };
+                } else {
+                    return { error: { message: data.error || 'Verification failed' } };
+                }
             } else {
-                return { error: { message: data.error || 'Verification failed' } };
+                const text = await res.text();
+                console.error('❌ Server returned non-JSON during verify:', text);
+                return { error: { message: `Verification server error (${res.status}).` } };
             }
         } catch (err) {
-            console.error('❌ verifyOTP error:', err);
+            console.error('❌ verifyOTP fetch error:', err);
             return { error: { message: err.message || 'System error during verification' } };
         }
     }

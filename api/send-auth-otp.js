@@ -1,12 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { sendOTP } = require('./_mailer');
 
-const url = process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabase = createClient(url, key);
-
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     const { email, metadata } = req.body;
@@ -15,21 +10,31 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Email is required' });
     }
 
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!url || !key) {
+        console.error('❌ Missing Supabase Environment Variables');
+        return res.status(500).json({ error: 'Server configuration error (missing environment variables)' });
+    }
+
+    const supabase = createClient(url, key);
+
     try {
-        // 1. Check if user exists
+        // 1. Identify or Create User in Auth
         let { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
         let user = userData?.user;
         
         if (!user) {
-            // Create the user first so we have a userId
+            console.log('👤 Creating new user in Auth:', email);
             const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
                 email,
-                email_confirm: true, // We mark as confirmed because we'll verify them with our own OTP
+                email_confirm: true,
                 user_metadata: metadata || {}
             });
             
             if (createError) {
-                if (createError.message.includes('already registered')) {
+                if (createError.message.toLowerCase().includes('already')) {
                     const { data: retryData } = await supabase.auth.admin.getUserByEmail(email);
                     user = retryData?.user;
                 } else {
@@ -40,15 +45,27 @@ export default async function handler(req, res) {
             }
         }
 
-        if (!user) throw new Error('Failed to identify or create user');
+        if (!user) throw new Error('Failed to identify or create user in Supabase Auth');
 
         const userId = user.id;
 
-        // 2. Generate 6-digit OTP
+        // 2. Ensure Profile exists (otp_tokens might have FK to profiles)
+        const { data: profile } = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
+        if (!profile) {
+            console.log('📄 Creating missing profile for:', email);
+            await supabase.from('profiles').insert({
+                id: userId,
+                email: email,
+                full_name: metadata?.full_name || '',
+                username: metadata?.username || null
+            });
+        }
+
+        // 3. Generate 6-digit OTP
         const otpCode = String(Math.floor(100000 + Math.random() * 900000));
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-        // 3. Store in otp_tokens (using insert to be safe, like other parts of the app)
+        // 4. Store in otp_tokens
         const { error: insertError } = await supabase
             .from('otp_tokens')
             .insert([
@@ -60,19 +77,24 @@ export default async function handler(req, res) {
                 }
             ]);
 
-        if (insertError) throw insertError;
+        if (insertError) {
+            console.error('❌ Database error inserting OTP:', insertError);
+            throw new Error(`Database error: ${insertError.message}`);
+        }
 
-        // 4. Send Email via our mailer
+        // 5. Send Email via our mailer
+        console.log('✉️ Sending OTP email via custom mailer...');
         const sent = await sendOTP(email, otpCode);
         
         if (!sent) {
-            return res.status(500).json({ error: 'Failed to send email via custom mailer' });
+            return res.status(500).json({ error: 'Email service failure. Please check your SMTP settings.' });
         }
 
+        console.log('✅ OTP sent successfully to', email);
         return res.status(200).json({ message: 'OTP sent successfully', userId });
 
     } catch (err) {
-        console.error('Send Auth OTP Error:', err);
-        return res.status(500).json({ error: err.message });
+        console.error('❌ Send Auth OTP Error:', err);
+        return res.status(500).json({ error: err.message || 'Internal server error' });
     }
-}
+};
