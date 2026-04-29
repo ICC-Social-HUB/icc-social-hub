@@ -199,14 +199,23 @@ const AdminView = (() => {
                     </tr></thead>
                     <tbody id="users-table-body">${displayUsers.map(u => `
                         <tr class="border-b border-zinc-800/30 hover:bg-zinc-800/20 transition-colors">
-                            <td class="px-4 py-3">
-                                <div class="flex items-center gap-2">
+                            <td class="px-4 py-3 min-w-[200px]">
+                                <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold flex-shrink-0">
                                         ${(u.full_name || u.username || '?').charAt(0).toUpperCase()}
                                     </div>
-                                    <div class="flex flex-col">
-                                        <span class="font-medium text-xs">${u.full_name || 'Anon'}</span>
-                                        <span class="text-[10px] text-zinc-500">@${u.username || '—'}</span>
+                                    <div class="flex flex-col gap-1.5 flex-1">
+                                        <div class="relative">
+                                            <label class="absolute -top-1.5 left-2 px-1 bg-zinc-950 text-[8px] text-zinc-500 uppercase tracking-tighter">Full Name</label>
+                                            <input type="text" class="user-name-input w-full bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1 text-[11px] text-white focus:border-blue-500 outline-none transition-colors" value="${u.full_name || ''}" data-id="${u.id}">
+                                        </div>
+                                        <div class="relative">
+                                            <label class="absolute -top-1.5 left-2 px-1 bg-zinc-950 text-[8px] text-zinc-500 uppercase tracking-tighter">Username</label>
+                                            <div class="flex items-center">
+                                                <span class="pl-2 pr-0.5 text-[10px] text-zinc-600">@</span>
+                                                <input type="text" class="user-username-input w-full bg-zinc-950 border border-zinc-800 rounded-md pr-2 py-1 text-[10px] text-zinc-400 focus:border-blue-500 outline-none transition-colors" value="${u.username || ''}" data-id="${u.id}">
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </td>
@@ -332,12 +341,29 @@ const AdminView = (() => {
         container.querySelectorAll('.save-user-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const userId = btn.dataset.id;
-                const teamVal = document.querySelector(`.user-team-select[data-id="${userId}"]`).value;
+                const fullName = container.querySelector(`.user-name-input[data-id="${userId}"]`)?.value.trim();
+                const username = container.querySelector(`.user-username-input[data-id="${userId}"]`)?.value.trim();
+                const teamVal = container.querySelector(`.user-team-select[data-id="${userId}"]`).value;
+                
+                if (!username) { Toast.error('Username cannot be empty'); return; }
+
                 const team_id = teamVal ? parseInt(teamVal) : null;
                 btn.textContent = '...';
-                const { error } = await ICCSupabase.adminUpdateUser(userId, { team_id, is_pending_member: false });
+                
+                const fields = { 
+                    full_name: fullName, 
+                    username: username,
+                    team_id: team_id, 
+                    is_pending_member: false 
+                };
+
+                const { error } = await ICCSupabase.adminUpdateUser(userId, fields);
                 if (error) Toast.error('Failed to update user: ' + error.message);
-                else Toast.success('User updated!');
+                else {
+                    Toast.success('User profile updated!');
+                    // Refresh local user list to reflect changes
+                    allUsers = await ICCSupabase.getAllProfiles();
+                }
                 btn.textContent = 'Save';
             });
         });
