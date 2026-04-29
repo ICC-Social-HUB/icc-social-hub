@@ -21,27 +21,43 @@ module.exports = async (req, res) => {
         const supabase = createClient(url, key);
 
         // 1. Identify or Create User
-        let { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
-        let user = userData?.user;
-        
-        if (!user) {
+        // Try to find existing user by email in profiles table
+        let { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', email)
+            .maybeSingle();
+
+        let userId = existingProfile?.id;
+
+        if (!userId) {
+            // User not in profiles, try creating in Auth
             const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
                 email,
                 email_confirm: true,
                 user_metadata: metadata || {}
             });
-            if (createError && !createError.message.includes('already')) return sendError(createError.message);
-            
-            if (!newUser?.user) {
-                const { data: retry } = await supabase.auth.admin.getUserByEmail(email);
-                user = retry?.user;
+
+            if (createError) {
+                // If user exists in Auth but not in profiles (sync issue)
+                if (createError.message.includes('already')) {
+                    // Fallback: list users and find (limited to 50, but usually works for small/mid apps)
+                    const { data: listData } = await supabase.auth.admin.listUsers();
+                    const authUser = listData?.users?.find(u => u.email === email);
+                    if (authUser) {
+                        userId = authUser.id;
+                    } else {
+                        return sendError('User already exists in Auth but could not be retrieved.');
+                    }
+                } else {
+                    return sendError(createError.message);
+                }
             } else {
-                user = newUser.user;
+                userId = newUser.user.id;
             }
         }
 
-        if (!user) return sendError('Failed to identify user in Auth');
-        const userId = user.id;
+        if (!userId) return sendError('Failed to identify or create user');
 
         // 2. Ensure Profile
         const { data: profile } = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
