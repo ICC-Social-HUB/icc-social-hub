@@ -1,15 +1,15 @@
 const nodemailer = require('nodemailer');
 
-// Handle trailing spaces in app password (if passed via .env)
-const emailPass = (process.env.EMAIL_PASS || '').replace(/\s+/g, '');
-
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: emailPass
-    }
-});
+const createTransporter = () => {
+    const emailPass = (process.env.EMAIL_PASS || '').replace(/\s+/g, '');
+    return nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: emailPass
+        }
+    });
+};
 
 const sendOTP = async (email, otp) => {
     const mailOptions = {
@@ -33,6 +33,7 @@ const sendOTP = async (email, otp) => {
     };
 
     try {
+        const transporter = createTransporter();
         await transporter.sendMail(mailOptions);
         console.log('OTP email sent successfully to', email);
         return true;
@@ -82,6 +83,7 @@ const sendTeamStatusEmail = async (email, type, teamName) => {
     };
 
     try {
+        const transporter = createTransporter();
         await transporter.sendMail(mailOptions);
         console.log(\`Team status email [\${type}] sent to \${email}\`);
         return true;
