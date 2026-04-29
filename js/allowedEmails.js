@@ -109,6 +109,7 @@ const _ALLOWED_EMAIL_LIST = [
     "ranjithkumarbr2002@gmail.com",
     "ananyya.rajj@gmail.com",
     "kirthanvc07@gmail.com",
+    "saravanantm3@gmail.com",
 
 
 ];
