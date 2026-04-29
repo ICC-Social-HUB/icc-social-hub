@@ -91,8 +91,7 @@ const ICCSupabase = (() => {
                 if (res.ok && data.success !== false) {
                     // Sign in using the hashed token returned
                     const { error: signInError } = await client.auth.verifyOtp({
-                        email,
-                        token: data.token,
+                        token_hash: data.token,
                         type: 'magiclink'
                     });
                     if (signInError) return { error: signInError };
