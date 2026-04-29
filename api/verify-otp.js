@@ -1,11 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 
-// Initialize Supabase Client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
     // Enable CORS for Vercel
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -24,15 +19,19 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+    const supabase = createClient(url, key);
+
     try {
         const { userId, token } = req.body;
 
         if (!userId || !token) {
-            return res.status(400).json({ error: 'User ID and token are required' });
+            return res.status(400).json({ error: 'User ID and code are required' });
         }
 
-        // 1. Find the token in the database
-        const { data: tokens, error: fetchError } = await supabase
+        // 1. Fetch the latest unused OTP for this user
+        const { data: validTokens, error: fetchError } = await supabase
             .from('otp_tokens')
             .select('*')
             .eq('user_id', userId)
@@ -41,58 +40,42 @@ export default async function handler(req, res) {
             .order('created_at', { ascending: false })
             .limit(1);
 
-        if (fetchError || !tokens || tokens.length === 0) {
-            return res.status(400).json({ error: 'Invalid or already used OTP' });
+        if (fetchError || !validTokens || validTokens.length === 0) {
+            return res.status(200).json({ success: false, error: 'Invalid or expired code' });
         }
 
-        const validToken = tokens[0];
+        const otpRecord = validTokens[0];
 
         // 2. Check expiration
-        const now = new Date();
-        const expiresAt = new Date(validToken.expires_at);
-
-        if (now > expiresAt) {
-            // Mark as used since it's expired
-            await supabase
-                .from('otp_tokens')
-                .update({ used: true })
-                .eq('id', validToken.id);
-                
-            return res.status(400).json({ error: 'OTP has expired' });
+        if (new Date() > new Date(otpRecord.expires_at)) {
+            return res.status(200).json({ success: false, error: 'Verification code has expired' });
         }
 
-        // 3. Mark token as used
-        const { error: updateError } = await supabase
+        // 3. Mark as used
+        await supabase
             .from('otp_tokens')
             .update({ used: true })
-            .eq('id', validToken.id);
+            .eq('id', otpRecord.id);
 
-        if (updateError) {
-            console.error('Error marking token used:', updateError);
-            return res.status(500).json({ error: 'Failed to complete verification' });
-        }
+        // 4. If this was for an email change, update the user's email in Supabase Auth
+        if (otpRecord.new_email) {
+            const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
+                email: otpRecord.new_email,
+                email_confirm: true
+            });
 
-        // 4. Actually update the user's email in Supabase Auth securely using Service Role
-        if (validToken.new_email) {
-            const { error: authError } = await supabase.auth.admin.updateUserById(
-                userId,
-                { email: validToken.new_email, email_confirm: true }
-            );
-            
-            if (authError) {
-                console.error('Error updating auth email:', authError);
-                return res.status(500).json({ error: 'Failed to update email address in Auth' });
+            if (updateError) {
+                console.error('Error updating email in Auth:', updateError);
+                return res.status(200).json({ success: false, error: 'Failed to update email: ' + updateError.message });
             }
+            
+            // Also update the email in the profiles table
+            await supabase.from('profiles').update({ email: otpRecord.new_email }).eq('id', userId);
         }
 
-        // 5. Verification successful
-        return res.status(200).json({ 
-            message: 'OTP verified successfully',
-            newEmail: validToken.new_email 
-        });
-        
+        return res.status(200).json({ success: true, message: 'Verification successful' });
     } catch (error) {
         console.error('Verify OTP Error:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(200).json({ success: false, error: error.message || 'Internal server error' });
     }
-}
+};

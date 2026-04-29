@@ -204,7 +204,8 @@ const ProfileView = (() => {
                     body: JSON.stringify({ userId: ICCSupabase.getUser().id, email: newEmail, newEmail: newEmail })
                 });
                 
-                if (!response.ok) throw new Error((await response.json()).error);
+                const data = await response.json();
+                if (!response.ok || data.success === false) throw new Error(data.error || 'Unknown error');
                 
                 Toast.success('OTP sent to ' + newEmail);
                 _emailEditState = 'otp_sent';
@@ -232,9 +233,8 @@ const ProfileView = (() => {
                     body: JSON.stringify({ userId: ICCSupabase.getUser().id, token: otpCode })
                 });
                 
-                if (!response.ok) throw new Error((await response.json()).error);
-                
                 const data = await response.json();
+                if (!response.ok || data.success === false) throw new Error(data.error || 'Unknown error');
                 
                 // Finalize email change in Supabase (Backend handled it securely using Admin API)
                 // Update local session data so UI reflects new email immediately

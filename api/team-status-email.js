@@ -1,6 +1,6 @@
 const { sendTeamStatusEmail } = require('./_mailer');
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
     // Enable CORS for Vercel
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -30,10 +30,10 @@ export default async function handler(req, res) {
         if (success) {
             return res.status(200).json({ success: true });
         } else {
-            return res.status(500).json({ error: 'Failed to send email' });
+            return res.status(200).json({ success: false, error: 'Email delivery failed. Please check SMTP settings.' });
         }
     } catch (error) {
         console.error('API Error:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(200).json({ success: false, error: error.message || 'Internal server error' });
     }
-}
+};

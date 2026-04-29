@@ -1,12 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { sendOTP } = require('./_mailer');
 
-// Initialize Supabase Client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
     // Enable CORS for Vercel
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -24,6 +19,10 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
+
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+    const supabase = createClient(url, key);
 
     try {
         const { userId, email, newEmail } = req.body;
@@ -58,19 +57,19 @@ export default async function handler(req, res) {
 
         if (insertError) {
             console.error('Error inserting OTP:', insertError);
-            return res.status(500).json({ error: 'Failed to generate OTP' });
+            return res.status(200).json({ success: false, error: 'Failed to generate OTP code' });
         }
 
         // 5. Send Email
         const emailSent = await sendOTP(email, otpCode);
         
         if (!emailSent) {
-            return res.status(500).json({ error: 'Failed to send OTP email' });
+            return res.status(200).json({ success: false, error: 'Failed to send verification email' });
         }
 
-        return res.status(200).json({ message: 'OTP sent successfully' });
+        return res.status(200).json({ success: true, message: 'OTP sent successfully' });
     } catch (error) {
         console.error('Generate OTP Error:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(200).json({ success: false, error: error.message || 'Internal server error' });
     }
-}
+};
