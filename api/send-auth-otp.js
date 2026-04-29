@@ -1,111 +1,102 @@
 const { createClient } = require('@supabase/supabase-js');
-const { sendOTP } = require('./_mailer');
+const nodemailer = require('nodemailer');
 
 module.exports = async (req, res) => {
-    // Enable CORS
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
-
-    if (req.method === 'OPTIONS') return res.status(200).end();
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
-    const { email, metadata } = req.body;
-
-    if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
-    }
-
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!url || !key) {
-        console.error('❌ Missing Supabase Environment Variables');
-        return res.status(200).json({ success: false, error: 'Server configuration error (missing environment variables)' });
-    }
-
-    const supabase = createClient(url, key);
+    // Return 200 for everything to bypass Vercel's HTML error interception
+    const sendError = (msg) => {
+        console.error('❌ API Error:', msg);
+        return res.status(200).json({ success: false, error: msg });
+    };
 
     try {
-        // 1. Identify or Create User in Auth
+        if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+        const { email, metadata } = req.body;
+        if (!email) return sendError('Email is required');
+
+        const url = process.env.SUPABASE_URL;
+        const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!url || !key) return sendError('Server configuration error (missing env variables)');
+
+        const supabase = createClient(url, key);
+
+        // 1. Identify or Create User
         let { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
         let user = userData?.user;
         
         if (!user) {
-            console.log('👤 Creating new user in Auth:', email);
             const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
                 email,
                 email_confirm: true,
                 user_metadata: metadata || {}
             });
+            if (createError && !createError.message.includes('already')) return sendError(createError.message);
             
-            if (createError) {
-                if (createError.message.toLowerCase().includes('already')) {
-                    const { data: retryData } = await supabase.auth.admin.getUserByEmail(email);
-                    user = retryData?.user;
-                } else {
-                    throw createError;
-                }
+            if (!newUser?.user) {
+                const { data: retry } = await supabase.auth.admin.getUserByEmail(email);
+                user = retry?.user;
             } else {
-                user = newUser?.user;
+                user = newUser.user;
             }
         }
 
-        if (!user) throw new Error('Failed to identify or create user in Supabase Auth');
-
+        if (!user) return sendError('Failed to identify user in Auth');
         const userId = user.id;
 
-        // 2. Ensure Profile exists
+        // 2. Ensure Profile
         const { data: profile } = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
         if (!profile) {
-            console.log('📄 Creating minimal profile for:', email);
-            const { error: profErr } = await supabase.from('profiles').insert({
+            await supabase.from('profiles').insert({
                 id: userId,
                 email: email,
                 full_name: metadata?.full_name || email.split('@')[0],
                 username: metadata?.username || `user_${userId.substring(0, 8)}`
             });
-            if (profErr) console.error('⚠️ Profile creation warning:', profErr);
         }
 
-        // 3. Generate 6-digit OTP
+        // 3. Generate OTP
         const otpCode = String(Math.floor(100000 + Math.random() * 900000));
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-        // 4. Store in otp_tokens
-        const { error: insertError } = await supabase
-            .from('otp_tokens')
-            .insert([
-                {
-                    user_id: userId,
-                    token: otpCode,
-                    expires_at: expiresAt,
-                    used: false
-                }
-            ]);
+        // 4. Store OTP
+        const { error: insertError } = await supabase.from('otp_tokens').insert([{
+            user_id: userId,
+            token: otpCode,
+            expires_at: expiresAt,
+            used: false
+        }]);
+        if (insertError) return sendError('Database error: ' + insertError.message);
 
-        if (insertError) {
-            console.error('❌ Database error inserting OTP:', insertError);
-            throw new Error(`Database error: ${insertError.message}`);
-        }
-
-        // 5. Send Email via our mailer
-        console.log('✉️ Sending OTP email via custom mailer...');
-        const sent = await sendOTP(email, otpCode);
+        // 5. Send Email directly
+        const emailUser = process.env.EMAIL_USER;
+        const emailPass = (process.env.EMAIL_PASS || '').replace(/\s+/g, '');
         
-        if (!sent) {
-            return res.status(200).json({ success: false, error: 'Email service failure. Please check your SMTP settings.' });
-        }
+        if (!emailUser || !emailPass) return sendError('Email service not configured (env missing)');
 
-        console.log('✅ OTP sent successfully to', email);
-        return res.status(200).json({ message: 'OTP sent successfully', userId });
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: { user: emailUser, pass: emailPass }
+        });
+
+        const mailOptions = {
+            from: emailUser,
+            to: email,
+            subject: 'Your ICC InnovoApp Verification Code',
+            html: `
+                <div style="font-family: sans-serif; background-color: #0f172a; color: #f8fafc; padding: 40px; text-align: center;">
+                    <h1 style="color: #38bdf8;">ICC Social Hub</h1>
+                    <p>Your verification code is:</p>
+                    <div style="font-size: 32px; font-weight: bold; color: #38bdf8; margin: 20px 0;">${otpCode}</div>
+                    <p style="font-size: 12px; color: #64748b;">Expires in 10 minutes.</p>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        return res.status(200).json({ success: true, message: 'OTP sent', userId });
 
     } catch (err) {
-        console.error('❌ Send Auth OTP Error:', err);
-        return res.status(200).json({ 
-            success: false,
-            error: err.message || 'Internal server error'
-        });
+        return sendError(err.message || 'Internal server error');
     }
 };
