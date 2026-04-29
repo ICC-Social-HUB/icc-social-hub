@@ -10,9 +10,14 @@ const AuthModal = (() => {
     let loading = false;
     let errorMsg = '';
 
-    function open() {
-        isOpen = true; step = 'main'; email = ''; loading = false; errorMsg = '';
-        mount(); document.body.style.overflow = 'hidden';
+    function open(startStep = 'main', targetEmail = '') {
+        isOpen = true; 
+        step = startStep; 
+        email = targetEmail; 
+        loading = false; 
+        errorMsg = '';
+        mount(); 
+        document.body.style.overflow = 'hidden';
     }
     function close() {
         isOpen = false; errorMsg = ''; loading = false;

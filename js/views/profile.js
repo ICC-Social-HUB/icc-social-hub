@@ -87,23 +87,14 @@ const ProfileView = (() => {
                 </div>
                 <div><label class="block text-[11px] font-medium text-zinc-500 mb-1">Full Name</label><input type="text" id="edit-name" value="${profile.full_name || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
                 
-                <!-- EMAIL CHANGE OTP SECTION -->
-                <div>
-                    <label class="block text-[11px] font-medium text-zinc-500 mb-1">Email Address</label>
-                    <div class="flex gap-2">
-                        <input type="email" id="edit-email" value="${_emailEditState === 'idle' ? (ICCSupabase.getUser()?.email || '') : _newEmailDraft}" class="form-input flex-1 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" ${_emailEditState === 'otp_sent' ? 'disabled' : ''} placeholder="New email address">
-                        ${_emailEditState === 'idle' ? `<button type="button" id="edit-send-otp-btn" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-semibold transition-colors">Change</button>` : ''}
-                        ${_emailEditState === 'sending' ? `<button type="button" disabled class="px-3 py-2 bg-zinc-800 rounded-lg text-xs font-semibold"><div class="spinner spinner-sm"></div></button>` : ''}
-                    </div>
+                <!-- PASSWORD RESET SECTION -->
+                <div class="pt-2">
+                    <button type="button" id="profile-reset-password-btn" class="w-full py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                        Reset Password via Email OTP
+                    </button>
+                    <p class="text-[10px] text-zinc-500 mt-2 text-center">We'll send a code to your registered email to set a new password.</p>
                 </div>
-                ${_emailEditState === 'otp_sent' ? `
-                <div class="p-3 bg-zinc-900/50 border border-zinc-800 rounded-lg animate-slide-down">
-                    <label class="block text-[11px] font-medium text-zinc-500 mb-1 text-center">Enter 6-digit code sent to ${_newEmailDraft}</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="edit-otp" placeholder="123456" class="form-input flex-1 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white text-center font-bold tracking-[0.2em]" maxlength="6">
-                        <button type="button" id="edit-verify-otp-btn" class="px-3 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-xs font-semibold transition-all w-20" id="verify-btn-text">Verify</button>
-                    </div>
-                </div>` : ''}
 
                 <div><label class="block text-[11px] font-medium text-zinc-500 mb-1">Bio</label><textarea id="edit-bio" rows="2" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${profile.bio || ''}</textarea></div>
                 <div><label class="block text-[11px] font-medium text-zinc-500 mb-1">Skills <span class="text-zinc-600">(comma separated)</span></label><input type="text" id="edit-skills" value="${(profile.skills || []).join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" placeholder="React, Design, ML..."></div>
@@ -121,15 +112,11 @@ const ProfileView = (() => {
 
     let _avatarFile = null;
     let _removeAvatar = false;
-    let _emailEditState = 'idle'; // 'idle', 'sending', 'otp_sent'
-    let _newEmailDraft = '';
 
     async function mount(container) {
         editing = false;
         _avatarFile = null;
         _removeAvatar = false;
-        _emailEditState = 'idle';
-        _newEmailDraft = '';
         container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
         if (ICCSupabase.getUser()) {
             userPosts = await ICCSupabase.fetchPostsByUser(ICCSupabase.getUser().id);
@@ -148,8 +135,6 @@ const ProfileView = (() => {
             editing = !editing;
             _avatarFile = null;
             _removeAvatar = false;
-            _emailEditState = 'idle';
-            _newEmailDraft = '';
             container.innerHTML = render();
             bindEvents(container);
         });
@@ -157,8 +142,6 @@ const ProfileView = (() => {
             editing = false;
             _avatarFile = null;
             _removeAvatar = false;
-            _emailEditState = 'idle';
-            _newEmailDraft = '';
             container.innerHTML = render();
             bindEvents(container);
         });
@@ -184,71 +167,23 @@ const ProfileView = (() => {
             if (preview) preview.innerHTML = `<span class="font-heading font-bold text-xl text-red-500">${name.charAt(0).toUpperCase()}</span>`;
         });
 
-        // OTP Send
-        document.getElementById('edit-send-otp-btn')?.addEventListener('click', async () => {
-            const newEmail = document.getElementById('edit-email').value.trim();
-            const currentEmail = ICCSupabase.getUser()?.email;
-            if (!newEmail || newEmail === currentEmail) {
-                Toast.error('Please enter a new email address');
-                return;
-            }
-            _emailEditState = 'sending';
-            _newEmailDraft = newEmail;
-            container.innerHTML = render();
-            bindEvents(container);
-
-            try {
-                const response = await fetch('/api/generate-otp', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: ICCSupabase.getUser().id, email: newEmail, newEmail: newEmail })
-                });
-                
-                const data = await response.json();
-                if (!response.ok || data.success === false) throw new Error(data.error || 'Unknown error');
-                
-                Toast.success('OTP sent to ' + newEmail);
-                _emailEditState = 'otp_sent';
-            } catch (err) {
-                Toast.error('Failed to send OTP: ' + err.message);
-                _emailEditState = 'idle';
-            }
-            container.innerHTML = render();
-            bindEvents(container);
-        });
-
-        // OTP Verify
-        document.getElementById('edit-verify-otp-btn')?.addEventListener('click', async (e) => {
-            const otpCode = document.getElementById('edit-otp').value.trim();
-            if (otpCode.length !== 6) { Toast.error('Enter 6-digit code'); return; }
+        // Password Reset via OTP
+        document.getElementById('profile-reset-password-btn')?.addEventListener('click', async () => {
+            const user = ICCSupabase.getUser();
+            if (!user || !user.email) return;
             
-            const btn = e.target;
-            btn.innerHTML = '<div class="spinner spinner-sm"></div>';
-            btn.disabled = true;
-
-            try {
-                const response = await fetch('/api/verify-otp', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: ICCSupabase.getUser().id, token: otpCode })
-                });
-                
-                const data = await response.json();
-                if (!response.ok || data.success === false) throw new Error(data.error || 'Unknown error');
-                
-                // Finalize email change in Supabase (Backend handled it securely using Admin API)
-                // Update local session data so UI reflects new email immediately
-                const client = ICCSupabase.getClient();
-                await client.auth.refreshSession();
-
-                Toast.success('Email updated successfully!');
-                _emailEditState = 'idle';
-                _newEmailDraft = '';
-            } catch (err) {
-                Toast.error('Verification failed: ' + err.message);
+            if (confirm(`Send a password reset code to ${user.email}?`)) {
+                try {
+                    const { error } = await ICCSupabase.sendOTP(user.email);
+                    if (error) throw error;
+                    
+                    Toast.success('Reset code sent! Opening reset window...');
+                    // We can reuse AuthModal's forgot-password flow
+                    AuthModal.open('forgot-otp', user.email); 
+                } catch (err) {
+                    Toast.error('Failed to send reset code: ' + err.message);
+                }
             }
-            container.innerHTML = render();
-            bindEvents(container);
         });
         document.getElementById('profile-edit-form')?.addEventListener('submit', async e => {
             e.preventDefault();
