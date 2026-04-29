@@ -15,7 +15,7 @@ const sendOTP = async (email, otp) => {
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
-        subject: 'Your ICC InnovoApp Verification Code',
+        subject: 'Your ICC Social Hub Verification Code',
         html: `
         <div style="font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; padding: 40px 20px; text-align: center; border-radius: 12px; max-width: 500px; margin: 0 auto; border: 1px solid #334155;">
             <h1 style="color: #38bdf8; margin-bottom: 10px; font-size: 24px; text-transform: uppercase; letter-spacing: 2px;">ICC Social Hub</h1>
