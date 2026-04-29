@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!url || !key) {
-        return res.status(500).json({ error: 'Server configuration error' });
+        return res.status(200).json({ success: false, error: 'Server configuration error (missing environment variables)' });
     }
 
     const supabase = createClient(url, key);
@@ -37,12 +37,12 @@ module.exports = async (req, res) => {
             .limit(1);
 
         if (fetchError || !validTokens || validTokens.length === 0) {
-            return res.status(401).json({ error: 'Invalid or expired verification code' });
+            return res.status(200).json({ success: false, error: 'Invalid or expired verification code' });
         }
 
         const otpRecord = validTokens[0];
         if (new Date() > new Date(otpRecord.expires_at)) {
-            return res.status(401).json({ error: 'Verification code has expired' });
+            return res.status(200).json({ success: false, error: 'Verification code has expired' });
         }
 
         // 2. Mark OTP as used
@@ -68,6 +68,6 @@ module.exports = async (req, res) => {
 
     } catch (err) {
         console.error('❌ Verify Auth OTP Error:', err);
-        return res.status(500).json({ error: err.message || 'Internal server error' });
+        return res.status(200).json({ success: false, error: err.message || 'Internal server error' });
     }
 };

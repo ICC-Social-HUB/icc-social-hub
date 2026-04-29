@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
 
     if (!url || !key) {
         console.error('❌ Missing Supabase Environment Variables');
-        return res.status(500).json({ error: 'Server configuration error (missing environment variables)' });
+        return res.status(200).json({ success: false, error: 'Server configuration error (missing environment variables)' });
     }
 
     const supabase = createClient(url, key);
@@ -95,7 +95,7 @@ module.exports = async (req, res) => {
         const sent = await sendOTP(email, otpCode);
         
         if (!sent) {
-            return res.status(500).json({ error: 'Email service failure. Please check your SMTP settings.' });
+            return res.status(200).json({ success: false, error: 'Email service failure. Please check your SMTP settings.' });
         }
 
         console.log('✅ OTP sent successfully to', email);

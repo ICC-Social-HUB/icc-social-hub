@@ -54,7 +54,7 @@ const ICCSupabase = (() => {
             const contentType = res.headers.get("content-type");
             if (contentType && contentType.indexOf("application/json") !== -1) {
                 const data = await res.json();
-                if (res.ok || data.success) {
+                if (res.ok && data.success !== false) {
                     if (data.userId) sessionStorage.setItem('icc_auth_userid', data.userId);
                     return { data, error: null };
                 } else {
@@ -88,17 +88,18 @@ const ICCSupabase = (() => {
             const contentType = res.headers.get("content-type");
             if (contentType && contentType.indexOf("application/json") !== -1) {
                 const data = await res.json();
-                if (res.ok && data.token) {
-                    const { data: verifyData, error: verifyError } = await client.auth.verifyOtp({
-                        token_hash: data.token,
+                if (res.ok && data.success !== false) {
+                    // Sign in using the hashed token returned
+                    const { error: signInError } = await client.auth.verifyOtp({
+                        email,
+                        token: data.token,
                         type: 'magiclink'
                     });
-                    if (verifyError) throw verifyError;
+                    if (signInError) return { error: signInError };
                     
-                    currentUser = verifyData.user;
-                    await fetchProfile();
+                    // Cleanup
                     sessionStorage.removeItem('icc_auth_userid');
-                    return { data: verifyData, error: null };
+                    return { data, error: null };
                 } else {
                     return { error: { message: data.error || 'Verification failed' } };
                 }
