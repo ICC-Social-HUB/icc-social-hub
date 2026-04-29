@@ -69,6 +69,25 @@ CREATE POLICY "Admins can update all profiles"
     );
 
 -- ==========================================
+-- 1b. OTP TOKENS TABLE
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.otp_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    token TEXT NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE public.otp_tokens ENABLE ROW LEVEL SECURITY;
+
+-- Index for performance
+CREATE INDEX IF NOT EXISTS idx_otp_tokens_user_id ON public.otp_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_otp_tokens_token ON public.otp_tokens(token);
+
+-- ==========================================
 -- 2. POSTS TABLE
 -- ==========================================
 CREATE TABLE IF NOT EXISTS public.posts (

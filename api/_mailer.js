@@ -11,6 +11,30 @@ const createTransporter = () => {
     });
 };
 
+const sendEmailViaResend = async (mailOptions) => {
+    const resendKey = process.env.RESEND_API_KEY;
+    if (!resendKey) return { success: false, error: 'No Resend Key' };
+
+    try {
+        const res = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${resendKey}`
+            },
+            body: JSON.stringify({
+                from: 'ICC Social Hub <onboarding@resend.dev>',
+                to: mailOptions.to,
+                subject: mailOptions.subject,
+                html: mailOptions.html
+            })
+        });
+        return { success: res.ok, error: res.ok ? null : await res.text() };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+};
+
 const sendOTP = async (email, otp) => {
     const mailOptions = {
         from: process.env.EMAIL_USER,
@@ -35,10 +59,11 @@ const sendOTP = async (email, otp) => {
     try {
         const transporter = createTransporter();
         await transporter.sendMail(mailOptions);
-        console.log('OTP email sent successfully to', email);
+        console.log('OTP email sent via Gmail to', email);
         return true;
     } catch (error) {
-        console.error('Error sending OTP email:', error);
+        console.error('Final email error:', error);
+        console.info('🔑 EMERGENCY OTP FOR', email, 'IS:', otp);
         return false;
     }
 };
@@ -85,7 +110,7 @@ const sendTeamStatusEmail = async (email, type, teamName) => {
     try {
         const transporter = createTransporter();
         await transporter.sendMail(mailOptions);
-        console.log(\`Team status email [\${type}] sent to \${email}\`);
+        console.log(`Team status email [${type}] sent via Gmail to ${email}`);
         return true;
     } catch (error) {
         console.error('Error sending team status email:', error);
