@@ -39,28 +39,67 @@ const ICCSupabase = (() => {
         return { data, error };
     }
 
-    // Email OTP: send
+    // Email OTP: send (Customized to use /api/send-auth-otp to bypass Supabase mail limits)
     async function sendOTP(email, metadata = null) {
         if (!client) return { error: { message: 'Supabase not configured' } };
-        const options = { shouldCreateUser: true };
-        if (metadata) options.data = metadata;
-        const { data, error } = await client.auth.signInWithOtp({ email, options });
-        return { data, error };
+        
+        console.log('📡 Sending custom OTP for:', email);
+        try {
+            const res = await fetch('/api/send-auth-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, metadata })
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                // Store userId in sessionStorage for the verify step
+                sessionStorage.setItem('icc_auth_userid', data.userId);
+                return { data, error: null };
+            } else {
+                return { error: { message: data.error || 'Failed to send OTP' } };
+            }
+        } catch (err) {
+            console.error('❌ sendOTP error:', err);
+            return { error: { message: 'Connection error while sending OTP' } };
+        }
     }
 
-    // Email OTP: verify
+    // Email OTP: verify (Customized to use /api/verify-auth-otp)
     async function verifyOTP(email, token) {
         if (!client) return { error: { message: 'Supabase not configured' } };
-        const { data, error } = await client.auth.verifyOtp({
-            email,
-            token,
-            type: 'email'
-        });
-        if (!error && data.user) {
-            currentUser = data.user;
-            await fetchProfile();
+        
+        const userId = sessionStorage.getItem('icc_auth_userid');
+        if (!userId) return { error: { message: 'Auth session expired. Please try sending the code again.' } };
+
+        try {
+            const res = await fetch('/api/verify-auth-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, token, userId })
+            });
+            const data = await res.json();
+
+            if (res.ok && data.token) {
+                // Use the returned magiclink token to sign in the Supabase client
+                const { data: verifyData, error: verifyError } = await client.auth.verifyOtp({
+                    token_hash: data.token,
+                    type: 'magiclink'
+                });
+
+                if (verifyError) throw verifyError;
+                
+                currentUser = verifyData.user;
+                await fetchProfile();
+                sessionStorage.removeItem('icc_auth_userid');
+                return { data: verifyData, error: null };
+            } else {
+                return { error: { message: data.error || 'Verification failed' } };
+            }
+        } catch (err) {
+            console.error('❌ verifyOTP error:', err);
+            return { error: { message: err.message || 'System error during verification' } };
         }
-        return { data, error };
     }
 
     // Email/Password: login
