@@ -127,10 +127,10 @@ const TeamsView = (() => {
                                 ${teamMembers.length === 0 ? '<p class="text-xs text-zinc-600 text-center py-4">No members yet — be first!</p>'
                 : teamMembers.map((m, i) => `
                                 <div class="roster-item flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i * 0.04}s">
-                                    <a href="#chat/${m.id}" class="flex items-center gap-2 flex-1 min-w-0 hover:opacity-80 transition-opacity" title="Message ${m.full_name || 'User'}">
-                                        <div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name || '?').charAt(0).toUpperCase()}</div>
-                                        <p class="text-xs font-medium truncate">${m.full_name || 'Anonymous'}</p>
-                                    </a>
+                                    <div class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity open-user-profile" data-id="${m.id}" title="View Profile">
+                                        <div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name || m.username || '?').charAt(0).toUpperCase()}</div>
+                                        <p class="text-xs font-medium truncate">${m.full_name || m.username || 'Anonymous'}</p>
+                                    </div>
                                     ${(isLeadOrAdmin && m.id !== profile?.id) ? `<button class="remove-member-btn px-1.5 py-1 bg-red-900/30 text-red-400 hover:bg-red-900/60 rounded text-[10px] font-medium transition-colors" data-id="${m.id}">Remove</button>` : ''}
                                 </div>
                                 `).join('')}
@@ -144,9 +144,14 @@ const TeamsView = (() => {
                                 ${pendingMembers.length === 0 ? '<p class="text-xs text-zinc-600">No pending requests</p>' : pendingMembers.map(m => `
                                 <div class="bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden mb-3">
                                     <div class="flex items-center justify-between px-3 py-2 bg-zinc-900/50">
-                                        <div class="min-w-0 pr-2">
-                                            <p class="text-xs font-bold truncate">${m.full_name || 'Anon'}</p>
-                                            <p class="text-[10px] text-zinc-500 truncate">@${m.username || ''}</p>
+                                        <div class="flex items-center gap-2 min-w-0 pr-2">
+                                            <div class="w-8 h-8 rounded-full bg-zinc-800 flex-shrink-0 overflow-hidden cursor-pointer open-user-profile" data-id="${m.id}">
+                                                ${m.avatar_url ? `<img src="${m.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[10px] font-bold bg-zinc-700 text-zinc-400">${(m.full_name || '?').charAt(0).toUpperCase()}</div>`}
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p class="text-[13px] font-bold truncate cursor-pointer hover:text-emerald-400 transition-colors open-user-profile leading-tight" data-id="${m.id}">${m.full_name || m.username || 'Anon'}</p>
+                                                <p class="text-[10px] text-zinc-500 truncate">@${m.username || ''}</p>
+                                            </div>
                                         </div>
                                         <div class="flex gap-1.5 flex-shrink-0">
                                             <button class="approve-member-btn px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-[10px] font-bold transition-colors" data-id="${m.id}">Approve</button>
@@ -211,10 +216,10 @@ const TeamsView = (() => {
                     roster.innerHTML = teamMembers.length === 0 ? '<p class="text-xs text-zinc-600 text-center py-4">No members yet — be first!</p>'
                         : teamMembers.map((m, i) => `
                                 <div class="roster-item flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i * 0.04}s">
-                                    <a href="#chat/${m.id}" class="flex items-center gap-2 flex-1 min-w-0 hover:opacity-80 transition-opacity" title="Message ${m.full_name || 'User'}">
-                                        <div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name || '?').charAt(0).toUpperCase()}</div>
-                                        <p class="text-xs font-medium truncate">${m.full_name || 'Anonymous'}</p>
-                                    </a>
+                                    <div class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity open-user-profile" data-id="${m.id}" title="View Profile">
+                                        <div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name || m.username || '?').charAt(0).toUpperCase()}</div>
+                                        <p class="text-xs font-medium truncate">${m.full_name || m.username || 'Anonymous'}</p>
+                                    </div>
                                     ${(isLeadOrAdmin && m.id !== profile?.id) ? `<button class="remove-member-btn px-1.5 py-1 bg-red-900/30 text-red-400 hover:bg-red-900/60 rounded text-[10px] font-medium transition-colors" data-id="${m.id}">Remove</button>` : ''}
                                 </div>
                                 `).join('');
@@ -232,9 +237,14 @@ const TeamsView = (() => {
                                 ${pendingMembers.length === 0 ? '<p class="text-xs text-zinc-600">No pending requests</p>' : pendingMembers.map(m => `
                                 <div class="bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden mb-3">
                                     <div class="flex items-center justify-between px-3 py-2 bg-zinc-900/50">
-                                        <div class="min-w-0 pr-2">
-                                            <p class="text-xs font-bold truncate">${m.full_name || 'Anon'}</p>
-                                            <p class="text-[10px] text-zinc-500 truncate">@${m.username || ''}</p>
+                                        <div class="flex items-center gap-2 min-w-0 pr-2">
+                                            <div class="w-8 h-8 rounded-full bg-zinc-800 flex-shrink-0 overflow-hidden cursor-pointer open-user-profile" data-id="${m.id}">
+                                                ${m.avatar_url ? `<img src="${m.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[10px] font-bold bg-zinc-700 text-zinc-400">${(m.full_name || '?').charAt(0).toUpperCase()}</div>`}
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p class="text-[13px] font-bold truncate cursor-pointer hover:text-emerald-400 transition-colors open-user-profile leading-tight" data-id="${m.id}">${m.full_name || m.username || 'Anon'}</p>
+                                                <p class="text-[10px] text-zinc-500 truncate">@${m.username || ''}</p>
+                                            </div>
                                         </div>
                                         <div class="flex gap-1.5 flex-shrink-0">
                                             <button class="approve-member-btn px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-[10px] font-bold transition-colors" data-id="${m.id}">Approve</button>
@@ -354,6 +364,14 @@ const TeamsView = (() => {
                     Toast.info('Join request denied');
                     const c = document.getElementById('app'); mount(c, lead.id);
                 }
+            });
+        });
+
+        document.querySelectorAll('.open-user-profile').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const userId = el.dataset.id;
+                if (userId) UserProfileModal.open(userId);
             });
         });
 
