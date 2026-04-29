@@ -45,7 +45,7 @@ const ICCSupabase = (() => {
         
         console.log('📡 Sending custom OTP for:', email);
         try {
-            const res = await fetch('/api/test-otp', {
+            const res = await fetch('/api/send-auth-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, metadata })
@@ -54,8 +54,8 @@ const ICCSupabase = (() => {
             const contentType = res.headers.get("content-type");
             if (contentType && contentType.indexOf("application/json") !== -1) {
                 const data = await res.json();
-                if (res.ok) {
-                    sessionStorage.setItem('icc_auth_userid', data.userId);
+                if (res.ok || data.success) {
+                    if (data.userId) sessionStorage.setItem('icc_auth_userid', data.userId);
                     return { data, error: null };
                 } else {
                     return { error: { message: data.error || 'Failed to send OTP' } };

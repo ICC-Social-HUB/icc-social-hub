@@ -56,16 +56,17 @@ module.exports = async (req, res) => {
 
         const userId = user.id;
 
-        // 2. Ensure Profile exists (otp_tokens might have FK to profiles)
+        // 2. Ensure Profile exists
         const { data: profile } = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
         if (!profile) {
-            console.log('📄 Creating missing profile for:', email);
-            await supabase.from('profiles').insert({
+            console.log('📄 Creating minimal profile for:', email);
+            const { error: profErr } = await supabase.from('profiles').insert({
                 id: userId,
                 email: email,
-                full_name: metadata?.full_name || '',
-                username: metadata?.username || null
+                full_name: metadata?.full_name || email.split('@')[0],
+                username: metadata?.username || `user_${userId.substring(0, 8)}`
             });
+            if (profErr) console.error('⚠️ Profile creation warning:', profErr);
         }
 
         // 3. Generate 6-digit OTP
@@ -102,9 +103,9 @@ module.exports = async (req, res) => {
 
     } catch (err) {
         console.error('❌ Send Auth OTP Error:', err);
-        return res.status(500).json({ 
-            error: err.message || 'Internal server error',
-            stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        return res.status(200).json({ 
+            success: false,
+            error: err.message || 'Internal server error'
         });
     }
 };
