@@ -1,7 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { sendOTP } = require('./_mailer');
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -107,4 +107,4 @@ export default async function handler(req, res) {
             stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
         });
     }
-}
+};

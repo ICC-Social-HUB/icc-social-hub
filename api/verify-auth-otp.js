@@ -1,6 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -70,4 +70,4 @@ export default async function handler(req, res) {
         console.error('❌ Verify Auth OTP Error:', err);
         return res.status(500).json({ error: err.message || 'Internal server error' });
     }
-}
+};

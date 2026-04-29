@@ -45,7 +45,7 @@ const ICCSupabase = (() => {
         
         console.log('📡 Sending custom OTP for:', email);
         try {
-            const res = await fetch('/api/send-auth-otp', {
+            const res = await fetch('/api/test-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, metadata })
