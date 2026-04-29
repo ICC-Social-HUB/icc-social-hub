@@ -17,6 +17,7 @@ const _ALLOWED_EMAIL_LIST = [
 
     // Test Account --
     "contact.designix@gmail.com",
+
     // ── Batch 1: Core Members ──
     "saravanantm1920@gmail.com",
     "chetansurya625v3@gmail.com",
@@ -99,6 +100,16 @@ const _ALLOWED_EMAIL_LIST = [
     "sinchanarkashyap@gmail.com",
     "mohands0810@gmail.com",
     "karthikhadapad0@gmail.com",
+    "sinchanshravya@gmail.com",
+    "binitasai@gmail.com",
+    "karthikhadapad0@gmail.com",
+    "bhavanasreeni7@gmail.com",
+    "cvprajwalguptha379@gmail.com",
+    "pavanigowda875@gmail.com",
+    "ranjithkumarbr2002@gmail.com",
+    "ananyya.rajj@gmail.com",
+    "kirthanvc07@gmail.com",
+
 
 ];
 // Internal lookup set (auto-built, case-insensitive — don't edit this)
