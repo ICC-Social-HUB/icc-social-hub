@@ -7,6 +7,7 @@ const AdminView = (() => {
     let allPosts = [];
     let allUsers = [];
     let editingLead = null;
+    let editingUserId = null;
 
     function render() {
         const user = ICCSupabase.getUser();
@@ -178,66 +179,91 @@ const AdminView = (() => {
         const displayUsers = allUsers.filter(u => u.role !== 'admin' && u.role !== 'lead');
 
         return `
-        <div class="glass-card rounded-xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div class="flex items-center justify-between p-4 border-b border-zinc-800/50 flex-wrap gap-3">
+        <div class="space-y-4">
+            <div class="flex items-center justify-between px-2 flex-wrap gap-3">
                 <div class="flex items-center gap-3">
                     <h3 class="font-heading font-semibold text-sm">User Management</h3>
                     <span class="text-xs text-zinc-500" id="users-count-badge">${displayUsers.length} members</span>
                 </div>
                 <div class="relative w-full sm:w-64">
-                    <input type="text" id="admin-user-search" placeholder="Search users..." class="form-input w-full pl-9 pr-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white">
+                    <input type="text" id="admin-user-search" placeholder="Search users..." class="form-input w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white">
                     <svg class="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </div>
             </div>
-            <div class="overflow-x-auto overflow-y-auto flex-1">
-                <table class="w-full text-left text-sm relative">
-                    <thead class="sticky top-0 bg-zinc-950 z-10"><tr class="border-b border-zinc-800">
-                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">User</th>
-                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">Email</th>
-                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">Team</th>
-                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase text-right">Actions</th>
-                    </tr></thead>
-                    <tbody id="users-table-body">${displayUsers.map(u => `
-                        <tr class="border-b border-zinc-800/30 hover:bg-zinc-800/20 transition-colors">
-                            <td class="px-4 py-3 min-w-[200px]">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                                        ${(u.full_name || u.username || '?').charAt(0).toUpperCase()}
-                                    </div>
-                                    <div class="flex flex-col gap-1.5 flex-1">
-                                        <div class="relative">
-                                            <label class="absolute -top-1.5 left-2 px-1 bg-zinc-950 text-[8px] text-zinc-500 uppercase tracking-tighter">Full Name</label>
-                                            <input type="text" class="user-name-input w-full bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1 text-[11px] text-white focus:border-blue-500 outline-none transition-colors" value="${u.full_name || ''}" data-id="${u.id}">
-                                        </div>
-                                        <div class="relative">
-                                            <label class="absolute -top-1.5 left-2 px-1 bg-zinc-950 text-[8px] text-zinc-500 uppercase tracking-tighter">Username</label>
-                                            <div class="flex items-center">
-                                                <span class="pl-2 pr-0.5 text-[10px] text-zinc-600">@</span>
-                                                <input type="text" class="user-username-input w-full bg-zinc-950 border border-zinc-800 rounded-md pr-2 py-1 text-[10px] text-zinc-400 focus:border-blue-500 outline-none transition-colors" value="${u.username || ''}" data-id="${u.id}">
-                                            </div>
-                                        </div>
-                                    </div>
+
+            <div class="grid gap-3" id="users-list-container">
+                ${displayUsers.map(u => {
+                    const isEditing = editingUserId === u.id;
+                    const teamName = CORE_LEADS.find(l => l.id === u.team_id)?.team || 'No Team';
+                    
+                    return `
+                    <div class="glass-card rounded-2xl p-4 transition-all duration-300 ${isEditing ? 'ring-1 ring-blue-500/50 bg-blue-500/5' : ''}" data-user-id="${u.id}">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                <div class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-bold flex-shrink-0 border border-zinc-700">
+                                    ${(u.full_name || u.username || '?').charAt(0).toUpperCase()}
                                 </div>
-                            </td>
-                            <td class="px-4 py-3">
-                                ${u.email
-                ? `<span class="text-xs text-zinc-300 font-mono">${u.email}</span>`
-                : `<span class="text-[10px] text-zinc-600 italic">No email</span>`
-            }
-                            </td>
-                            <td class="px-4 py-3">
-                                <select class="user-team-select bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 w-32" data-id="${u.id}">
-                                    <option value="">None</option>
-                                    ${CORE_LEADS.map(l => `<option value="${l.id}" ${u.team_id === l.id ? 'selected' : ''}>${l.team}</option>`).join('')}
-                                </select>
-                            </td>
-                            <td class="px-4 py-3 text-right flex justify-end gap-2">
-                                <button class="save-user-btn text-[10px] bg-blue-600/20 text-blue-400 px-2.5 py-1.5 rounded hover:bg-blue-600/40 transition-colors font-medium" data-id="${u.id}">Save</button>
-                                <button class="delete-user-btn text-[10px] bg-red-600/20 text-red-400 px-2.5 py-1.5 rounded hover:bg-red-600/40 transition-colors font-medium" data-id="${u.id}">Delete</button>
-                            </td>
-                        </tr>
-                    `).join('')}</tbody>
-                </table>
+                                
+                                ${isEditing ? `
+                                    <div class="flex-1 space-y-2 py-1">
+                                        <div class="relative">
+                                            <input type="text" class="user-name-input w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-white focus:border-blue-500 outline-none" value="${u.full_name || ''}" placeholder="Full Name">
+                                            <span class="absolute -top-2 left-2 px-1 bg-zinc-900 text-[9px] text-zinc-500 uppercase tracking-wider">Full Name</span>
+                                        </div>
+                                        <div class="relative">
+                                            <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden">
+                                                <span class="pl-3 pr-1 text-[10px] text-zinc-500">@</span>
+                                                <input type="text" class="user-username-input w-full bg-transparent px-0 py-1.5 text-xs text-white focus:outline-none" value="${u.username || ''}" placeholder="username">
+                                            </div>
+                                            <span class="absolute -top-2 left-2 px-1 bg-zinc-900 text-[9px] text-zinc-500 uppercase tracking-wider">Username</span>
+                                        </div>
+                                    </div>
+                                ` : `
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="text-sm font-semibold text-white truncate">${u.full_name || 'Anonymous'}</h4>
+                                        <p class="text-[11px] text-zinc-500 truncate">@${u.username || '—'}</p>
+                                    </div>
+                                `}
+                            </div>
+                            
+                            ${!isEditing ? `
+                                <button class="edit-user-btn p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-all" data-id="${u.id}">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                </button>
+                            ` : ''}
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-2 gap-3 border-t border-zinc-800/50 pt-4">
+                            <div class="space-y-1">
+                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Email Address</span>
+                                <p class="text-[11px] text-zinc-400 font-mono truncate">${u.email || 'No email'}</p>
+                            </div>
+                            <div class="space-y-1">
+                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Team Assignment</span>
+                                ${isEditing ? `
+                                    <select class="user-team-select w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] text-zinc-300 outline-none focus:border-blue-500">
+                                        <option value="">No Team</option>
+                                        ${CORE_LEADS.map(l => `<option value="${l.id}" ${u.team_id === l.id ? 'selected' : ''}>${l.team}</option>`).join('')}
+                                    </select>
+                                ` : `
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${u.team_id ? 'bg-blue-500/10 text-blue-400' : 'bg-zinc-800 text-zinc-500'}">
+                                        ${teamName}
+                                    </span>
+                                `}
+                            </div>
+                        </div>
+
+                        ${isEditing ? `
+                            <div class="mt-4 flex items-center gap-2 pt-3 border-t border-zinc-800/30">
+                                <button class="save-user-btn flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-all" data-id="${u.id}">Save Changes</button>
+                                <button class="cancel-user-edit-btn px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-medium transition-all">Cancel</button>
+                                <button class="delete-user-btn p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-all" data-id="${u.id}" title="Delete User">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>`;
+                }).join('')}
             </div>
         </div>`;
     }
@@ -338,17 +364,34 @@ const AdminView = (() => {
         });
 
         // User management
+        container.querySelectorAll('.edit-user-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                editingUserId = btn.dataset.id;
+                container.innerHTML = render(); bindEvents(container);
+            });
+        });
+
+        container.querySelectorAll('.cancel-user-edit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                editingUserId = null;
+                container.innerHTML = render(); bindEvents(container);
+            });
+        });
+
         container.querySelectorAll('.save-user-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const userId = btn.dataset.id;
-                const fullName = container.querySelector(`.user-name-input[data-id="${userId}"]`)?.value.trim();
-                const username = container.querySelector(`.user-username-input[data-id="${userId}"]`)?.value.trim();
-                const teamVal = container.querySelector(`.user-team-select[data-id="${userId}"]`).value;
+                const card = container.querySelector(`.glass-card[data-user-id="${userId}"]`);
+                const fullName = card.querySelector(`.user-name-input`)?.value.trim();
+                const username = card.querySelector(`.user-username-input`)?.value.trim();
+                const teamVal = card.querySelector(`.user-team-select`)?.value;
                 
                 if (!username) { Toast.error('Username cannot be empty'); return; }
 
                 const team_id = teamVal ? parseInt(teamVal) : null;
-                btn.textContent = '...';
+                const originalText = btn.textContent;
+                btn.textContent = 'Saving...';
+                btn.disabled = true;
                 
                 const fields = { 
                     full_name: fullName, 
@@ -358,30 +401,33 @@ const AdminView = (() => {
                 };
 
                 const { error } = await ICCSupabase.adminUpdateUser(userId, fields);
-                if (error) Toast.error('Failed to update user: ' + error.message);
-                else {
+                if (error) {
+                    Toast.error('Failed to update user: ' + error.message);
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                } else {
                     Toast.success('User profile updated!');
-                    // Refresh local user list to reflect changes
+                    editingUserId = null;
                     allUsers = await ICCSupabase.getAllProfiles();
+                    container.innerHTML = render(); bindEvents(container);
                 }
-                btn.textContent = 'Save';
             });
         });
 
         // User Search
         document.getElementById('admin-user-search')?.addEventListener('input', e => {
             const query = e.target.value.toLowerCase();
-            const table = document.getElementById('users-table-body');
-            if (!table) return;
-            const rows = table.querySelectorAll('tr');
+            const container = document.getElementById('users-list-container');
+            if (!container) return;
+            const cards = container.querySelectorAll('.glass-card');
             let visibleCount = 0;
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
                 if (text.includes(query)) {
-                    row.style.display = '';
+                    card.style.display = '';
                     visibleCount++;
                 } else {
-                    row.style.display = 'none';
+                    card.style.display = 'none';
                 }
             });
             const countBadge = document.getElementById('users-count-badge');
