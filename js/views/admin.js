@@ -9,6 +9,7 @@ const AdminView = (() => {
     let editingLead = null;
     let editingUserId = null;
     let userSearchQuery = '';
+    let userSectionFilter = '';
 
     function render() {
         const user = ICCSupabase.getUser();
@@ -186,9 +187,15 @@ const AdminView = (() => {
                     <h3 class="font-heading font-semibold text-sm">User Management</h3>
                     <span class="text-xs text-zinc-500" id="users-count-badge">${displayUsers.length} members</span>
                 </div>
-                <div class="relative w-full sm:w-64">
-                    <input type="text" id="admin-user-search" placeholder="Search by name, email, or USN..." class="form-input w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white" value="${userSearchQuery}">
-                    <svg class="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <select id="admin-user-section-filter" class="bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white px-2 py-2 outline-none focus:border-blue-500">
+                        <option value="">All Secs</option>
+                        ${['A','B','C','D','E','F','G','H','I','J','K'].map(s => `<option value="${s}" ${userSectionFilter === s ? 'selected' : ''}>Sec ${s}</option>`).join('')}
+                    </select>
+                    <div class="relative flex-1 sm:w-64">
+                        <input type="text" id="admin-user-search" placeholder="Search by name, email, or USN..." class="form-input w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white" value="${userSearchQuery}">
+                        <svg class="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
                 </div>
             </div>
 
@@ -208,7 +215,7 @@ const AdminView = (() => {
                     const teamName = CORE_LEADS.find(l => l.id === u.team_id)?.team || 'No Team';
                     
                     return `
-                    <div class="glass-card rounded-2xl p-4 transition-all duration-300 ${isEditing ? 'ring-1 ring-blue-500/50 bg-blue-500/5' : ''}" data-user-id="${u.id}">
+                    <div class="glass-card rounded-2xl p-4 transition-all duration-300 ${isEditing ? 'ring-1 ring-blue-500/50 bg-blue-500/5' : ''}" data-user-id="${u.id}" data-section="${(section || '').toUpperCase()}">
                         <div class="flex items-start justify-between gap-4">
                             <div class="flex items-center gap-3 flex-1 min-w-0">
                                 <div class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-bold flex-shrink-0 border border-zinc-700 relative">
@@ -495,32 +502,50 @@ const AdminView = (() => {
             });
         });
 
-        // User Search
+        // User Search & Filter
+        const applyUserFilters = () => {
+            const query = userSearchQuery.toLowerCase();
+            const sectionQuery = userSectionFilter;
+            const container = document.getElementById('users-list-container');
+            if (!container) return;
+            const cards = container.querySelectorAll('.glass-card');
+            let visibleCount = 0;
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                const cardSection = card.dataset.section || '';
+                
+                const matchesSearch = text.includes(query);
+                const matchesSection = !sectionQuery || cardSection === sectionQuery;
+                
+                if (matchesSearch && matchesSection) {
+                    card.style.display = '';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            const countBadge = document.getElementById('users-count-badge');
+            if (countBadge) countBadge.textContent = visibleCount + ' members';
+        };
+
         const searchInput = document.getElementById('admin-user-search');
         if (searchInput) {
             searchInput.addEventListener('input', e => {
                 userSearchQuery = e.target.value;
-                const query = userSearchQuery.toLowerCase();
-                const container = document.getElementById('users-list-container');
-                if (!container) return;
-                const cards = container.querySelectorAll('.glass-card');
-                let visibleCount = 0;
-                cards.forEach(card => {
-                    const text = card.textContent.toLowerCase();
-                    if (text.includes(query)) {
-                        card.style.display = '';
-                        visibleCount++;
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-                const countBadge = document.getElementById('users-count-badge');
-                if (countBadge) countBadge.textContent = visibleCount + ' members';
+                applyUserFilters();
             });
-
-            if (userSearchQuery) {
-                searchInput.dispatchEvent(new Event('input'));
-            }
+        }
+        
+        const sectionSelect = document.getElementById('admin-user-section-filter');
+        if (sectionSelect) {
+            sectionSelect.addEventListener('change', e => {
+                userSectionFilter = e.target.value;
+                applyUserFilters();
+            });
+        }
+        
+        if (userSearchQuery || userSectionFilter) {
+            applyUserFilters();
         }
 
         container.querySelectorAll('.delete-user-btn').forEach(btn => {
