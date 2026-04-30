@@ -674,6 +674,9 @@ const ICCSupabase = (() => {
         });
 
         if (!error) {
+            // Sync with profiles table so admin panel and other views reflect the team
+            await client.from('profiles').update({ team_id: teamId }).eq('id', userId);
+
             const teamName = CORE_LEADS.find(l => l.id === parseInt(teamId))?.team || 'the team';
             await createNotification({
                 userId: userId,
