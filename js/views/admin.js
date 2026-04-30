@@ -213,8 +213,8 @@ const AdminView = (() => {
                                     </div>
                                 ` : `
                                     <div class="flex-1 min-w-0">
-                                        <div class="flex items-center gap-2">
-                                            <h4 class="text-sm font-semibold text-white truncate">${fullName || 'Anonymous'}</h4>
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <h4 class="text-sm font-semibold text-white break-words">${fullName || 'Anonymous'}</h4>
                                             ${isVerified ? `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Excel Verified</span>` : `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20">Unverified</span>`}
                                             ${isManuallyUpdated ? `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">Manually Updated</span>` : ''}
                                         </div>
@@ -230,7 +230,7 @@ const AdminView = (() => {
                             ` : ''}
                         </div>
 
-                        <div class="mt-4 grid grid-cols-2 gap-3 border-t border-zinc-800/50 pt-4">
+                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-zinc-800/50 pt-4">
                             <div class="space-y-1">
                                 <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Email Address (Read Only)</span>
                                 <p class="text-[11px] text-zinc-400 font-mono truncate">${u.email || 'No email'}</p>
