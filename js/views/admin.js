@@ -2,7 +2,7 @@
    ICC Social Hub — Admin Dashboard
    ============================================ */
 const AdminView = (() => {
-    let activeTab = 'overview';
+    let activeTab = 'broadcast';
     let pendingLeads = [];
     let allPosts = [];
     let allUsers = [];
@@ -29,7 +29,7 @@ const AdminView = (() => {
                     </div>
                 </div>
                 <div class="flex gap-1 overflow-x-auto mb-4 pb-1 border-b border-zinc-800/50">
-                    ${['overview', 'broadcast', 'leads', 'users', 'moderate'].map(t => `<button class="admin-tab ${activeTab === t ? 'active' : ''}" data-tab="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</button>`).join('')}
+                    ${['broadcast', 'leads', 'users', 'moderate'].map(t => `<button class="admin-tab ${activeTab === t ? 'active' : ''}" data-tab="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</button>`).join('')}
                 </div>
                 <div id="admin-content">${renderTab()}</div>
             </div>
@@ -38,7 +38,6 @@ const AdminView = (() => {
 
     function renderTab() {
         switch (activeTab) {
-            case 'overview': return renderOverview();
             case 'broadcast': return renderBroadcast();
             case 'leads': return renderLeads();
             case 'users': return renderUsers();
@@ -47,31 +46,7 @@ const AdminView = (() => {
         }
     }
 
-    function renderOverview() {
-        return `
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            <div class="admin-stat-card"><p class="text-2xl font-heading font-bold">${CORE_LEADS.length}</p><p class="text-[11px] text-zinc-500 mt-0.5">Teams</p></div>
-            <div class="admin-stat-card"><p class="text-2xl font-heading font-bold">${pendingLeads.length}</p><p class="text-[11px] text-zinc-500 mt-0.5">Pending</p></div>
-            <div class="admin-stat-card"><p class="text-2xl font-heading font-bold">${allPosts.length}</p><p class="text-[11px] text-zinc-500 mt-0.5">Posts</p></div>
-            <div class="admin-stat-card"><p class="text-2xl font-heading font-bold gradient-text-static">∞</p><p class="text-[11px] text-zinc-500 mt-0.5">Potential</p></div>
-        </div>
-        <div class="glass-card rounded-xl p-5">
-            <h3 class="font-heading font-semibold text-sm mb-3">Quick Actions</h3>
-            <div class="grid grid-cols-2 gap-2">
-                <button class="admin-tab-switch px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors text-left" data-tab="broadcast">📢 Send Broadcast</button>
-                <button class="admin-tab-switch px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors text-left" data-tab="leads">👥 Manage Leads</button>
-                <button class="admin-tab-switch px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors text-left" data-tab="users">🧑‍💻 Manage Users</button>
-                <button class="admin-tab-switch px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors text-left" data-tab="moderate">🛡️ Moderate Feed</button>
-            </div>
-        </div>
-        <div class="glass-card border-red-500/20 rounded-xl p-5 mt-4">
-            <h3 class="font-heading font-semibold text-sm text-red-500 mb-1">Danger Zone</h3>
-            <p class="text-[11px] text-zinc-500 mb-3">Irreversible actions that affect all users.</p>
-            <div class="flex flex-wrap gap-2">
-                <button id="admin-wipe-notifications" class="px-4 py-2 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/30 rounded-lg text-xs font-bold transition-all">Clear All Notifications Everywhere</button>
-            </div>
-        </div>`;
-    }
+
 
     function renderBroadcast() {
         return `
@@ -313,7 +288,7 @@ const AdminView = (() => {
     }
 
     async function mount(container) {
-        activeTab = 'overview';
+        activeTab = 'broadcast';
         container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
         pendingLeads = await ICCSupabase.getPendingLeads();
         allPosts = await ICCSupabase.getAllPosts();
