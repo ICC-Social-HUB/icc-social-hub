@@ -187,7 +187,7 @@ const AdminView = (() => {
                     <span class="text-xs text-zinc-500" id="users-count-badge">${displayUsers.length} members</span>
                 </div>
                 <div class="relative w-full sm:w-64">
-                    <input type="text" id="admin-user-search" placeholder="Search users..." class="form-input w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white" value="${userSearchQuery}">
+                    <input type="text" id="admin-user-search" placeholder="Search by name, email, or USN..." class="form-input w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white" value="${userSearchQuery}">
                     <svg class="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </div>
             </div>
@@ -195,33 +195,47 @@ const AdminView = (() => {
             <div class="grid gap-3" id="users-list-container">
                 ${displayUsers.map(u => {
                     const isEditing = editingUserId === u.id;
+                    const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
+                    const isVerified = !!student;
+                    
+                    const fullName = u.full_name || (student ? student.fullName : '');
+                    const usn = u.usn || (student ? student.usn : '');
+                    const phone = u.phone || (student ? student.phone : '');
+                    const section = student ? student.section : '';
+                    
+                    // A user is manually updated if they have db overrides that differ from the empty defaults
+                    const isManuallyUpdated = !!(u.usn || u.phone || (u.full_name && u.full_name !== (student ? student.fullName : '')));
                     const teamName = CORE_LEADS.find(l => l.id === u.team_id)?.team || 'No Team';
                     
                     return `
                     <div class="glass-card rounded-2xl p-4 transition-all duration-300 ${isEditing ? 'ring-1 ring-blue-500/50 bg-blue-500/5' : ''}" data-user-id="${u.id}">
                         <div class="flex items-start justify-between gap-4">
                             <div class="flex items-center gap-3 flex-1 min-w-0">
-                                <div class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-bold flex-shrink-0 border border-zinc-700">
-                                    ${(u.full_name || u.username || '?').charAt(0).toUpperCase()}
+                                <div class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-bold flex-shrink-0 border border-zinc-700 relative">
+                                    ${(fullName || u.username || '?').charAt(0).toUpperCase()}
                                 </div>
                                 
                                 ${isEditing ? `
                                     <div class="flex-1 space-y-2 py-1">
                                         <div class="relative">
-                                            <input type="text" class="user-name-input w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-white focus:border-blue-500 outline-none" value="${u.full_name || ''}" placeholder="Full Name">
+                                            <input type="text" class="user-name-input w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-white focus:border-blue-500 outline-none" value="${fullName}" placeholder="Full Name">
                                             <span class="absolute -top-2 left-2 px-1 bg-zinc-900 text-[9px] text-zinc-500 uppercase tracking-wider">Full Name</span>
                                         </div>
                                         <div class="relative">
                                             <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden">
                                                 <span class="pl-3 pr-1 text-[10px] text-zinc-500">@</span>
-                                                <input type="text" class="user-username-input w-full bg-transparent px-0 py-1.5 text-xs text-white focus:outline-none" value="${u.username || ''}" placeholder="username">
+                                                <input type="text" class="user-username-input w-full bg-transparent px-0 py-1.5 text-xs text-white focus:outline-none" value="${u.username || ''}" placeholder="Auth Username">
                                             </div>
-                                            <span class="absolute -top-2 left-2 px-1 bg-zinc-900 text-[9px] text-zinc-500 uppercase tracking-wider">Username</span>
+                                            <span class="absolute -top-2 left-2 px-1 bg-zinc-900 text-[9px] text-zinc-500 uppercase tracking-wider">Auth Username</span>
                                         </div>
                                     </div>
                                 ` : `
                                     <div class="flex-1 min-w-0">
-                                        <h4 class="text-sm font-semibold text-white truncate">${u.full_name || 'Anonymous'}</h4>
+                                        <div class="flex items-center gap-2">
+                                            <h4 class="text-sm font-semibold text-white truncate">${fullName || 'Anonymous'}</h4>
+                                            ${isVerified ? `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Excel Verified</span>` : `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20">Unverified</span>`}
+                                            ${isManuallyUpdated ? `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">Manually Updated</span>` : ''}
+                                        </div>
                                         <p class="text-[11px] text-zinc-500 truncate">@${u.username || '—'}</p>
                                     </div>
                                 `}
@@ -236,28 +250,50 @@ const AdminView = (() => {
 
                         <div class="mt-4 grid grid-cols-2 gap-3 border-t border-zinc-800/50 pt-4">
                             <div class="space-y-1">
-                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Email Address</span>
+                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Email Address (Read Only)</span>
                                 <p class="text-[11px] text-zinc-400 font-mono truncate">${u.email || 'No email'}</p>
                             </div>
                             <div class="space-y-1">
-                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Team Assignment</span>
+                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">USN</span>
                                 ${isEditing ? `
-                                    <select class="user-team-select w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] text-zinc-300 outline-none focus:border-blue-500">
-                                        <option value="">No Team</option>
-                                        ${CORE_LEADS.map(l => `<option value="${l.id}" ${u.team_id === l.id ? 'selected' : ''}>${l.team}</option>`).join('')}
-                                    </select>
+                                    <input type="text" class="user-usn-input w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] text-white focus:border-blue-500 outline-none uppercase" value="${usn}" placeholder="1KS...">
                                 ` : `
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${u.team_id ? 'bg-blue-500/10 text-blue-400' : 'bg-zinc-800 text-zinc-500'}">
-                                        ${teamName}
-                                    </span>
+                                    <p class="text-[11px] text-zinc-300 font-mono uppercase">${usn || '—'}</p>
                                 `}
+                            </div>
+                            <div class="space-y-1">
+                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Phone Number</span>
+                                ${isEditing ? `
+                                    <input type="tel" class="user-phone-input w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] text-white focus:border-blue-500 outline-none" value="${phone}" placeholder="10 digits">
+                                ` : `
+                                    <p class="text-[11px] text-zinc-300 font-mono">${phone || '—'}</p>
+                                `}
+                            </div>
+                            <div class="space-y-1">
+                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Section & Team</span>
+                                <div class="flex gap-2 items-center">
+                                    <span class="text-[11px] font-bold text-zinc-300 uppercase">${section || '-'}</span>
+                                    ${isEditing ? `
+                                        <select class="user-team-select flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] text-zinc-300 outline-none focus:border-blue-500">
+                                            <option value="">No Team</option>
+                                            ${CORE_LEADS.map(l => `<option value="${l.id}" ${u.team_id === l.id ? 'selected' : ''}>${l.team}</option>`).join('')}
+                                        </select>
+                                    ` : `
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${u.team_id ? 'bg-blue-500/10 text-blue-400' : 'bg-zinc-800 text-zinc-500'}">
+                                            ${teamName}
+                                        </span>
+                                    `}
+                                </div>
                             </div>
                         </div>
 
                         ${isEditing ? `
-                            <div class="mt-4 flex items-center gap-2 pt-3 border-t border-zinc-800/30">
+                            <div class="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-zinc-800/30">
                                 <button class="save-user-btn flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-all" data-id="${u.id}">Save Changes</button>
                                 <button class="cancel-user-edit-btn px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-medium transition-all">Cancel</button>
+                                ${isManuallyUpdated ? `
+                                    <button class="restore-user-btn px-4 py-2 bg-orange-600/10 hover:bg-orange-600 text-orange-500 hover:text-white border border-orange-500/30 rounded-xl text-xs font-semibold transition-all" data-id="${u.id}" title="Revert to Excel Data">Restore</button>
+                                ` : ''}
                                 <button class="delete-user-btn p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-all" data-id="${u.id}" title="Delete User">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                 </button>
@@ -385,9 +421,23 @@ const AdminView = (() => {
                 const card = container.querySelector(`.glass-card[data-user-id="${userId}"]`);
                 const fullName = card.querySelector(`.user-name-input`)?.value.trim();
                 const username = card.querySelector(`.user-username-input`)?.value.trim();
+                const usn = card.querySelector(`.user-usn-input`)?.value.trim();
+                const phone = card.querySelector(`.user-phone-input`)?.value.trim();
                 const teamVal = card.querySelector(`.user-team-select`)?.value;
                 
                 if (!username) { Toast.error('Username cannot be empty'); return; }
+
+                if (usn && !/^[1-9][A-Z]{2}\d{2}[A-Z]{2}\d{3}$/i.test(usn) && usn.length !== 10) {
+                    Toast.error('Please enter a valid USN format (e.g. 1KS25CS001)');
+                    return;
+                }
+
+                if (phone && !/^\d{10}$/.test(phone.replace(/\D/g, ''))) {
+                    Toast.error('Please enter a valid 10-digit phone number');
+                    return;
+                }
+
+                const cleanedPhone = phone ? phone.replace(/\D/g, '') : null;
 
                 const team_id = teamVal ? parseInt(teamVal) : null;
                 const originalText = btn.textContent;
@@ -397,6 +447,8 @@ const AdminView = (() => {
                 const fields = { 
                     full_name: fullName, 
                     username: username,
+                    usn: usn ? usn.toUpperCase() : null,
+                    phone: cleanedPhone,
                     team_id: team_id, 
                     is_pending_member: false 
                 };
@@ -408,6 +460,34 @@ const AdminView = (() => {
                     btn.disabled = false;
                 } else {
                     Toast.success('User profile updated!');
+                    editingUserId = null;
+                    allUsers = await ICCSupabase.getAllProfiles();
+                    container.innerHTML = render(); bindEvents(container);
+                }
+            });
+        });
+
+        container.querySelectorAll('.restore-user-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm('Are you sure you want to revert to the original Excel verified data? This will clear manual overrides.')) return;
+                const userId = btn.dataset.id;
+                const originalText = btn.textContent;
+                btn.textContent = 'Restoring...';
+                btn.disabled = true;
+                
+                const fields = { 
+                    full_name: null, 
+                    usn: null,
+                    phone: null
+                };
+
+                const { error } = await ICCSupabase.adminUpdateUser(userId, fields);
+                if (error) {
+                    Toast.error('Restore failed: ' + error.message);
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                } else {
+                    Toast.success('Reverted to Excel values!');
                     editingUserId = null;
                     allUsers = await ICCSupabase.getAllProfiles();
                     container.innerHTML = render(); bindEvents(container);
