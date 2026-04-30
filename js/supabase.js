@@ -860,8 +860,23 @@ const ICCSupabase = (() => {
 
     async function getAllProfiles() {
         if (!client) return [];
-        const { data } = await client.from('profiles').select('*').order('created_at', { ascending: false });
-        return data || [];
+        // Fetch profiles and any associated team memberships to guarantee accurate admin rendering
+        const { data, error } = await client.from('profiles')
+            .select('*, team_memberships(team_id)')
+            .order('created_at', { ascending: false });
+            
+        if (error) {
+            console.error('getAllProfiles error:', error);
+            return [];
+        }
+
+        return (data || []).map(u => {
+            const membershipTeamId = u.team_memberships && u.team_memberships.length > 0 ? u.team_memberships[0].team_id : null;
+            return {
+                ...u,
+                team_id: membershipTeamId || u.team_id
+            };
+        });
     }
 
     async function getAllPosts() {
