@@ -2,7 +2,7 @@
    ICC Social Hub — Admin Dashboard
    ============================================ */
 const AdminView = (() => {
-    let activeTab = 'broadcast';
+    let activeTab = 'users';
     let pendingLeads = [];
     let allPosts = [];
     let allUsers = [];
@@ -288,7 +288,7 @@ const AdminView = (() => {
     }
 
     async function mount(container) {
-        activeTab = 'broadcast';
+        activeTab = 'users';
         container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
         pendingLeads = await ICCSupabase.getPendingLeads();
         allPosts = await ICCSupabase.getAllPosts();
