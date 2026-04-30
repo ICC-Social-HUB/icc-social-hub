@@ -124,4 +124,3 @@ const ALLOWED_EMAILS = new Set(_ALLOWED_EMAIL_LIST.map(e => e.trim().toLowerCase
 function isEmailAllowed(email) {
     return ALLOWED_EMAILS.has(email.trim().toLowerCase());
 }
-
