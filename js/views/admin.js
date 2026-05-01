@@ -187,7 +187,7 @@ const AdminView = (() => {
                     
                     // A user is manually updated if they have db overrides that differ from the empty defaults
                     const isManuallyUpdated = !!(u.usn || u.phone || (u.full_name && u.full_name !== (student ? student.fullName : '')));
-                    const teamName = CORE_LEADS.find(l => l.id === u.team_id)?.team || 'No Team';
+                    const teamName = CORE_LEADS.find(l => Number(l.id) === Number(u.team_id))?.team || 'No Team';
                     
                     return `
                     <div class="glass-card rounded-2xl p-4 transition-all duration-300 ${isEditing ? 'ring-1 ring-blue-500/50 bg-blue-500/5' : ''}" data-user-id="${u.id}" data-section="${(section || '').toUpperCase()}">
@@ -258,7 +258,7 @@ const AdminView = (() => {
                                     ${isEditing ? `
                                         <select class="user-team-select flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] text-zinc-300 outline-none focus:border-blue-500">
                                             <option value="">No Team</option>
-                                            ${CORE_LEADS.map(l => `<option value="${l.id}" ${u.team_id === l.id ? 'selected' : ''}>${l.team}</option>`).join('')}
+                                            ${CORE_LEADS.map(l => `<option value="${l.id}" ${Number(u.team_id) === Number(l.id) ? 'selected' : ''}>${l.team}</option>`).join('')}
                                         </select>
                                     ` : `
                                         <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${u.team_id ? 'bg-blue-500/10 text-blue-400' : 'bg-zinc-800 text-zinc-500'}">
