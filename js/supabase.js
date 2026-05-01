@@ -874,7 +874,14 @@ const ICCSupabase = (() => {
         }
 
         return (data || []).map(u => {
-            const membershipTeamId = u.team_memberships && u.team_memberships.length > 0 ? u.team_memberships[0].team_id : null;
+            let membershipTeamId = null;
+            if (u.team_memberships) {
+                if (Array.isArray(u.team_memberships) && u.team_memberships.length > 0) {
+                    membershipTeamId = u.team_memberships[0].team_id;
+                } else if (!Array.isArray(u.team_memberships) && u.team_memberships.team_id) {
+                    membershipTeamId = u.team_memberships.team_id;
+                }
+            }
             return {
                 ...u,
                 team_id: membershipTeamId || u.team_id
