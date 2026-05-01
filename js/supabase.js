@@ -830,13 +830,16 @@ const ICCSupabase = (() => {
         
         // If team_id was updated, enforce one-team rule by clearing old ones first
         if (!error && fields.hasOwnProperty('team_id')) {
-            await client.from('team_memberships').delete().eq('user_id', userId);
+            console.log('adminUpdateUser: updating team_id to', fields.team_id);
+            const { error: deleteError } = await client.from('team_memberships').delete().eq('user_id', userId);
+            if (deleteError) console.error('adminUpdateUser deleteError:', deleteError);
             
             if (fields.team_id !== null) {
-                await client.from('team_memberships').insert({
+                const { error: insertError } = await client.from('team_memberships').insert({
                     user_id: userId,
                     team_id: fields.team_id
                 });
+                if (insertError) console.error('adminUpdateUser insertError:', insertError);
             } else {
                 // Trigger Removal Email Notification
                 const user = await fetchUserById(userId);

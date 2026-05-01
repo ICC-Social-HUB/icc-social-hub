@@ -255,16 +255,9 @@ const AdminView = (() => {
                                 <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Section & Team</span>
                                 <div class="flex gap-2 items-center">
                                     <span class="text-[11px] font-bold text-zinc-300 uppercase">${section || '-'}</span>
-                                    ${isEditing ? `
-                                        <select class="user-team-select flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] text-zinc-300 outline-none focus:border-blue-500">
-                                            <option value="">No Team</option>
-                                            ${CORE_LEADS.map(l => `<option value="${l.id}" ${Number(u.team_id) === Number(l.id) ? 'selected' : ''}>${l.team}</option>`).join('')}
-                                        </select>
-                                    ` : `
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${u.team_id ? 'bg-blue-500/10 text-blue-400' : 'bg-zinc-800 text-zinc-500'}">
-                                            ${teamName}
-                                        </span>
-                                    `}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${u.team_id ? 'bg-blue-500/10 text-blue-400' : 'bg-zinc-800 text-zinc-500'}">
+                                        ${teamName}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -405,7 +398,7 @@ const AdminView = (() => {
                 const username = card.querySelector(`.user-username-input`)?.value.trim();
                 const usn = card.querySelector(`.user-usn-input`)?.value.trim();
                 const phone = card.querySelector(`.user-phone-input`)?.value.trim();
-                const teamVal = card.querySelector(`.user-team-select`)?.value;
+                const cleanedPhone = phone ? phone.replace(/\D/g, '') : null;
                 
                 if (!username) { Toast.error('Username cannot be empty'); return; }
 
@@ -414,14 +407,11 @@ const AdminView = (() => {
                     return;
                 }
 
-                if (phone && !/^\d{10}$/.test(phone.replace(/\D/g, ''))) {
+                if (phone && !/^\d{10}$/.test(cleanedPhone)) {
                     Toast.error('Please enter a valid 10-digit phone number');
                     return;
                 }
 
-                const cleanedPhone = phone ? phone.replace(/\D/g, '') : null;
-
-                const team_id = teamVal ? parseInt(teamVal) : null;
                 const originalText = btn.textContent;
                 btn.textContent = 'Saving...';
                 btn.disabled = true;
@@ -430,9 +420,7 @@ const AdminView = (() => {
                     full_name: fullName, 
                     username: username,
                     usn: usn ? usn.toUpperCase() : null,
-                    phone: cleanedPhone,
-                    team_id: team_id, 
-                    is_pending_member: false 
+                    phone: cleanedPhone
                 };
 
                 const { error } = await ICCSupabase.adminUpdateUser(userId, fields);
