@@ -61,9 +61,16 @@ const ChatPanel = (() => {
     async function mount(container, partnerId) {
         currentPartnerId = partnerId;
         container.innerHTML = '<div class="flex items-center justify-center h-full"><div class="spinner"></div></div>';
-        partnerProfile = await ICCSupabase.fetchUserById(partnerId);
-        messages = await ICCSupabase.fetchMessages(partnerId);
+        [partnerProfile, messages] = await Promise.all([
+            ICCSupabase.fetchUserById(partnerId),
+            ICCSupabase.fetchMessages(partnerId)
+        ]);
+        console.log('[ChatPanel] partnerProfile:', partnerProfile, '| messages:', messages.length);
         await ICCSupabase.markAsRead(partnerId);
+        // Fallback: if profile fetch fails, use a placeholder so render() doesn't bail out
+        if (!partnerProfile) {
+            partnerProfile = { id: partnerId, full_name: 'User', username: null, avatar_url: null, role: null, team_id: null };
+        }
         container.innerHTML = render();
         scrollToBottom();
         bindEvents(container);
