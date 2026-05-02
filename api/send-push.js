@@ -37,7 +37,9 @@ module.exports = async function handler(req, res) {
             android: {
                 priority: 'high',
                 notification: {
-                    sound: 'default'
+                    sound: 'default',
+                    icon: 'ic_launcher',    // uses mipmap/ic_launcher
+                    color: '#E11D48'        // ICC brand crimson red
                 }
             }
         };

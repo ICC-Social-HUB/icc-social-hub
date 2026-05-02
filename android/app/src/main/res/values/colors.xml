@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ICC Brand Color (Crimson Red) — used for notification icon tint -->
+    <color name="colorPrimary">#E11D48</color>
+    <color name="colorPrimaryDark">#9F1239</color>
+    <color name="colorAccent">#FB7185</color>
+</resources>
