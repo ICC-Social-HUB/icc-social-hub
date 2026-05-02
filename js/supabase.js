@@ -503,9 +503,8 @@ const ICCSupabase = (() => {
         const userId = currentUser.id;
         const { data } = await client.from('messages')
             .select('*')
-            .or(
-                `and(sender_id.eq."${userId}",receiver_id.eq."${otherUserId}"),and(sender_id.eq."${otherUserId}",receiver_id.eq."${userId}")`
-            )
+            .in('sender_id', [userId, otherUserId])
+            .in('receiver_id', [userId, otherUserId])
             .order('created_at', { ascending: true })
             .limit(limit);
         return data || [];
