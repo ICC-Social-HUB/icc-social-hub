@@ -526,7 +526,7 @@ const STUDENT_DATA = [
   }
 ];
 
-window.getStudentDataByEmail = function(email) {
-    if (!email) return null;
-    return STUDENT_DATA.find(s => s.email.trim().toLowerCase() === email.trim().toLowerCase()) || null;
+window.getStudentDataByEmail = function (email) {
+  if (!email) return null;
+  return STUDENT_DATA.find(s => s.email.trim().toLowerCase() === email.trim().toLowerCase()) || null;
 };

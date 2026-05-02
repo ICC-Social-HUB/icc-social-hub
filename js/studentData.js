@@ -524,9 +524,16 @@ const STUDENT_DATA = [
     "email": "shreekishors776@gmail.com",
     "phone": 7899248202
   }
+  {
+    "fullName": "Chinmayi K S ",
+    "usn": "1KS25IC012",
+    "section": "I",
+    "email": "chinmayi.cks@gmail.com",
+    "phone": 8722841285
+  }
 ];
 
-window.getStudentDataByEmail = function(email) {
-    if (!email) return null;
-    return STUDENT_DATA.find(s => s.email.trim().toLowerCase() === email.trim().toLowerCase()) || null;
+window.getStudentDataByEmail = function (email) {
+  if (!email) return null;
+  return STUDENT_DATA.find(s => s.email.trim().toLowerCase() === email.trim().toLowerCase()) || null;
 };
