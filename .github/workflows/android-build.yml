@@ -37,7 +37,9 @@ jobs:
           npx cap sync android
 
       - name: Make gradlew executable
-        run: chmod +x ./android/gradlew
+        run: |
+          sed -i 's/\r$//' ./android/gradlew
+          chmod +x ./android/gradlew
 
       - name: Build Debug APK
         run: cd android && ./gradlew assembleDebug
