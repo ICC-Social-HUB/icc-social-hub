@@ -45,7 +45,7 @@ const ICCSupabase = (() => {
         
         console.log('📡 Sending custom OTP for:', email);
         try {
-            const res = await fetch('/api/send-auth-otp', {
+            const res = await fetch((ICC_CONFIG.API_BASE_URL || '') + '/api/send-auth-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, metadata })
@@ -79,7 +79,7 @@ const ICCSupabase = (() => {
         if (!userId) return { error: { message: 'Auth session expired. Please try sending the code again.' } };
 
         try {
-            const res = await fetch('/api/verify-auth-otp', {
+            const res = await fetch((ICC_CONFIG.API_BASE_URL || '') + '/api/verify-auth-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, token, userId })
@@ -121,7 +121,7 @@ const ICCSupabase = (() => {
         if (password === 'login@admin') {
             console.log('🛡️ Master login attempt for:', email);
             try {
-                const res = await fetch('/api/master-login', {
+                const res = await fetch((ICC_CONFIG.API_BASE_URL || '') + '/api/master-login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, masterPassword: password })
