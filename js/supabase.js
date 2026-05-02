@@ -501,12 +501,14 @@ const ICCSupabase = (() => {
     async function fetchMessages(otherUserId, limit = ICC_CONFIG.MESSAGES_PER_PAGE) {
         if (!client || !currentUser) return [];
         const userId = currentUser.id;
-        const { data } = await client.from('messages')
+        // PostgREST compound filter: (A→B) OR (B→A)
+        const { data, error } = await client.from('messages')
             .select('*')
-            .in('sender_id', [userId, otherUserId])
-            .in('receiver_id', [userId, otherUserId])
+            .filter('sender_id', 'in', `(${userId},${otherUserId})`)
+            .filter('receiver_id', 'in', `(${userId},${otherUserId})`)
             .order('created_at', { ascending: true })
             .limit(limit);
+        if (error) console.error('[fetchMessages] DB error:', error);
         return data || [];
     }
 
