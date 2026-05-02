@@ -76,16 +76,12 @@
     async function registerPushNotifications() {
         alert("PUSH START - App is attempting to register!");
         
-        if (!window.Capacitor || !window.Capacitor.isNative) {
-            alert("Not running natively! window.Capacitor: " + !!window.Capacitor);
+        if (!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.PushNotifications) {
+            alert("Push plugin not found! This usually means the app is running in a web browser or the plugin wasn't synced.");
             return;
         }
         
         const PushNotifications = window.Capacitor.Plugins.PushNotifications;
-        if (!PushNotifications) {
-            alert("Push plugin not found!");
-            return;
-        }
 
         let permStatus = await PushNotifications.checkPermissions();
         if (permStatus.receive === 'prompt') {
