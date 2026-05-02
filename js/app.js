@@ -74,13 +74,11 @@
 
 
     async function registerPushNotifications() {
-        alert("PUSH START - App is attempting to register!");
-        
         if (!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.PushNotifications) {
-            alert("Push plugin not found! This usually means the app is running in a web browser or the plugin wasn't synced.");
+            console.warn("Push plugin not found! Running in browser or sync missing.");
             return;
         }
-        
+
         const PushNotifications = window.Capacitor.Plugins.PushNotifications;
 
         let permStatus = await PushNotifications.checkPermissions();
@@ -89,21 +87,21 @@
         }
 
         if (permStatus.receive !== 'granted') {
-            alert("Permission denied!");
+            console.warn("Push permission denied by user.");
             return;
         }
 
         await PushNotifications.register();
 
         PushNotifications.addListener('registration', (token) => {
-            alert('SUCCESS! Your phone registered for notifications.');
+            console.log('✅ Push registration success, token generated.');
             if (ICCSupabase.getUser()) {
                 ICCSupabase.updateProfile({ fcm_token: token.value });
             }
         });
 
         PushNotifications.addListener('registrationError', (error) => {
-            alert('Error registering: ' + JSON.stringify(error));
+            console.error('Error registering push:', error);
         });
 
         PushNotifications.addListener('pushNotificationReceived', (notification) => {
