@@ -499,8 +499,12 @@ const ICCSupabase = (() => {
     }
 
     async function fetchMessages(otherUserId, limit = ICC_CONFIG.MESSAGES_PER_PAGE) {
-        if (!client || !currentUser) return [];
+        if (!client || !currentUser) {
+            console.warn('[fetchMessages] Skipped — client:', !!client, 'currentUser:', !!currentUser);
+            return [];
+        }
         const userId = currentUser.id;
+        console.log('[fetchMessages] Fetching conversation between', userId, '↔', otherUserId);
         // PostgREST compound filter: (A→B) OR (B→A)
         const { data, error } = await client.from('messages')
             .select('*')
@@ -509,6 +513,7 @@ const ICCSupabase = (() => {
             .order('created_at', { ascending: true })
             .limit(limit);
         if (error) console.error('[fetchMessages] DB error:', error);
+        console.log('[fetchMessages] Result:', data?.length ?? 0, 'messages', error ? '| Error:' + error.message : '');
         return data || [];
     }
 
