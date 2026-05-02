@@ -506,15 +506,17 @@ const ICCSupabase = (() => {
         const userId = currentUser.id;
         console.log('[fetchMessages] Fetching conversation between', userId, '↔', otherUserId);
         // PostgREST compound filter: (A→B) OR (B→A)
+        // Order DESCENDING to get the newest messages, then reverse so UI shows oldest first
         const { data, error } = await client.from('messages')
             .select('*')
             .filter('sender_id', 'in', `(${userId},${otherUserId})`)
             .filter('receiver_id', 'in', `(${userId},${otherUserId})`)
-            .order('created_at', { ascending: true })
+            .order('created_at', { ascending: false })
             .limit(limit);
         if (error) console.error('[fetchMessages] DB error:', error);
-        console.log('[fetchMessages] Result:', data?.length ?? 0, 'messages', error ? '| Error:' + error.message : '');
-        return data || [];
+        const msgs = (data || []).reverse(); // reverse so oldest appears at top
+        console.log('[fetchMessages] Result:', msgs.length, 'messages', error ? '| Error:' + error.message : '');
+        return msgs;
     }
 
     async function sendMessage(receiverId, content) {
