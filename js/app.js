@@ -74,8 +74,10 @@
 
 
     async function registerPushNotifications() {
+        alert("PUSH START - App is attempting to register!");
+        
         if (!window.Capacitor || !window.Capacitor.isNative) {
-            console.log("Not running natively, skipping push setup");
+            alert("Not running natively! window.Capacitor: " + !!window.Capacitor);
             return;
         }
         
