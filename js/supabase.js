@@ -943,8 +943,43 @@ const ICCSupabase = (() => {
                 body 
             }).select();
             
-        if (error) console.error('❌ Notification DB Error:', error);
-        else console.log('✅ Notification created successfully:', data?.[0]);
+        if (error) {
+            console.error('❌ Notification DB Error:', error);
+        } else if (data?.[0]) {
+            console.log('✅ Notification created successfully:', data[0]);
+            
+            // Trigger Mobile Push Notification if user has a token
+            try {
+                const { data: profile } = await client.from('profiles').select('fcm_token').eq('id', userId).single();
+                if (profile && profile.fcm_token) {
+                    const titleMap = {
+                        like: 'New Like ❤️',
+                        comment: 'New Comment 💬',
+                        message: 'New Message ✉️',
+                        post: 'New Team Post',
+                        broadcast: 'Important Broadcast 📢',
+                        team_join: 'Team Join Request',
+                        team_approve: 'Request Approved! 🎉',
+                        team_deny: 'Request Status Update',
+                        mention: 'New Mention',
+                        welcome: 'Welcome to ICC Hub! 🚀',
+                        system: 'System Alert'
+                    };
+                    
+                    fetch((ICC_CONFIG.API_BASE_URL || '') + '/api/send-push', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: titleMap[type] || 'New Notification',
+                            body: body || 'You have a new notification waiting for you.',
+                            token: profile.fcm_token
+                        })
+                    }).catch(e => console.error('Push API network error:', e));
+                }
+            } catch (err) {
+                console.error('Error triggering push notification:', err);
+            }
+        }
 
         return { data: data?.[0], error };
     }
