@@ -38,8 +38,8 @@ module.exports = async function handler(req, res) {
                 priority: 'high',
                 notification: {
                     sound: 'default',
-                    icon: 'ic_launcher',    // uses mipmap/ic_launcher
-                    color: '#E11D48'        // ICC brand crimson red
+                    icon: 'ic_stat_notification',  // white vector drawable
+                    color: '#E11D48'               // ICC crimson red
                 }
             }
         };
