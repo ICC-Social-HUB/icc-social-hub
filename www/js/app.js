@@ -32,7 +32,12 @@
                 if (ICCSupabase.needsOnboarding()) {
                     window.location.hash = '#onboarding';
                 } else {
-                    window.dispatchEvent(new Event('hashchange'));
+                    // Don't re-dispatch hashchange if we're already inside a chat thread
+                    // — it causes a race condition that wipes rendered messages
+                    const currentHash = window.location.hash;
+                    if (!currentHash.startsWith('#chat/')) {
+                        window.dispatchEvent(new Event('hashchange'));
+                    }
                 }
                 BottomNav.updateAllBadges();
 
