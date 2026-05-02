@@ -17,8 +17,29 @@ const ChatPanel = (() => {
     }
 
     function render() {
-        if (!partnerProfile) return '';
+        console.log('[render] called — partnerProfile:', !!partnerProfile, '| messages.length:', messages.length);
+        if (!partnerProfile) { console.warn('[render] Aborted — partnerProfile is null'); return ''; }
         const userId = ICCSupabase.getUser()?.id;
+        let messageHtml = '';
+        if (messages.length === 0) {
+            messageHtml = '<div class="empty-state"><p class="text-sm text-zinc-600">Start the conversation! 💬</p></div>';
+        } else {
+            try {
+                messageHtml = messages.map(m => {
+                    const isSent = m.sender_id === userId;
+                    const time = new Date(m.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                    return `<div class="flex ${isSent ? 'justify-end' : 'justify-start'} group" id="msg-${m.id || m.temp_id}">
+                        ${isSent ? `<button type="button" class="delete-msg-btn opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-red-500 transition-all mr-2 self-center" data-msg-id="${m.id || m.temp_id}" title="Delete Message">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>` : ''}
+                        <div class="chat-bubble ${isSent ? 'chat-bubble-sent' : 'chat-bubble-received'}"><p>${escapeHtml(m.content)}</p><p class="text-[10px] ${isSent ? 'text-white/50' : 'text-zinc-500'} mt-1 text-right">${time}</p></div>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                console.error('[render] Error building message HTML:', e);
+                messageHtml = '<div class="empty-state"><p class="text-sm text-red-500">Error rendering messages</p></div>';
+            }
+        }
         return `
         <div class="flex flex-col h-full">
             <div class="flex items-center gap-3 p-4 border-b border-zinc-800/50 bg-zinc-900/80 backdrop-blur-sm">
@@ -34,20 +55,7 @@ const ChatPanel = (() => {
                 </div>
             </div>
             <div class="flex-1 overflow-y-auto p-4 space-y-2" id="chat-messages">
-                ${messages.length === 0 ? '<div class="empty-state"><p class="text-sm text-zinc-600">Start the conversation! 💬</p></div>' :
-                messages.map(m => {
-                    const isSent = m.sender_id === userId;
-                    const time = new Date(m.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                    return `<div class="flex ${isSent ? 'justify-end' : 'justify-start'} group" id="msg-${m.id || m.temp_id}">
-                        ${isSent ? `<button type="button" class="delete-msg-btn opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-red-500 transition-all mr-2 self-center" data-msg-id="${m.id || m.temp_id}" title="Delete Message">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>` : ''}
-                        <div class="chat-bubble ${isSent ? 'chat-bubble-sent' : 'chat-bubble-received'}">
-                            <p>${escapeHtml(m.content)}</p>
-                            <p class="text-[10px] ${isSent ? 'text-white/50' : 'text-zinc-500'} mt-1 text-right">${time}</p>
-                        </div>
-                    </div>`;
-                }).join('')}
+                ${messageHtml}
             </div>
             <form class="chat-input-bar p-3 flex gap-2" id="chat-send-form">
                 <input type="text" id="chat-input" placeholder="Type a message..." class="form-input flex-1 px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600" autocomplete="off">
