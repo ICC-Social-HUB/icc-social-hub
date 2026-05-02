@@ -1,9 +1,5 @@
 {
   "appId": "com.icc.hub",
   "appName": "ICC Hub",
-  "webDir": "www",
-  "server": {
-    "url": "https://icc-social-hub.vercel.app",
-    "cleartext": true
-  }
+  "webDir": "www"
 }
