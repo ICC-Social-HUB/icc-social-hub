@@ -523,7 +523,7 @@ const STUDENT_DATA = [
     "section": "H",
     "email": "shreekishors776@gmail.com",
     "phone": 7899248202
-  }
+  },
   {
     "fullName": "Chinmayi K S ",
     "usn": "1KS25IC012",
