@@ -2,7 +2,13 @@
   "name": "icc-innovoapp",
   "version": "1.0.0",
   "description": "ICC Innovoapp with Vercel Serverless Functions",
+  "scripts": {
+    "sync": "if not exist www mkdir www && copy index.html www\\ && xcopy js www\\js\\ /s /e /y && xcopy css www\\css\\ /s /e /y && npx cap sync"
+  },
   "dependencies": {
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/cli": "^7.6.2",
+    "@capacitor/core": "^8.3.1",
     "@supabase/supabase-js": "^2.39.0",
     "cors": "^2.8.5",
     "nodemailer": "^6.9.7"
