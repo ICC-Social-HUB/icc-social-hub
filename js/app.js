@@ -74,28 +74,41 @@
 
 
     async function registerPushNotifications() {
-        if (!window.Capacitor || !window.Capacitor.isNative) return;
+        if (!window.Capacitor || !window.Capacitor.isNative) {
+            console.log("Not running natively, skipping push setup");
+            return;
+        }
+        
         const PushNotifications = window.Capacitor.Plugins.PushNotifications;
-        if (!PushNotifications) return;
+        if (!PushNotifications) {
+            alert("Push plugin not found!");
+            return;
+        }
 
         let permStatus = await PushNotifications.checkPermissions();
         if (permStatus.receive === 'prompt') {
             permStatus = await PushNotifications.requestPermissions();
         }
 
-        if (permStatus.receive !== 'granted') return;
+        if (permStatus.receive !== 'granted') {
+            alert("Permission denied!");
+            return;
+        }
 
         await PushNotifications.register();
 
         PushNotifications.addListener('registration', (token) => {
-            console.log('✅ Push registration success, token: ' + token.value);
+            alert('SUCCESS! Your phone registered for notifications.');
             if (ICCSupabase.getUser()) {
                 ICCSupabase.updateProfile({ fcm_token: token.value });
             }
         });
 
+        PushNotifications.addListener('registrationError', (error) => {
+            alert('Error registering: ' + JSON.stringify(error));
+        });
+
         PushNotifications.addListener('pushNotificationReceived', (notification) => {
-            // Optional: Show in-app toast when notification received while app is open
             console.log('Push received:', notification);
         });
     }
