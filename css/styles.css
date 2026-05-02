@@ -29,6 +29,21 @@ body {
     overscroll-behavior: contain;
     touch-action: pan-y;
     min-height: 100dvh;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Fix sticky/fixed headers overlapping with status bar */
+.sticky.top-0, .fixed.top-0 {
+    top: env(safe-area-inset-top, 0px) !important;
+}
+
+#toast-root {
+    top: calc(5rem + env(safe-area-inset-top, 0px)) !important;
+}
+
+#notif-bell-root {
+    top: calc(1rem + env(safe-area-inset-top, 0px)) !important;
 }
 
 /* Prevent zoom on input focus (iOS) */
