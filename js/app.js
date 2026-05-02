@@ -46,6 +46,9 @@
                         BottomNav.updateAllBadges();
                     });
                     NotifBell.update();
+                    
+                    // Register for Push Notifications on Native
+                    registerPushNotifications();
                 }
             }
 
@@ -69,6 +72,33 @@
     });
 
 
+
+    async function registerPushNotifications() {
+        if (!window.Capacitor || !window.Capacitor.isNative) return;
+        const PushNotifications = window.Capacitor.Plugins.PushNotifications;
+        if (!PushNotifications) return;
+
+        let permStatus = await PushNotifications.checkPermissions();
+        if (permStatus.receive === 'prompt') {
+            permStatus = await PushNotifications.requestPermissions();
+        }
+
+        if (permStatus.receive !== 'granted') return;
+
+        await PushNotifications.register();
+
+        PushNotifications.addListener('registration', (token) => {
+            console.log('✅ Push registration success, token: ' + token.value);
+            if (ICCSupabase.getUser()) {
+                ICCSupabase.updateProfile({ fcm_token: token.value });
+            }
+        });
+
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+            // Optional: Show in-app toast when notification received while app is open
+            console.log('Push received:', notification);
+        });
+    }
 
     function initParticles() {
         const bg = document.getElementById('particles-bg');

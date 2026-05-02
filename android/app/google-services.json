@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "733433494779",
+    "project_id": "icc-social-hub",
+    "storage_bucket": "icc-social-hub.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:733433494779:android:8401279194e81a8c07c45e",
+        "android_client_info": {
+          "package_name": "com.icc.hub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyWnVrDVoNBz7wcoL4uNYkzJW6d7a_YpE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
