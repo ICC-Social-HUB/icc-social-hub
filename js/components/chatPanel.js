@@ -6,6 +6,16 @@ const ChatPanel = (() => {
     let messages = [];
     let partnerProfile = null;
 
+    function escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return String(unsafe)
+             .replace(/&/g, "&amp;")
+             .replace(/</g, "&lt;")
+             .replace(/>/g, "&gt;")
+             .replace(/"/g, "&quot;")
+             .replace(/'/g, "&#039;");
+    }
+
     function render() {
         if (!partnerProfile) return '';
         const userId = ICCSupabase.getUser()?.id;
