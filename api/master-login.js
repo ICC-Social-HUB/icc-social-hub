@@ -34,16 +34,50 @@ module.exports = async (req, res) => {
     try {
         console.log(`🔍 Checking user in profiles: ${email}`);
         
-        // 4. Check if user exists in the profiles table
-        const { data: profile, error: profileError } = await supabase
+        // 4. Find or auto-create the user
+        let { data: profile } = await supabase
             .from('profiles')
             .select('id')
             .eq('email', email)
-            .single();
+            .maybeSingle();
 
-        if (profileError || !profile) {
-            console.error('❌ User not found in profiles:', email);
-            return res.status(404).json({ error: 'User does not exist in the database' });
+        let userId = profile?.id;
+
+        if (!userId) {
+            console.log('ℹ️ User not in profiles, checking Auth...');
+            // Try creating in Auth
+            const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+                email,
+                email_confirm: true,
+                user_metadata: {}
+            });
+
+            if (createError) {
+                if (createError.message.includes('already')) {
+                    // Exists in Auth but not profiles — find them
+                    const { data: listData } = await supabase.auth.admin.listUsers();
+                    const authUser = listData?.users?.find(u => u.email === email);
+                    if (authUser) {
+                        userId = authUser.id;
+                    } else {
+                        return res.status(500).json({ error: 'User auth sync error. Contact support.' });
+                    }
+                } else {
+                    return res.status(500).json({ error: createError.message });
+                }
+            } else {
+                userId = newUser.user.id;
+            }
+
+            // Create profile row
+            await supabase.from('profiles').insert({
+                id: userId,
+                email: email,
+                full_name: email.split('@')[0],
+                username: `user_${userId.substring(0, 8)}`
+            });
+
+            console.log(`✅ Auto-created user profile for: ${email}`);
         }
 
         // 5. Generate a magic link for the target user
