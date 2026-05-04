@@ -1,10 +1,10 @@
 /* ============================================
-   ICC Social Hub — Team Chat Modal
+   ICC Social Hub — Team Chat Modal (Refined)
    ============================================ */
 const TeamChatModal = (() => {
     let currentTeamId = null;
     let messages = [];
-    let subscription = null;
+    let subscriptionName = null;
 
     function render(team) {
         return `
@@ -21,23 +21,23 @@ const TeamChatModal = (() => {
                             <p class="text-[10px] text-zinc-500 font-medium">Team Only Room</p>
                         </div>
                     </div>
-                    <button id="close-team-chat" class="p-2 hover:bg-zinc-800 rounded-full transition-colors text-zinc-400">
+                    <button id="close-team-chat" class="p-2 hover:bg-zinc-800 rounded-full transition-colors text-zinc-400 cursor-pointer">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
 
-                <!-- Messages -->
-                <div id="team-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                    <div class="flex items-center justify-center py-8">
+                <!-- Messages Container -->
+                <div id="team-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-zinc-950/20">
+                    <div class="flex items-center justify-center py-12" id="team-chat-loading-spinner">
                         <div class="spinner w-6 h-6"></div>
                     </div>
                 </div>
 
-                <!-- Input -->
+                <!-- Input Area -->
                 <form id="team-chat-form" class="p-4 bg-zinc-900/50 border-t border-zinc-800/50">
                     <div class="relative flex items-center gap-2">
-                        <input type="text" id="team-chat-input" placeholder="Message team members..." class="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-600/50 transition-all" autocomplete="off">
-                        <button type="submit" class="w-12 h-12 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/20 transition-all active:scale-95">
+                        <input type="text" id="team-chat-input" placeholder="Message team..." class="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-600/50 transition-all" autocomplete="off">
+                        <button type="submit" id="team-chat-send-btn" class="w-12 h-12 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/20 transition-all active:scale-95 disabled:opacity-50">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7"/></svg>
                         </button>
                     </div>
@@ -47,69 +47,74 @@ const TeamChatModal = (() => {
     }
 
     async function open(teamId) {
-        const team = CORE_LEADS.find(l => l.id === teamId);
+        if (currentTeamId) return; // Prevent double open
+        
+        const team = CORE_LEADS.find(l => l.id === parseInt(teamId));
         if (!team) return;
         currentTeamId = teamId;
 
-        document.body.insertAdjacentHTML('beforeend', render(team));
+        // 1. Inject into Modal Root for better layer management
+        const modalRoot = document.getElementById('modal-root');
+        if (modalRoot) {
+            modalRoot.innerHTML = render(team);
+        } else {
+            document.body.insertAdjacentHTML('beforeend', render(team));
+        }
         
         const container = document.getElementById('team-chat-messages');
         const form = document.getElementById('team-chat-form');
         const input = document.getElementById('team-chat-input');
+        const closeBtn = document.getElementById('close-team-chat');
 
-        // Fetch initial messages with error fallback
-        try {
-            messages = await ICCSupabase.fetchTeamMessages(teamId);
-        } catch (err) {
-            console.error('Failed to load team messages:', err);
-            messages = [];
-        }
-        renderMessages(container);
-
-        // Subscribe to real-time
-        subscription = ICCSupabase.subscribeToTeamChat(teamId, (newMsg) => {
-            messages.push(newMsg);
-            renderMessages(container);
-        });
-
-        // Close logic
-        document.getElementById('close-team-chat').onclick = close;
-        document.getElementById('team-chat-modal').onclick = (e) => {
-            if (e.target.id === 'team-chat-modal') close();
-        };
-
-        // Send logic
+        // 2. IMMEDIATE EVENT BINDING (Fixes the "Won't close" issue)
+        closeBtn.onclick = close;
+        
         const handleSend = async (e) => {
             if (e) e.preventDefault();
             const content = input.value.trim();
             if (!content || form.dataset.loading === 'true') return;
             
             form.dataset.loading = 'true';
-            const originalBtn = form.querySelector('button[type="submit"]').innerHTML;
-            form.querySelector('button[type="submit"]').innerHTML = '<div class="spinner w-4 h-4 border-white/30 border-t-white"></div>';
+            const sendBtn = document.getElementById('team-chat-send-btn');
+            const originalIcon = sendBtn.innerHTML;
+            sendBtn.innerHTML = '<div class="spinner w-4 h-4 border-white/30 border-t-white"></div>';
+            sendBtn.disabled = true;
             
-            const { error } = await ICCSupabase.sendTeamMessage(teamId, content);
-            
-            form.dataset.loading = 'false';
-            form.querySelector('button[type="submit"]').innerHTML = originalBtn;
-
-            if (error) {
-                Toast.error("Couldn't send: " + error.message);
-            } else {
-                input.value = '';
+            try {
+                const { error } = await ICCSupabase.sendTeamMessage(teamId, content);
+                if (error) {
+                    Toast.error("Couldn't send: " + (error.message || "Permission Denied"));
+                } else {
+                    input.value = '';
+                }
+            } catch (err) {
+                Toast.error("System Error: Could not reach chat server.");
+            } finally {
+                form.dataset.loading = 'false';
+                sendBtn.innerHTML = originalIcon;
+                sendBtn.disabled = false;
                 input.focus();
             }
         };
 
-        form.addEventListener('submit', handleSend);
-        
-        // Ensure enter key works
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-            }
-        });
+        form.onsubmit = handleSend;
+
+        // 3. LOAD DATA
+        try {
+            messages = await ICCSupabase.fetchTeamMessages(teamId);
+            renderMessages(container);
+            
+            // Subscribe for live updates
+            subscriptionName = ICCSupabase.subscribeToTeamChat(teamId, (newMsg) => {
+                if (currentTeamId === teamId) {
+                    messages.push(newMsg);
+                    renderMessages(container);
+                }
+            });
+        } catch (err) {
+            console.error('Chat load error:', err);
+            renderMessages(container); // Fallback to empty state
+        }
 
         input.focus();
     }
@@ -118,8 +123,12 @@ const TeamChatModal = (() => {
         if (!container) return;
         const myId = ICCSupabase.getUser()?.id;
 
-        if (messages.length === 0) {
-            container.innerHTML = `<div class="flex flex-col items-center justify-center py-12 text-center">
+        // Remove loading spinner
+        const spinner = document.getElementById('team-chat-loading-spinner');
+        if (spinner) spinner.remove();
+
+        if (!messages || messages.length === 0) {
+            container.innerHTML = `<div class="flex flex-col items-center justify-center py-16 text-center">
                 <div class="w-12 h-12 bg-zinc-900 rounded-full flex items-center justify-center mb-3">
                     <svg class="w-6 h-6 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"/></svg>
                 </div>
@@ -131,6 +140,12 @@ const TeamChatModal = (() => {
         container.innerHTML = messages.map(m => {
             const isMe = m.sender_id === myId;
             const p = m.profiles || {};
+            // Robust Time Formatting Fallback
+            let timeStr = '';
+            try { 
+                timeStr = typeof formatTimeAgo === 'function' ? formatTimeAgo(m.created_at) : ''; 
+            } catch(e) { timeStr = ''; }
+
             return `
             <div class="flex ${isMe ? 'justify-end' : 'justify-start'} animate-slide-up">
                 <div class="flex max-w-[85%] ${isMe ? 'flex-row-reverse' : 'flex-row'} gap-2">
@@ -138,34 +153,36 @@ const TeamChatModal = (() => {
                     <div class="w-8 h-8 rounded-full bg-zinc-800 flex-shrink-0 overflow-hidden mt-1 border border-zinc-700">
                         ${p.avatar_url ? `<img src="${p.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[10px] font-bold text-zinc-500">${(p.full_name || '?').charAt(0).toUpperCase()}</div>`}
                     </div>` : ''}
-                    <div>
-                        ${!isMe ? `<p class="text-[10px] text-zinc-500 mb-1 ml-1 font-medium">${p.full_name || p.username || 'Anonymous'}</p>` : ''}
-                        <div class="px-3 py-2 rounded-2xl text-sm ${isMe ? 'bg-emerald-600 text-white rounded-tr-none shadow-lg shadow-emerald-600/10' : 'bg-zinc-800 text-zinc-200 rounded-tl-none'}">
+                    <div class="min-w-0">
+                        ${!isMe ? `<p class="text-[10px] text-zinc-500 mb-1 ml-1 font-medium truncate">${p.full_name || p.username || 'Anonymous'}</p>` : ''}
+                        <div class="px-3 py-2 rounded-2xl text-sm ${isMe ? 'bg-emerald-600 text-white rounded-tr-none shadow-lg shadow-emerald-600/10' : 'bg-zinc-800 text-zinc-200 rounded-tl-none'} break-words">
                             ${m.content}
                         </div>
-                        <p class="text-[8px] text-zinc-600 mt-1 ${isMe ? 'text-right mr-1' : 'ml-1'}">${formatTimeAgo(m.created_at)}</p>
+                        <p class="text-[8px] text-zinc-600 mt-1 ${isMe ? 'text-right mr-1' : 'ml-1'}">${timeStr}</p>
                     </div>
                 </div>
             </div>`;
         }).join('');
+        
         container.scrollTop = container.scrollHeight;
     }
 
     function close() {
-        console.log('🚪 Closing team chat modal...');
         const modal = document.getElementById('team-chat-modal');
         if (modal) {
             modal.classList.add('fade-out');
             setTimeout(() => {
                 modal.remove();
-                if (subscription) {
-                    console.log('📡 Unsubscribing from channel:', subscription);
-                    ICCSupabase.unsubscribeChannel(subscription);
+                // Clean up root if used
+                const root = document.getElementById('modal-root');
+                if (root && root.contains(modal)) root.innerHTML = '';
+                
+                if (subscriptionName) {
+                    ICCSupabase.unsubscribeChannel(subscriptionName);
                 }
-                subscription = null;
+                subscriptionName = null;
                 currentTeamId = null;
                 messages = [];
-                console.log('✅ Team chat modal destroyed');
             }, 300);
         }
     }
