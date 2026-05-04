@@ -140,30 +140,59 @@ const TeamChatModal = (() => {
         container.innerHTML = messages.map(m => {
             const isMe = m.sender_id === myId;
             const p = m.profiles || {};
-            // Robust Time Formatting Fallback
+            // Better role detection: check if they are an admin or lead
+            const userRole = p.role || 'user';
+            const isVerified = userRole === 'lead' || userRole === 'admin';
+            const canDelete = isMe || ICCSupabase.isAdmin();
+            
             let timeStr = '';
             try { 
                 timeStr = typeof formatTimeAgo === 'function' ? formatTimeAgo(m.created_at) : ''; 
             } catch(e) { timeStr = ''; }
 
             return `
-            <div class="flex ${isMe ? 'justify-end' : 'justify-start'} animate-slide-up">
+            <div class="flex ${isMe ? 'justify-end' : 'justify-start'} animate-slide-up group">
                 <div class="flex max-w-[85%] ${isMe ? 'flex-row-reverse' : 'flex-row'} gap-2">
-                    ${!isMe ? `
-                    <div class="w-8 h-8 rounded-full bg-zinc-800 flex-shrink-0 overflow-hidden mt-1 border border-zinc-700">
-                        ${p.avatar_url ? `<img src="${p.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[10px] font-bold text-zinc-500">${(p.full_name || '?').charAt(0).toUpperCase()}</div>`}
-                    </div>` : ''}
-                    <div class="min-w-0">
-                        ${!isMe ? `<p class="text-[10px] text-zinc-500 mb-1 ml-1 font-medium truncate">${p.full_name || p.username || 'Anonymous'}</p>` : ''}
-                        <div class="px-3 py-2 rounded-2xl text-sm ${isMe ? 'bg-emerald-600 text-white rounded-tr-none shadow-lg shadow-emerald-600/10' : 'bg-zinc-800 text-zinc-200 rounded-tl-none'} break-words">
-                            ${m.content}
+                    <div class="w-8 h-8 rounded-full bg-zinc-800 flex-shrink-0 overflow-hidden mt-1 border border-zinc-700 shadow-sm">
+                        ${p.avatar_url ? `<img src="${p.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[10px] font-bold text-zinc-400">${(p.full_name || p.username || '?').charAt(0).toUpperCase()}</div>`}
+                    </div>
+                    <div class="min-w-0 flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+                        <p class="text-[10px] text-zinc-500 mb-1 flex items-center gap-1 font-semibold">
+                            ${p.full_name || p.username || 'Anonymous User'}
+                            ${isVerified ? `<span class="text-emerald-400" title="Verified Member">${ICC_CONFIG.VERIFIED_TICK}</span>` : ''}
+                        </p>
+                        <div class="relative flex items-center gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}">
+                            <div class="px-3 py-2 rounded-2xl text-sm ${isMe ? 'bg-emerald-600 text-white rounded-tr-none shadow-lg shadow-emerald-600/10' : 'bg-zinc-800 text-zinc-200 rounded-tl-none'} break-words">
+                                ${m.content}
+                            </div>
+                            ${canDelete ? `
+                            <button class="delete-team-msg opacity-0 group-hover:opacity-100 p-2 text-zinc-500 hover:text-red-500 transition-all rounded-lg hover:bg-zinc-800/30 cursor-pointer" data-msg-id="${m.id}" title="Delete message">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>` : ''}
                         </div>
-                        <p class="text-[8px] text-zinc-600 mt-1 ${isMe ? 'text-right mr-1' : 'ml-1'}">${timeStr}</p>
+                        <p class="text-[8px] text-zinc-600 mt-1">${timeStr}</p>
                     </div>
                 </div>
             </div>`;
         }).join('');
         
+        // Bind delete events
+        container.querySelectorAll('.delete-team-msg').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.preventDefault();
+                if (!confirm('Delete this message?')) return;
+                const msgId = btn.dataset.msgId;
+                const { error } = await ICCSupabase.deleteTeamMessage(msgId);
+                if (error) {
+                    Toast.error("Failed to delete: " + error.message);
+                } else {
+                    // Local remove
+                    messages = messages.filter(m => m.id !== msgId);
+                    renderMessages(container);
+                }
+            };
+        });
+
         container.scrollTop = container.scrollHeight;
     }
 
