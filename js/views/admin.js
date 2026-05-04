@@ -143,7 +143,7 @@ const AdminView = (() => {
             const prof = p.profiles || {};
             return `<div class="flex items-center gap-3 px-4 py-3 glass-card rounded-xl">
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium truncate">${prof.username || prof.full_name || 'Anon'}${prof.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</p>
+                        <p class="text-sm font-medium truncate">${prof.username || prof.full_name || 'Anon'}${(prof.role === 'lead' || prof.role === 'admin') ? ICC_CONFIG.VERIFIED_TICK : ''}</p>
                         <p class="text-xs text-zinc-500 truncate">${(p.caption || 'No caption').slice(0, 60)}</p>
                         <p class="text-[10px] text-zinc-600 mt-0.5">${formatTimeAgo(p.created_at)}</p>
                     </div>

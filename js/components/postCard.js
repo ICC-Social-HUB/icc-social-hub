@@ -23,7 +23,7 @@ const PostCard = (() => {
                 </button>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
-                        <button class="user-link font-semibold text-sm hover:text-red-400 transition-colors truncate" data-user-id="${p.id || post.user_id}">${p.username || p.full_name || 'Anonymous'}${p.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</button>
+                        <button class="user-link font-semibold text-sm hover:text-red-400 transition-colors truncate" data-user-id="${p.id || post.user_id}">${p.username || p.full_name || 'Anonymous'}${(p.role === 'lead' || p.role === 'admin') ? ICC_CONFIG.VERIFIED_TICK : ''}</button>
                         ${(p.role === 'lead' || p.role === 'admin') ? `<span class="px-1.5 py-0.5 bg-red-600/15 text-red-400 rounded text-[10px] font-bold uppercase">${p.role}</span>` : ''}
                         ${isAnnounce ? '<span class="announcement-badge">Official</span>' : ''}
                     </div>
@@ -147,7 +147,7 @@ const PostCard = (() => {
                 return `<div class="flex gap-2 group relative">
                     <div class="w-6 h-6 rounded-full bg-zinc-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(cp.full_name||'?').charAt(0).toUpperCase()}</div>
                     <div class="flex-1 min-w-0 pr-6">
-                        <span class="text-xs font-semibold text-zinc-300">${cp.username||cp.full_name||'Anon'}${cp.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</span>
+                        <span class="text-xs font-semibold text-zinc-300">${cp.username||cp.full_name||'Anon'}${(cp.role === 'lead' || cp.role === 'admin') ? ICC_CONFIG.VERIFIED_TICK : ''}</span>
                         <p class="text-xs text-zinc-400 mt-0.5">${escapeHtml(c.content)}</p>
                     </div>
                     ${canDelete ? `<button class="delete-comment-btn absolute right-0 top-0 p-1.5 text-zinc-600 hover:text-red-500 transition-all rounded-lg hover:bg-zinc-800/50" data-comment-id="${c.id}" title="Delete comment">

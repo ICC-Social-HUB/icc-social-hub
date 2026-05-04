@@ -45,7 +45,7 @@ const ChatView = (() => {
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center justify-between">
-                                    <p class="font-semibold text-sm truncate">${p.username || p.full_name || 'User'}${p.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</p>
+                                    <p class="font-semibold text-sm truncate">${p.username || p.full_name || 'User'}${(p.role === 'lead' || p.role === 'admin') ? ICC_CONFIG.VERIFIED_TICK : ''}</p>
                                     <span class="text-[10px] text-zinc-500 flex-shrink-0">${time}</span>
                                 </div>
                                 <p class="text-xs text-zinc-500 truncate mt-0.5">${preview}</p>
@@ -112,7 +112,7 @@ const ChatView = (() => {
                             ${u.avatar_url ? `<img src="${u.avatar_url}" class="w-full h-full object-cover">` : (u.full_name || '?').charAt(0).toUpperCase()}
                         </div>
                         <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold truncate">${u.full_name || u.username || 'User'}${u.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</p>
+                            <p class="text-sm font-semibold truncate">${u.full_name || u.username || 'User'}${(u.role === 'lead' || u.role === 'admin') ? ICC_CONFIG.VERIFIED_TICK : ''}</p>
                             <p class="text-[11px] text-zinc-500 truncate">@${u.username || 'anon'}</p>
                         </div>
                     </div>
