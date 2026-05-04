@@ -17,6 +17,7 @@ const _ALLOWED_EMAIL_LIST = [
 
     // Test Account --
     "contact.designix@gmail.com",
+    "idkwhythisemailloll@gmail.com",
 
     // ── Batch 1: Core Members ──
     "saravanantm1920@gmail.com",
@@ -109,7 +110,6 @@ const _ALLOWED_EMAIL_LIST = [
     "ranjithkumarbr2002@gmail.com",
     "kirthanvc07@gmail.com",
     "saravanantm3@gmail.com",
-    "idkwhythisemailloll@gmail.com",
     "shreekishors776@gmail.com",
     "chinmayi.cks@gmail.com",
     "badris0620@gmail.com",
