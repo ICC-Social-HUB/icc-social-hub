@@ -1342,6 +1342,7 @@ const ICCSupabase = (() => {
         fetchComments, addComment, deleteComment,
         fetchConversations, fetchMessages, sendMessage, deleteMessage, markAsRead, getUnreadCount,
         joinTeam, cancelJoinRequest, getTeamMembers, getPendingMembers, approveMember, denyMember,
+        fetchTeamMessages, sendTeamMessage, subscribeToTeamChat,
         fetchLeads, createLead, updateLead, deleteLead,
         approveLead, denyLead, getPendingLeads,
         createBroadcast, getActiveBroadcast, dismissBroadcast, adminDeletePost,
