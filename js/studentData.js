@@ -591,7 +591,7 @@ const STUDENT_DATA = [
   {
   "fullName": "M G Akhil",
   "usn": "1KS25CS061",
-  "section": "Cse-B",
+  "section": "B",
   "email": "mgakhil676@gmail.com",
   "phone": 7022476472
 }
