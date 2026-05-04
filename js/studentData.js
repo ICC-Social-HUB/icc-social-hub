@@ -551,6 +551,27 @@ const STUDENT_DATA = [
     "section": "K",
     "email": "gouthambg23@gmail.com",
     "phone": 8431342235
+  },
+  {
+    "fullName": "Sannabenni karthik manjappa",
+    "usn": "1ks25me024",
+    "section": "k",
+    "email": "kar2007thik@gmail.com",
+    "phone": 8217225521
+  },
+  {
+    "fullName": "P Sai Suchitra",
+    "usn": "1KS25CS077",
+    "section": "B",
+    "email": "suchitraparimi@gmail.com",
+    "phone": 8217733548
+  },
+  {
+    "fullName": "Skandesh Krishna L",
+    "usn": "1KS25EC103",
+    "section": "H",
+    "email": "skandeshkrishnal@gmail.com",
+    "phone": 8431827341
   }
 ];
 
