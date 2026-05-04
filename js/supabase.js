@@ -665,6 +665,17 @@ const ICCSupabase = (() => {
         })).filter(Boolean);
     }
 
+    async function fetchAllTeamCounts() {
+        if (!client) return {};
+        const { data, error } = await client.from('team_memberships').select('team_id');
+        if (error) return {};
+        const counts = {};
+        data.forEach(m => {
+            counts[m.team_id] = (counts[m.team_id] || 0) + 1;
+        });
+        return counts;
+    }
+
     async function approveMember(userId, teamId) {
         if (!client) return { error: { message: 'Not configured' } };
 
@@ -823,7 +834,19 @@ const ICCSupabase = (() => {
     async function updateLead(id, fields) {
         if (!client) return { error: { message: 'Not configured' } };
         fields.updated_at = new Date().toISOString();
-        const { data, error } = await client.from('core_leads').update(fields).eq('id', id).select();
+        // 1. If changing team, check limit
+        if (fields.team_id && fields.team_id !== 'none') {
+            const { data: members } = await client.from('team_memberships').select('user_id').eq('team_id', fields.team_id);
+            if (members && members.length >= 7) {
+                // Check if user is already counted in those 7
+                const isAlreadyIn = members.some(m => m.user_id === id);
+                if (!isAlreadyIn) {
+                    return { error: { message: 'Target team is full (7/7). Move someone out first.' } };
+                }
+            }
+        }
+
+        const { data, error } = await client.from('profiles').update(fields).eq('id', id).select();
         return { data: data && data.length > 0 ? data[0] : null, error };
     }
 
@@ -835,6 +858,18 @@ const ICCSupabase = (() => {
 
     async function approveLead(userId, teamId) {
         if (!client) return { error: { message: 'Not configured' } };
+
+        // Check limit
+        if (teamId) {
+            const { data: members } = await client.from('team_memberships').select('user_id').eq('team_id', teamId);
+            if (members && members.length >= 7) {
+                const isAlreadyIn = members.some(m => m.user_id === userId);
+                if (!isAlreadyIn) {
+                    return { error: { message: 'This team is already full (max 7 members).' } };
+                }
+            }
+        }
+
         const { data, error } = await client.from('profiles')
             .update({ role: 'lead', is_pending_lead: false, team_id: teamId })
             .eq('id', userId).select().single();
@@ -894,6 +929,18 @@ const ICCSupabase = (() => {
 
     async function adminUpdateUser(userId, fields) {
         if (!client) return { error: { message: 'Not configured' } };
+
+        // If team_id is being changed, check limit
+        if (fields.hasOwnProperty('team_id') && fields.team_id !== null && fields.team_id !== 'none') {
+            const { data: members } = await client.from('team_memberships').select('user_id').eq('team_id', fields.team_id);
+            if (members && members.length >= 7) {
+                const isAlreadyIn = members.some(m => m.user_id === userId);
+                if (!isAlreadyIn) {
+                    return { error: { message: 'Target team is full (7/7).' } };
+                }
+            }
+        }
+
         const { data, error } = await client.from('profiles')
             .update(fields).eq('id', userId).select().single();
         
