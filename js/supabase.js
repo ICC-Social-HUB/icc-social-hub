@@ -585,6 +585,12 @@ const ICCSupabase = (() => {
             return { error: { message: 'You already have a pending request for another team. Please cancel it before applying to this one.' } };
         }
         
+        // 3. Check if target team is full
+        const { data: members } = await client.from('team_memberships').select('user_id').eq('team_id', parseInt(teamId));
+        if (members && members.length >= 7) {
+            return { error: { message: 'This team is already full (max 7 members).' } };
+        }
+        
         // 1. Insert join data
         const { error: dataError } = await client.from('team_join_data').upsert({
             user_id: currentUser.id,
@@ -666,6 +672,12 @@ const ICCSupabase = (() => {
         const { data: existing } = await client.from('team_memberships').select('team_id').eq('user_id', userId);
         if (existing && existing.length > 0) {
             return { error: { message: 'This user is already a member of another team.' } };
+        }
+
+        // 0.5. Check if team is full
+        const { data: teamMembers } = await client.from('team_memberships').select('user_id').eq('team_id', teamId);
+        if (teamMembers && teamMembers.length >= 7) {
+            return { error: { message: 'This team is already full (max 7 members). Cannot approve more members.' } };
         }
         
         // 1. Cleanup join data

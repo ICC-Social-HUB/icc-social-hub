@@ -20,6 +20,9 @@ jobs:
           node-version: '20'
 
       - name: Run Sync Script
+        env:
+          GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
         run: node scripts/sync-students.js
 
       - name: Commit and Push Changes
