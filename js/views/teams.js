@@ -92,7 +92,17 @@ const TeamsView = (() => {
                         <div class="pt-2">
                             ${(() => {
                 if (!user) return `<button id="team-join-btn" class="join-btn px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Join ${lead.team}</button><p class="text-[11px] text-zinc-600 mt-1.5">Sign in to join</p>`;
-                if (isMember) return `<div class="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600/15 border border-emerald-600/30 rounded-xl"><svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="text-emerald-400 text-sm font-semibold">You're a Member</span></div>`;
+                if (isMember || ICCSupabase.isAdmin()) return `
+                    <div class="flex flex-col gap-3">
+                        <div class="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600/15 border border-emerald-600/30 rounded-xl">
+                            <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="text-emerald-400 text-sm font-semibold">You're a Member</span>
+                        </div>
+                        <button id="open-team-chat-btn" class="flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-sm font-bold transition-all shadow-lg shadow-zinc-950/50 group">
+                            <svg class="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                            Open Team Chat
+                        </button>
+                    </div>`;
                 if (profile?.memberships?.length > 0 || profile?.role === 'lead') return `<div class="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60"><svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span class="text-zinc-500 text-sm font-semibold">Already in a Team</span></div><p class="text-[10px] text-zinc-600 mt-2">You can only be in one team at a time.</p>`;
                 if (isPending) return `
                                     <div class="flex flex-col gap-2">
@@ -323,6 +333,9 @@ const TeamsView = (() => {
         document.getElementById('team-join-btn')?.addEventListener('click', async () => {
             if (!ICCSupabase.getUser()) { AuthModal.open(); return; }
             JoinTeamModal.open(lead);
+        });
+        document.getElementById('open-team-chat-btn')?.addEventListener('click', () => {
+            TeamChatModal.open(lead.id);
         });
 
         document.getElementById('team-cancel-btn')?.addEventListener('click', async () => {

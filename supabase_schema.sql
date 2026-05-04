@@ -600,6 +600,45 @@ CREATE POLICY "Leads and admins can add members"
 -- This enforces the "only the team lead can remove them" rule.
 
 -- ==========================================
+-- 15. TEAM MESSAGES TABLE
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.team_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    team_id INTEGER NOT NULL,
+    sender_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.team_messages ENABLE ROW LEVEL SECURITY;
+
+-- Team members and admins can view team messages
+CREATE POLICY "Team members and admins can view team messages"
+    ON public.team_messages FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.team_memberships
+            WHERE team_id = team_messages.team_id AND user_id = auth.uid()
+        ) OR EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+-- Only team members can send team messages
+CREATE POLICY "Team members can send team messages"
+    ON public.team_messages FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.team_memberships
+            WHERE team_id = team_id AND user_id = auth.uid()
+        )
+    );
+
+-- Enable Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE public.team_messages;
+
+-- ==========================================
 -- DONE! ✅
 -- ==========================================
 -- Your database is now ready.
