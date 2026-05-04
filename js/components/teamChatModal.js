@@ -79,15 +79,37 @@ const TeamChatModal = (() => {
         };
 
         // Send logic
-        form.onsubmit = async (e) => {
-            e.preventDefault();
+        const handleSend = async (e) => {
+            if (e) e.preventDefault();
             const content = input.value.trim();
-            if (!content) return;
-            input.value = '';
+            if (!content || form.dataset.loading === 'true') return;
+            
+            form.dataset.loading = 'true';
+            const originalBtn = form.querySelector('button[type="submit"]').innerHTML;
+            form.querySelector('button[type="submit"]').innerHTML = '<div class="spinner w-4 h-4 border-white/30 border-t-white"></div>';
             
             const { error } = await ICCSupabase.sendTeamMessage(teamId, content);
-            if (error) Toast.error("Couldn't send message: " + error.message);
+            
+            form.dataset.loading = 'false';
+            form.querySelector('button[type="submit"]').innerHTML = originalBtn;
+
+            if (error) {
+                Toast.error("Couldn't send: " + error.message);
+            } else {
+                input.value = '';
+                input.focus();
+            }
         };
+
+        form.addEventListener('submit', handleSend);
+        
+        // Ensure enter key works
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+            }
+        });
 
         input.focus();
     }
