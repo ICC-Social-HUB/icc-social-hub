@@ -36,8 +36,10 @@ const _ALLOWED_EMAIL_LIST = [
     "hasini01032007@gmail.com",
 
     // ── Batch 2: Club Members ──
+    // ── BATCH_STUDENTS_START ──
     "yashaswini.r608@gmail.com",
     "sowmyabojanapati@gmail.com",
+    "sinchanshravya@gmail.com",
     "rabeeakouser@gmail.com",
     "mohitha2402@gmail.com",
     "srushtiwali1404@gmail.com",
@@ -85,7 +87,8 @@ const _ALLOWED_EMAIL_LIST = [
     "lchinmay32@gmail.com",
     "manjunathkolamali73@gmail.com",
     "amulya11g@gmail.com",
-    "abhi.atria.002@gmail.com",
+    "binitasai@gmail.com",
+    "abhi.atria.002@gmail.vom",
     "sourabh.bayari7002@gmail.com",
     "chandanalokesha.l2007@gmail.com",
     "raaga194@gmail.com",
@@ -102,15 +105,12 @@ const _ALLOWED_EMAIL_LIST = [
     "sinchanarkashyap@gmail.com",
     "mohands0810@gmail.com",
     "karthikhadapad0@gmail.com",
-    "sinchanshravya@gmail.com",
-    "binitasai@gmail.com",
-    "karthikhadapad0@gmail.com",
     "bhavanasreeni7@gmail.com",
     "cvprajwalguptha379@gmail.com",
     "pavanigowda875@gmail.com",
     "ranjithkumarbr2002@gmail.com",
+    "ananyya.rajj@gmail.com",
     "kirthanvc07@gmail.com",
-    "saravanantm3@gmail.com",
     "shreekishors776@gmail.com",
     "chinmayi.cks@gmail.com",
     "badris0620@gmail.com",
@@ -119,6 +119,8 @@ const _ALLOWED_EMAIL_LIST = [
     "kar2007thik@gmail.com",
     "suchitraparimi@gmail.com",
     "skandeshkrishnal@gmail.com",
+    "premshetty2106@gmail.com",
+// ── BATCH_STUDENTS_END ──
 
 ];
 // Internal lookup set (auto-built, case-insensitive — don't edit this)
