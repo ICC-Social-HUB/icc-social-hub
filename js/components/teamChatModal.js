@@ -104,16 +104,20 @@ const TeamChatModal = (() => {
             messages = await ICCSupabase.fetchTeamMessages(teamId);
             renderMessages(container);
             
-            // Subscribe for live updates
-            subscriptionName = ICCSupabase.subscribeToTeamChat(teamId, (newMsg) => {
-                if (currentTeamId === teamId) {
-                    messages.push(newMsg);
-                    renderMessages(container);
+            // Subscribe for live updates (Insert & Delete)
+            subscriptionName = ICCSupabase.subscribeToTeamChat(teamId, (event) => {
+                if (currentTeamId !== teamId) return;
+
+                if (event.type === 'INSERT') {
+                    messages.push(event.message);
+                } else if (event.type === 'DELETE') {
+                    messages = messages.filter(m => m.id !== event.messageId);
                 }
+                renderMessages(container);
             });
         } catch (err) {
             console.error('Chat load error:', err);
-            renderMessages(container); // Fallback to empty state
+            renderMessages(container);
         }
 
         input.focus();

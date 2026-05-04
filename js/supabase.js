@@ -795,21 +795,31 @@ const ICCSupabase = (() => {
         return { data, error };
     }
 
-    function subscribeToTeamChat(teamId, onMessage) {
+    async function deleteTeamMessage(messageId) {
+        if (!client) return { error: { message: 'Not configured' } };
+        const { error } = await client.from('team_messages').delete().eq('id', messageId);
+        return { error };
+    }
+
+    function subscribeToTeamChat(teamId, onEvent) {
         if (!client) return null;
         const channelName = `team-chat-${teamId}`;
         const channel = client.channel(channelName)
             .on('postgres_changes', { 
-                event: 'INSERT', 
+                event: '*', // Listen to ALL changes (Insert, Delete, etc)
                 schema: 'public', 
                 table: 'team_messages', 
                 filter: `team_id=eq.${teamId}` 
             }, async (payload) => {
-                const { data } = await client.from('profiles')
-                    .select('id, username, full_name, avatar_url, role')
-                    .eq('id', payload.new.sender_id)
-                    .single();
-                onMessage({ ...payload.new, profiles: data });
+                if (payload.eventType === 'INSERT') {
+                    const { data } = await client.from('profiles')
+                        .select('id, username, full_name, avatar_url, role')
+                        .eq('id', payload.new.sender_id)
+                        .single();
+                    onEvent({ type: 'INSERT', message: { ...payload.new, profiles: data } });
+                } else if (payload.eventType === 'DELETE') {
+                    onEvent({ type: 'DELETE', messageId: payload.old.id });
+                }
             })
             .subscribe();
         activeChannels.push({ name: channelName, channel });
@@ -1342,7 +1352,7 @@ const ICCSupabase = (() => {
         fetchComments, addComment, deleteComment,
         fetchConversations, fetchMessages, sendMessage, deleteMessage, markAsRead, getUnreadCount,
         joinTeam, cancelJoinRequest, getTeamMembers, getPendingMembers, approveMember, denyMember,
-        fetchTeamMessages, sendTeamMessage, subscribeToTeamChat,
+        fetchTeamMessages, sendTeamMessage, deleteTeamMessage, subscribeToTeamChat,
         fetchLeads, createLead, updateLead, deleteLead,
         approveLead, denyLead, getPendingLeads,
         createBroadcast, getActiveBroadcast, dismissBroadcast, adminDeletePost,
