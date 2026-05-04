@@ -57,8 +57,13 @@ const TeamChatModal = (() => {
         const form = document.getElementById('team-chat-form');
         const input = document.getElementById('team-chat-input');
 
-        // Fetch initial messages
-        messages = await ICCSupabase.fetchTeamMessages(teamId);
+        // Fetch initial messages with error fallback
+        try {
+            messages = await ICCSupabase.fetchTeamMessages(teamId);
+        } catch (err) {
+            console.error('Failed to load team messages:', err);
+            messages = [];
+        }
         renderMessages(container);
 
         // Subscribe to real-time

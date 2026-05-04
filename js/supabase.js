@@ -758,20 +758,28 @@ const ICCSupabase = (() => {
     // ── TEAM CHAT ──
     async function fetchTeamMessages(teamId, limit = 50) {
         if (!client) return [];
-        const { data, error } = await client.from('team_messages')
-            .select('*, profiles:sender_id(id, username, full_name, avatar_url, role)')
-            .eq('team_id', teamId)
-            .order('created_at', { ascending: false })
-            .limit(limit);
-        if (error) console.error('fetchTeamMessages error:', error);
-        return (data || []).reverse();
+        try {
+            const { data, error } = await client.from('team_messages')
+                .select('*, profiles(id, username, full_name, avatar_url, role)')
+                .eq('team_id', teamId)
+                .order('created_at', { ascending: false })
+                .limit(limit);
+            if (error) {
+                console.error('fetchTeamMessages error:', error);
+                return [];
+            }
+            return (data || []).reverse();
+        } catch (err) {
+            console.error('fetchTeamMessages exception:', err);
+            return [];
+        }
     }
 
     async function sendTeamMessage(teamId, content) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
         const { data, error } = await client.from('team_messages')
             .insert({ team_id: teamId, sender_id: currentUser.id, content })
-            .select('*, profiles:sender_id(id, username, full_name, avatar_url, role)')
+            .select('*, profiles(id, username, full_name, avatar_url, role)')
             .single();
         return { data, error };
     }
