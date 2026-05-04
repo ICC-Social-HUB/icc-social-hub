@@ -152,15 +152,20 @@ const TeamChatModal = (() => {
     }
 
     function close() {
+        console.log('🚪 Closing team chat modal...');
         const modal = document.getElementById('team-chat-modal');
         if (modal) {
             modal.classList.add('fade-out');
             setTimeout(() => {
                 modal.remove();
-                if (subscription) ICCSupabase.unsubscribeChannel(subscription);
+                if (subscription) {
+                    console.log('📡 Unsubscribing from channel:', subscription);
+                    ICCSupabase.unsubscribeChannel(subscription);
+                }
                 subscription = null;
                 currentTeamId = null;
                 messages = [];
+                console.log('✅ Team chat modal destroyed');
             }, 300);
         }
     }

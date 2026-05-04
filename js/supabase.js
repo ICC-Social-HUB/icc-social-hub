@@ -797,7 +797,8 @@ const ICCSupabase = (() => {
 
     function subscribeToTeamChat(teamId, onMessage) {
         if (!client) return null;
-        const channel = client.channel(`team-chat-${teamId}`)
+        const channelName = `team-chat-${teamId}`;
+        const channel = client.channel(channelName)
             .on('postgres_changes', { 
                 event: 'INSERT', 
                 schema: 'public', 
@@ -811,8 +812,8 @@ const ICCSupabase = (() => {
                 onMessage({ ...payload.new, profiles: data });
             })
             .subscribe();
-        activeChannels.push(channel);
-        return channel;
+        activeChannels.push({ name: channelName, channel });
+        return channelName;
     }
 
     // ==================== ADMIN ====================
@@ -1299,9 +1300,9 @@ const ICCSupabase = (() => {
         return channel;
     }
 
-    function unsubscribeChannel(name) {
+    function unsubscribeChannel(nameOrChannel) {
         if (!client) return;
-        const idx = activeChannels.findIndex(c => c.name === name);
+        const idx = activeChannels.findIndex(c => c.name === nameOrChannel || c.channel === nameOrChannel);
         if (idx !== -1) {
             client.removeChannel(activeChannels[idx].channel);
             activeChannels.splice(idx, 1);
