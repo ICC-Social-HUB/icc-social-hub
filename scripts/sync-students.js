@@ -90,34 +90,37 @@ async function sync() {
         console.log('Codebase updated. Now marking spreadsheet rows as green...');
 
         // Update Spreadsheet Colors
-        // Note: Formatting requires saving each row or using a batch update.
-        // google-spreadsheet v4 row.save() handles values. For formatting, we use sheet.getCells or similar.
-        
-        for (const row of rowsToUpdate) {
-            // We'll set the background color for the entire row range
-            // This requires the sheet.updateCells or a similar low-level call if using google-spreadsheet
-            // However, a simpler way is to just add a "Status" column and set it to "Synced"
-            // But user specifically asked for "green fill".
-            
-            // To do green fill properly with google-spreadsheet v4:
-            // We use the sheet.updateCells method.
-        }
-
-        // Batch update formatting to green for all processed rows
-        const rowCount = rowsToUpdate.length;
         const colCount = sheet.columnCount;
         
-        await sheet.loadCells(`A1:${String.fromCharCode(64 + colCount)}${rowCount + 1}`);
-        
-        for (let i = 1; i <= rowCount; i++) {
-            for (let j = 0; j < colCount; j++) {
-                const cell = sheet.getCell(i, j);
-                cell.backgroundColor = { red: 0.8, green: 1, blue: 0.8 }; // Light green
-            }
-        }
-        await sheet.saveUpdatedCells();
+        // Find the range of rows to load
+        const rowIndices = rowsToUpdate.map(r => r.rowIndex);
+        if (rowIndices.length > 0) {
+            const minRow = Math.min(...rowIndices);
+            const maxRow = Math.max(...rowIndices);
 
-        console.log('Spreadsheet rows colored green. Sync complete!');
+            console.log(`Loading cells from row ${minRow + 1} to ${maxRow + 1}...`);
+            await sheet.loadCells({
+                startRowIndex: minRow,
+                endRowIndex: maxRow + 1,
+                startColumnIndex: 0,
+                endColumnIndex: colCount
+            });
+
+            for (const row of rowsToUpdate) {
+                for (let j = 0; j < colCount; j++) {
+                    try {
+                        const cell = sheet.getCell(row.rowIndex, j);
+                        cell.backgroundColor = { red: 0.8, green: 1, blue: 0.8 }; // Light green
+                    } catch (err) {
+                        // Ignore cells out of bounds if any
+                    }
+                }
+            }
+            await sheet.saveUpdatedCells();
+            console.log('Spreadsheet rows colored green.');
+        }
+
+        console.log('Sync complete!');
 
     } catch (e) {
         console.error('Error during sync:', e);
