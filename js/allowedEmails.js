@@ -129,6 +129,7 @@ const _ALLOWED_EMAIL_LIST = [
     "shravya24.nov@gmail.com",
     "darshkris1234@gmail.com",
     "shravya24.nov@gmail.com",
+    "adhoksh.an@gmail.com",
 // ── BATCH_STUDENTS_END ──
 
 ];
