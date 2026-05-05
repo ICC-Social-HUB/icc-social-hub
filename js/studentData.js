@@ -634,7 +634,7 @@ const STUDENT_DATA = [
   "fullName": "Darsh Krishna U ",
   "usn": "1KS25ME008",
   "section": "K",
-  "email": "darsh",
+  "email": "darshkris1234@gmail.com",
   "phone": 7411401620
 },
   {
