@@ -615,6 +615,27 @@ const STUDENT_DATA = [
   "section": "A",
   "email": "Kaushikgutha36@gmail.com",
   "phone": 7676797653
+},
+  {
+  "fullName": "Anirudh Dhanraj ",
+  "usn": "1ks25ec010",
+  "section": "G",
+  "email": "Anirudhdhanraj77@gmail.com",
+  "phone": 7892404969
+},
+  {
+  "fullName": "Shravya S ",
+  "usn": "1KS25AI095",
+  "section": "F",
+  "email": "shravya24.nov@gmail.com",
+  "phone": 9148859750
+},
+  {
+  "fullName": "Darsh Krishna U ",
+  "usn": "1KS25ME008",
+  "section": "K",
+  "email": "darsh",
+  "phone": 7411401620
 }
 // ── STUDENT_DATA_END ──
 ];
