@@ -608,6 +608,13 @@ const STUDENT_DATA = [
   "section": "E",
   "email": "ghatagejayani@gmail.com",
   "phone": 8147356101
+},
+  {
+  "fullName": "Kaushik G L ",
+  "usn": "1KS25CS049",
+  "section": "A",
+  "email": "Kaushikgutha36@gmail.com",
+  "phone": 7676797653
 }
 // ── STUDENT_DATA_END ──
 ];
