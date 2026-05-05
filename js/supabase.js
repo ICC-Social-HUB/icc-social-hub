@@ -587,8 +587,8 @@ const ICCSupabase = (() => {
         
         // 3. Check if target team is full
         const { data: members } = await client.from('team_memberships').select('user_id').eq('team_id', parseInt(teamId));
-        if (members && members.length >= 7) {
-            return { error: { message: 'This team is already full (max 7 members).' } };
+        if (members && members.length >= 8) {
+            return { error: { message: 'This team is already full (max 8 members).' } };
         }
         
         // 1. Insert join data
@@ -687,8 +687,8 @@ const ICCSupabase = (() => {
 
         // 0.5. Check if team is full
         const { data: teamMembers } = await client.from('team_memberships').select('user_id').eq('team_id', teamId);
-        if (teamMembers && teamMembers.length >= 7) {
-            return { error: { message: 'This team is already full (max 7 members). Cannot approve more members.' } };
+        if (teamMembers && teamMembers.length >= 8) {
+            return { error: { message: 'This team is already full (max 8 members). Cannot approve more members.' } };
         }
         
         // 1. Cleanup join data
@@ -862,10 +862,10 @@ const ICCSupabase = (() => {
         // Check limit
         if (teamId) {
             const { data: members } = await client.from('team_memberships').select('user_id').eq('team_id', teamId);
-            if (members && members.length >= 7) {
+            if (members && members.length >= 8) {
                 const isAlreadyIn = members.some(m => m.user_id === userId);
                 if (!isAlreadyIn) {
-                    return { error: { message: 'This team is already full (max 7 members).' } };
+                    return { error: { message: 'This team is already full (max 8 members).' } };
                 }
             }
         }
@@ -933,10 +933,10 @@ const ICCSupabase = (() => {
         // If team_id is being changed, check limit
         if (fields.hasOwnProperty('team_id') && fields.team_id !== null && fields.team_id !== 'none') {
             const { data: members } = await client.from('team_memberships').select('user_id').eq('team_id', fields.team_id);
-            if (members && members.length >= 7) {
+            if (members && members.length >= 8) {
                 const isAlreadyIn = members.some(m => m.user_id === userId);
                 if (!isAlreadyIn) {
-                    return { error: { message: 'Target team is full (7/7).' } };
+                    return { error: { message: 'Target team is full (8/8).' } };
                 }
             }
         }
