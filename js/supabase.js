@@ -845,19 +845,8 @@ const ICCSupabase = (() => {
     async function updateLead(id, fields) {
         if (!client) return { error: { message: 'Not configured' } };
         fields.updated_at = new Date().toISOString();
-        // 1. If changing team, check limit
-        if (fields.team_id && fields.team_id !== 'none') {
-            const { data: members } = await client.from('team_memberships').select('user_id').eq('team_id', fields.team_id);
-            if (members && members.length >= 7) {
-                // Check if user is already counted in those 7
-                const isAlreadyIn = members.some(m => m.user_id === id);
-                if (!isAlreadyIn) {
-                    return { error: { message: 'Target team is full (7/7). Move someone out first.' } };
-                }
-            }
-        }
-
-        const { data, error } = await client.from('profiles').update(fields).eq('id', id).select();
+        
+        const { data, error } = await client.from('core_leads').update(fields).eq('id', id).select();
         return { data: data && data.length > 0 ? data[0] : null, error };
     }
 
