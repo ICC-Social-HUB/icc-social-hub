@@ -221,8 +221,16 @@ const ICCSupabase = (() => {
             const actualTeamId = currentProfile.memberships[0] || null;
             if (currentProfile.team_id !== actualTeamId) {
                 currentProfile.team_id = actualTeamId;
-                // Optionally update DB if we want it to be permanent
-                client.from('profiles').update({ team_id: actualTeamId }).eq('id', currentUser.id).then(() => {});
+                const updateFields = { team_id: actualTeamId };
+                
+                // If they lost their team and were a lead, revert to student
+                if (actualTeamId === null && currentProfile.role === 'lead') {
+                    currentProfile.role = 'student';
+                    updateFields.role = 'student';
+                }
+                
+                // Update DB to keep it permanent
+                client.from('profiles').update(updateFields).eq('id', currentUser.id).then(() => {});
             }
 
             // Fetch pending requests
@@ -283,6 +291,12 @@ const ICCSupabase = (() => {
                 membershipTeamId = data.team_memberships[0].team_id;
             }
             data.team_id = membershipTeamId || (data.role === 'lead' ? data.team_id : null);
+            // If it's still null, and they were a lead, it means they are a lead without a team (stale)
+            // But we should probably rely on team_memberships as the source of truth for "being in a team"
+            if (!membershipTeamId && data.role !== 'admin') {
+                data.team_id = null;
+                if (data.role === 'lead') data.role = 'student';
+            }
         }
         return data;
     }
@@ -300,6 +314,10 @@ const ICCSupabase = (() => {
                 membershipTeamId = data.team_memberships[0].team_id;
             }
             data.team_id = membershipTeamId || (data.role === 'lead' ? data.team_id : null);
+            if (!membershipTeamId && data.role !== 'admin') {
+                data.team_id = null;
+                if (data.role === 'lead') data.role = 'student';
+            }
         }
         return data;
     }
@@ -320,6 +338,12 @@ const ICCSupabase = (() => {
                 ...u,
                 team_id: membershipTeamId || (u.role === 'lead' ? u.team_id : null)
             };
+        }).map(u => {
+            if (!u.team_memberships?.length && u.role !== 'admin') {
+                u.team_id = null;
+                if (u.role === 'lead') u.role = 'student';
+            }
+            return u;
         });
     }
 
@@ -781,8 +805,11 @@ const ICCSupabase = (() => {
         const { error } = await client.from('team_memberships').delete().eq('user_id', userId).eq('team_id', teamId);
         
         if (!error) {
-            // Also clear team_id in profiles table to keep it in sync
-            await client.from('profiles').update({ team_id: null }).eq('id', userId);
+            // Also clear team_id in profiles table and revert role if they were a lead
+            const { data: prof } = await client.from('profiles').select('role').eq('id', userId).single();
+            const updateFields = { team_id: null };
+            if (prof && prof.role === 'lead') updateFields.role = 'student';
+            await client.from('profiles').update(updateFields).eq('id', userId);
 
             const teamName = CORE_LEADS.find(l => l.id === parseInt(teamId))?.team || 'the team';
             await createNotification({
@@ -892,6 +919,14 @@ const ICCSupabase = (() => {
 
     async function deleteLead(id) {
         if (!client) return { error: { message: 'Not configured' } };
+        
+        // 1. Revert any leads assigned to this team
+        await client.from('profiles').update({ role: 'student', team_id: null }).eq('team_id', id).eq('role', 'lead');
+        
+        // 2. Remove memberships
+        await client.from('team_memberships').delete().eq('team_id', id);
+
+        // 3. Delete the lead record
         const { error } = await client.from('core_leads').delete().eq('id', id);
         return { error };
     }
@@ -970,6 +1005,8 @@ const ICCSupabase = (() => {
     async function adminUpdateUser(userId, fields) {
         if (!client) return { error: { message: 'Not configured' } };
 
+        if (fields.team_id === 'none') fields.team_id = null;
+
         // If team_id is being changed, check limit
         if (fields.hasOwnProperty('team_id') && fields.team_id !== null && fields.team_id !== 'none') {
             const { data: members } = await client.from('team_memberships').select('user_id').eq('team_id', fields.team_id);
@@ -990,13 +1027,19 @@ const ICCSupabase = (() => {
             const { error: deleteError } = await client.from('team_memberships').delete().eq('user_id', userId);
             if (deleteError) console.error('adminUpdateUser deleteError:', deleteError);
             
-            if (fields.team_id !== null) {
+            if (fields.team_id !== null && fields.team_id !== 'none') {
                 const { error: insertError } = await client.from('team_memberships').insert({
                     user_id: userId,
                     team_id: fields.team_id
                 });
                 if (insertError) console.error('adminUpdateUser insertError:', insertError);
             } else {
+                // If removing from team, also ensure role is not 'lead' anymore
+                const { data: prof } = await client.from('profiles').select('role').eq('id', userId).single();
+                if (prof && prof.role === 'lead') {
+                    await client.from('profiles').update({ role: 'student' }).eq('id', userId);
+                }
+
                 // Trigger Removal Email Notification
                 const user = await fetchUserById(userId);
                 if (user?.email) {
