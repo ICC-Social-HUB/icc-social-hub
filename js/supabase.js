@@ -217,6 +217,14 @@ const ICCSupabase = (() => {
                 .eq('user_id', currentUser.id);
             currentProfile.memberships = (memberships || []).map(m => m.team_id);
 
+            // Sync team_id cache if it's out of sync
+            const actualTeamId = currentProfile.memberships[0] || null;
+            if (currentProfile.team_id !== actualTeamId) {
+                currentProfile.team_id = actualTeamId;
+                // Optionally update DB if we want it to be permanent
+                client.from('profiles').update({ team_id: actualTeamId }).eq('id', currentUser.id).then(() => {});
+            }
+
             // Fetch pending requests
             const { data: pending } = await client
                 .from('team_join_data')
@@ -264,26 +272,55 @@ const ICCSupabase = (() => {
 
     async function fetchUserById(userId) {
         if (!client) return null;
-        const { data } = await client.from('profiles').select('*').eq('id', userId).maybeSingle();
+        const { data } = await client.from('profiles')
+            .select('*, team_memberships(team_id)')
+            .eq('id', userId)
+            .maybeSingle();
+        
+        if (data) {
+            let membershipTeamId = null;
+            if (data.team_memberships && data.team_memberships.length > 0) {
+                membershipTeamId = data.team_memberships[0].team_id;
+            }
+            data.team_id = membershipTeamId || (data.role === 'lead' ? data.team_id : null);
+        }
         return data;
     }
 
     async function fetchProfileByEmail(email) {
         if (!client || !email) return null;
         const { data } = await client.from('profiles')
-            .select('*')
+            .select('*, team_memberships(team_id)')
             .eq('email', email.toLowerCase().trim())
             .maybeSingle();
+        
+        if (data) {
+            let membershipTeamId = null;
+            if (data.team_memberships && data.team_memberships.length > 0) {
+                membershipTeamId = data.team_memberships[0].team_id;
+            }
+            data.team_id = membershipTeamId || (data.role === 'lead' ? data.team_id : null);
+        }
         return data;
     }
 
     async function searchUsers(query) {
         if (!client) return [];
         const { data } = await client.from('profiles')
-            .select('id, username, full_name, avatar_url, team_id, role')
+            .select('id, username, full_name, avatar_url, team_id, role, team_memberships(team_id)')
             .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
             .limit(20);
-        return data || [];
+        
+        return (data || []).map(u => {
+            let membershipTeamId = null;
+            if (u.team_memberships && u.team_memberships.length > 0) {
+                membershipTeamId = u.team_memberships[0].team_id;
+            }
+            return {
+                ...u,
+                team_id: membershipTeamId || (u.role === 'lead' ? u.team_id : null)
+            };
+        });
     }
 
     async function checkUsernameAvailable(username, email = null) {
@@ -744,6 +781,9 @@ const ICCSupabase = (() => {
         const { error } = await client.from('team_memberships').delete().eq('user_id', userId).eq('team_id', teamId);
         
         if (!error) {
+            // Also clear team_id in profiles table to keep it in sync
+            await client.from('profiles').update({ team_id: null }).eq('id', userId);
+
             const teamName = CORE_LEADS.find(l => l.id === parseInt(teamId))?.team || 'the team';
             await createNotification({
                 userId: userId,
@@ -1000,7 +1040,7 @@ const ICCSupabase = (() => {
             }
             return {
                 ...u,
-                team_id: membershipTeamId || u.team_id
+                team_id: (u.team_memberships && u.team_memberships.length > 0) ? membershipTeamId : null
             };
         });
     }
