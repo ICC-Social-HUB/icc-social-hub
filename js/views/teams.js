@@ -111,6 +111,7 @@ const TeamsView = (() => {
                     <p class="text-zinc-500 text-sm max-w-md mx-auto">Find the team that matches your passion.</p>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" id="leads-grid">
+                    ${(() => { console.log('Rendering Grid with Leads:', CORE_LEADS); return ''; })()}
                     ${CORE_LEADS.map((lead, i) => {
             const isMember = profile?.memberships?.includes(lead.id);
             const isPending = profile?.pending_teams?.includes(lead.id);
@@ -137,13 +138,13 @@ const TeamsView = (() => {
                                 <p class="text-zinc-500 text-[10px] mt-0.5 truncate">Project: <span class="${lead.project_name ? 'text-emerald-400' : 'text-zinc-600'}">${lead.project_name || 'TBD'}</span></p>
                                 
                                 <!-- Progress Mini Indicator -->
-                                <div class="mt-3 space-y-1">
-                                    <div class="flex items-center justify-between text-[9px] font-bold">
-                                        <span class="text-zinc-500 uppercase tracking-wider">Progress</span>
-                                        <span class="${progress > 0 ? 'text-emerald-400' : 'text-zinc-600'}">${progress}%</span>
+                                <div class="mt-3 pt-3 border-t border-zinc-800/30 space-y-1.5">
+                                    <div class="flex items-center justify-between text-[9px] font-bold uppercase tracking-tight">
+                                        <span class="text-zinc-500">Project Progress</span>
+                                        <span class="${progress > 0 ? 'text-emerald-400' : 'text-zinc-400'}">${progress}%</span>
                                     </div>
-                                    <div class="w-full h-1 bg-zinc-950 rounded-full overflow-hidden border border-zinc-800/30">
-                                        <div class="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-500" style="width: ${progress}%"></div>
+                                    <div class="w-full h-1.5 bg-zinc-950 rounded-full overflow-hidden border border-white/5">
+                                        <div class="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.2)] transition-all duration-700" style="width: ${progress}%"></div>
                                     </div>
                                 </div>
 
