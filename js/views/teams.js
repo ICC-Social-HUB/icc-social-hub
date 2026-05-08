@@ -326,7 +326,7 @@ const TeamsView = (() => {
             bindDetailEvents(lead);
             ICCSupabase.subscribeToTeam(currentTeamId, async (payload) => {
                 // If the change is in core_leads, re-fetch all leads and re-render
-                if (payload.table === 'core_leads') {
+                if (payload && payload.table === 'core_leads') {
                     await loadLeads();
                     const updatedLead = CORE_LEADS.find(l => l.id === currentTeamId);
                     if (updatedLead) {
