@@ -433,6 +433,17 @@ const ICCSupabase = (() => {
         return { data, error };
     }
 
+    async function updatePostStatus(postId, status) {
+        if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        const { data, error } = await client.from('posts')
+            .update({ status })
+            .eq('id', postId)
+            .eq('user_id', currentUser.id) // Security: Only author can update status
+            .select()
+            .single();
+        return { data, error };
+    }
+
     async function deletePost(postId) {
         if (!client) return { error: { message: 'Not configured' } };
         // Fetch post first to get image_url
@@ -1453,7 +1464,7 @@ const ICCSupabase = (() => {
     return {
         init, signInWithGoogle, sendOTP, verifyOTP, signOut, getSession, onAuthStateChange,
         fetchProfile, updateProfile, fetchUserById, fetchProfileByEmail, searchUsers, checkUsernameAvailable,
-        fetchPosts, fetchPostById, fetchPostsByTeam, fetchPostsByUser, createPost, deletePost,
+        fetchPosts, fetchPostById, fetchPostsByTeam, fetchPostsByUser, createPost, updatePostStatus, deletePost,
         toggleLike, hasLiked, fetchUserLikes,
         fetchComments, addComment, deleteComment,
         fetchConversations, fetchMessages, sendMessage, deleteMessage, markAsRead, getUnreadCount,

@@ -10,9 +10,12 @@ const PostCard = (() => {
         const isAnnounce = post.is_announcement;
         const currentUser = ICCSupabase.getUser();
         const canDelete = currentUser && (currentUser.id === post.user_id || ICCSupabase.isAdmin());
+        const isRequest = post.is_request;
+        const isResolved = post.status === 'resolved';
+        const isAuthor = currentUser && currentUser.id === post.user_id;
 
         return `
-        <article class="post-card mb-4 relative group" data-post-id="${post.id}" data-owner-id="${post.user_id}">
+        <article class="post-card mb-4 relative group ${isRequest ? 'request-card' : ''} ${isResolved ? 'resolved-dim' : ''}" data-post-id="${post.id}" data-owner-id="${post.user_id}">
             ${canDelete ? `
             <button class="delete-post-btn absolute top-3 right-3 p-2 text-zinc-600 hover:text-red-500 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-zinc-800/50 z-10" data-post-id="${post.id}" title="Delete post">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -26,10 +29,12 @@ const PostCard = (() => {
                         <button class="user-link font-semibold text-sm hover:text-red-400 transition-colors truncate" data-user-id="${p.id || post.user_id}">${p.username || p.full_name || 'Anonymous'}${(p.role === 'lead' || p.role === 'admin') ? ICC_CONFIG.VERIFIED_TICK : ''}</button>
                         ${(p.role === 'lead' || p.role === 'admin') ? `<span class="px-1.5 py-0.5 bg-red-600/15 text-red-400 rounded text-[10px] font-bold uppercase">${p.role}</span>` : ''}
                         ${isAnnounce ? '<span class="announcement-badge">Official</span>' : ''}
+                        ${isRequest ? (isResolved ? '<span class="px-2 py-0.5 bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 rounded-full text-[9px] font-black uppercase tracking-tighter animate-pulse">Resolved</span>' : '<span class="px-2 py-0.5 bg-amber-600/20 text-amber-400 border border-amber-500/30 rounded-full text-[9px] font-black uppercase tracking-tighter">Request</span>') : ''}
                     </div>
                     <div class="flex items-center gap-2 mt-0.5">
                         <span class="text-[11px] text-zinc-500">${timeAgo}</span>
                         ${teamLead ? `<a href="#teams/${post.team_tag}" class="text-[11px] text-zinc-500 hover:text-red-400 transition-colors">• ${teamLead.team}</a>` : ''}
+                        ${isRequest ? `<span class="text-[10px] font-bold text-amber-500/80">• ${post.request_type}</span>` : ''}
                     </div>
                 </div>
             </div>
@@ -38,6 +43,21 @@ const PostCard = (() => {
 
             <div class="px-4 pt-3 pb-2">
                 ${post.caption ? `<p class="text-sm text-zinc-200 leading-relaxed mb-3 whitespace-pre-wrap">${escapeHtml(post.caption)}</p>` : ''}
+                
+                ${isRequest && !isAuthor && !isResolved ? `
+                <div class="mb-4 p-3 bg-amber-600/5 border border-amber-500/20 rounded-xl flex items-center justify-between gap-3">
+                    <p class="text-[11px] text-amber-500/80 font-medium">Can you help with this ${post.request_type.toLowerCase()}?</p>
+                    <button class="message-requester-btn px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[10px] font-bold transition-all shadow-lg shadow-amber-600/20" data-user-id="${post.user_id}">Message</button>
+                </div>
+                ` : ''}
+
+                ${isRequest && isAuthor && !isResolved ? `
+                <button class="resolve-request-btn w-full mb-4 py-2 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-2" data-post-id="${post.id}">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    Mark as Resolved
+                </button>
+                ` : ''}
+
                 <div class="flex items-center gap-4">
                     <button class="like-btn flex items-center gap-1.5 text-sm transition-colors ${liked ? 'liked text-red-500' : 'text-zinc-500 hover:text-red-400'}" data-post-id="${post.id}">
                         <svg class="w-5 h-5" fill="${liked ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
@@ -83,6 +103,39 @@ const PostCard = (() => {
                             referenceId: postId
                         });
                     }
+                }
+            });
+        });
+
+        // Resolve request
+        container.querySelectorAll('.resolve-request-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const postId = btn.dataset.postId;
+                const card = btn.closest('.post-card');
+                
+                btn.disabled = true;
+                btn.innerHTML = '<div class="spinner spinner-sm"></div>';
+
+                const { error } = await ICCSupabase.updatePostStatus(postId, 'resolved');
+                if (error) {
+                    Toast.error('Failed to resolve: ' + error.message);
+                    btn.disabled = false;
+                    btn.innerHTML = 'Mark as Resolved';
+                } else {
+                    Toast.success('Request resolved! ✨');
+                    // We need to re-render the feed or just this card. 
+                    // For simplicity, let's trigger a hashchange to refresh.
+                    window.dispatchEvent(new Event('hashchange'));
+                }
+            });
+        });
+
+        // Message requester
+        container.querySelectorAll('.message-requester-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const userId = btn.dataset.userId;
+                if (userId) {
+                    ChatPanel.open(userId); // Assuming ChatPanel is available
                 }
             });
         });
@@ -137,6 +190,7 @@ const PostCard = (() => {
 
         const postCard = section.closest('.post-card');
         const postOwnerId = postCard?.dataset?.ownerId;
+        const isResolved = postCard?.classList.contains('resolved-dim');
 
         section.innerHTML = `
         <div class="p-4 space-y-3 max-h-64 overflow-y-auto">
@@ -156,10 +210,10 @@ const PostCard = (() => {
                 </div>`;
             }).join('')}
         </div>
-        ${user ? `<form class="comment-form flex gap-2 p-3 border-t border-zinc-800/50" data-post-id="${postId}">
+        ${user && !isResolved ? `<form class="comment-form flex gap-2 p-3 border-t border-zinc-800/50" data-post-id="${postId}">
             <input type="text" placeholder="Add a comment..." class="form-input flex-1 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white placeholder-zinc-600" required>
             <button type="submit" class="px-3 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-xs font-semibold transition-colors">Post</button>
-        </form>` : ''}`;
+        </form>` : (isResolved ? '<p class="text-[10px] text-zinc-600 text-center py-2 italic">Comments are locked for this resolved request.</p>' : '')}`;
 
         // Comment submit
         section.querySelector('.comment-form')?.addEventListener('submit', async e => {

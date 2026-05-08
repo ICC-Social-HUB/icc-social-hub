@@ -364,7 +364,7 @@ const TeamsView = (() => {
                 const count = document.getElementById('team-member-count');
                 // ... (rest of existing logic for members)
                 if (roster) {
-                    const isLeadOrAdmin = (profile?.role === 'lead' && profile.team_id === currentTeamId) || ICCSupabase.isAdmin();
+                    const isLeadOrAdmin = (profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) || ICCSupabase.isAdmin();
                     roster.innerHTML = teamMembers.length === 0 ? '<p class="text-xs text-zinc-600 text-center py-4">No members yet — be first!</p>'
                         : teamMembers.map((m, i) => `
                                 <div class="roster-item flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i * 0.04}s">

@@ -24,6 +24,7 @@ const FeedView = (() => {
                 <div class="flex gap-2 mb-4 overflow-x-auto pb-1 px-1 no-scrollbar" id="feed-filters">
                     <button class="filter-pill ${filter === 'all' ? 'active' : ''}" data-filter="all">All</button>
                     <button class="filter-pill ${filter === 'announcements' ? 'active' : ''}" data-filter="announcements">📢 Official</button>
+                    <button class="filter-pill ${filter === 'requests' ? 'active' : ''}" data-filter="requests">🆘 Requests</button>
                     ${CORE_LEADS.slice(0, 6).map(l => `<button class="filter-pill ${filter === String(l.id) ? 'active' : ''}" data-filter="${l.id}">${(l.team || 'Team').replace('Team ', '')}</button>`).join('')}
                 </div>
                 <div id="feed-posts"></div>
@@ -102,6 +103,7 @@ const FeedView = (() => {
     function matchesFilter(post) {
         if (filter === 'all') return true;
         if (filter === 'announcements') return post.is_announcement;
+        if (filter === 'requests') return post.is_request && post.status !== 'resolved';
         return post.team_tag === parseInt(filter);
     }
 
