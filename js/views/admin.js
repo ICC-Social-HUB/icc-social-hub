@@ -473,22 +473,28 @@ const AdminView = (() => {
 
         // User Search & Filter
         const applyUserFilters = () => {
-            const query = userSearchQuery.toLowerCase();
+            const query = userSearchQuery.trim().toLowerCase();
             const sectionQuery = userSectionFilter;
             const teamQuery = userTeamFilter;
             const listContainer = document.getElementById('users-list-container');
             if (!listContainer) return;
-            const cards = listContainer.querySelectorAll('.glass-card');
+            const cards = listContainer.querySelectorAll('.glass-card[data-user-id]');
             let visibleCount = 0;
+            
             cards.forEach(card => {
                 const text = card.textContent.toLowerCase();
-                const cardSection = card.dataset.section || '';
-                const cardTeamId = card.dataset.teamId || '';
+                const cardSection = card.getAttribute('data-section') || '';
+                const cardTeamId = card.getAttribute('data-team-id') || '';
 
                 const matchesSearch = !query || text.includes(query);
                 const matchesSection = !sectionQuery || cardSection === sectionQuery;
-                const matchesTeam = !teamQuery ||
-                    (teamQuery === 'none' ? !cardTeamId : cardTeamId === teamQuery);
+                
+                let matchesTeam = true;
+                if (teamQuery === 'none') {
+                    matchesTeam = !cardTeamId || cardTeamId === 'null' || cardTeamId === 'undefined';
+                } else if (teamQuery) {
+                    matchesTeam = String(cardTeamId) === String(teamQuery);
+                }
 
                 if (matchesSearch && matchesSection && matchesTeam) {
                     card.style.display = '';

@@ -287,12 +287,16 @@ const ICCSupabase = (() => {
         
         if (data) {
             let membershipTeamId = null;
-            if (data.team_memberships && data.team_memberships.length > 0) {
-                membershipTeamId = data.team_memberships[0].team_id;
+            const memberships = data.team_memberships;
+            if (memberships) {
+                if (Array.isArray(memberships) && memberships.length > 0) {
+                    membershipTeamId = memberships[0].team_id;
+                } else if (!Array.isArray(memberships) && memberships.team_id) {
+                    membershipTeamId = memberships.team_id;
+                }
             }
             data.team_id = membershipTeamId || (data.role === 'lead' ? data.team_id : null);
-            // If it's still null, and they were a lead, it means they are a lead without a team (stale)
-            // But we should probably rely on team_memberships as the source of truth for "being in a team"
+            
             if (!membershipTeamId && data.role !== 'admin') {
                 data.team_id = null;
                 if (data.role === 'lead') data.role = 'student';
@@ -310,8 +314,13 @@ const ICCSupabase = (() => {
         
         if (data) {
             let membershipTeamId = null;
-            if (data.team_memberships && data.team_memberships.length > 0) {
-                membershipTeamId = data.team_memberships[0].team_id;
+            const memberships = data.team_memberships;
+            if (memberships) {
+                if (Array.isArray(memberships) && memberships.length > 0) {
+                    membershipTeamId = memberships[0].team_id;
+                } else if (!Array.isArray(memberships) && memberships.team_id) {
+                    membershipTeamId = memberships.team_id;
+                }
             }
             data.team_id = membershipTeamId || (data.role === 'lead' ? data.team_id : null);
             if (!membershipTeamId && data.role !== 'admin') {
@@ -331,15 +340,20 @@ const ICCSupabase = (() => {
         
         return (data || []).map(u => {
             let membershipTeamId = null;
-            if (u.team_memberships && u.team_memberships.length > 0) {
-                membershipTeamId = u.team_memberships[0].team_id;
+            const memberships = u.team_memberships;
+            if (memberships) {
+                if (Array.isArray(memberships) && memberships.length > 0) {
+                    membershipTeamId = memberships[0].team_id;
+                } else if (!Array.isArray(memberships) && memberships.team_id) {
+                    membershipTeamId = memberships.team_id;
+                }
             }
             return {
                 ...u,
                 team_id: membershipTeamId || (u.role === 'lead' ? u.team_id : null)
             };
         }).map(u => {
-            if (!u.team_memberships?.length && u.role !== 'admin') {
+            if (!u.team_id && u.role !== 'admin') {
                 u.team_id = null;
                 if (u.role === 'lead') u.role = 'student';
             }
@@ -1074,16 +1088,17 @@ const ICCSupabase = (() => {
 
         return (data || []).map(u => {
             let membershipTeamId = null;
-            if (u.team_memberships) {
-                if (Array.isArray(u.team_memberships) && u.team_memberships.length > 0) {
-                    membershipTeamId = u.team_memberships[0].team_id;
-                } else if (!Array.isArray(u.team_memberships) && u.team_memberships.team_id) {
-                    membershipTeamId = u.team_memberships.team_id;
+            const memberships = u.team_memberships;
+            if (memberships) {
+                if (Array.isArray(memberships) && memberships.length > 0) {
+                    membershipTeamId = memberships[0].team_id;
+                } else if (!Array.isArray(memberships) && memberships.team_id) {
+                    membershipTeamId = memberships.team_id;
                 }
             }
             return {
                 ...u,
-                team_id: (u.team_memberships && u.team_memberships.length > 0) ? membershipTeamId : null
+                team_id: membershipTeamId
             };
         });
     }
