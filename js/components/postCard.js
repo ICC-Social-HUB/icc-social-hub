@@ -135,7 +135,7 @@ const PostCard = (() => {
             btn.addEventListener('click', () => {
                 const userId = btn.dataset.userId;
                 if (userId) {
-                    ChatPanel.open(userId); // Assuming ChatPanel is available
+                    window.location.hash = `#chat/${userId}`;
                 }
             });
         });
