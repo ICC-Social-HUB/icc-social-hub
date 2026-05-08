@@ -1348,6 +1348,21 @@ const ICCSupabase = (() => {
         return channel;
     }
 
+    function subscribeToAllLeads(onUpdate) {
+        if (!client) return null;
+        const channelName = 'all-leads';
+        unsubscribeChannel(channelName);
+
+        const channel = client.channel(channelName)
+            .on('postgres_changes', {
+                event: 'UPDATE', schema: 'public', table: 'core_leads'
+            }, (payload) => onUpdate(payload))
+            .subscribe();
+        
+        activeChannels.push({ name: channelName, channel });
+        return channel;
+    }
+
     function subscribeToBroadcasts(onBroadcast) {
         if (!client) return null;
         const channel = client.channel('broadcasts-live')
@@ -1454,7 +1469,7 @@ const ICCSupabase = (() => {
         uploadImage, deleteImage,
         signInWithPassword, updatePassword,
         subscribeToFeed, subscribeToMessages, subscribeToConversation,
-        subscribeToTeam, subscribeToBroadcasts, subscribeToNotifications,
+        subscribeToTeam, subscribeToAllLeads, subscribeToBroadcasts, subscribeToNotifications,
         unsubscribeChannel, cleanupAllChannels,
         getUser, getProfile, isConfigured, getClient, isAdmin, isLead, needsOnboarding
     };

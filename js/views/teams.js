@@ -114,6 +114,11 @@ const TeamsView = (() => {
                     ${CORE_LEADS.map((lead, i) => {
             const isMember = profile?.memberships?.includes(lead.id);
             const isPending = profile?.pending_teams?.includes(lead.id);
+            
+            const milestones = lead.milestones || {};
+            const completedCount = MILESTONE_PHASES.filter(p => milestones[p.id]).length;
+            const progress = Math.round((completedCount / MILESTONE_PHASES.length) * 100);
+
             return `
                         <div class="lead-card bg-zinc-900/60 border border-zinc-800/50 rounded-xl overflow-hidden cursor-pointer group" data-lead-id="${lead.id}" style="animation:slideUp 0.4s ease-out ${i * 0.05}s both">
                             <div class="relative h-28 sm:h-36 overflow-hidden bg-gradient-to-br ${lead.gradient}">
@@ -130,7 +135,19 @@ const TeamsView = (() => {
                                 <h3 class="font-heading font-semibold text-sm truncate">${lead.team}</h3>
                                 <p class="text-zinc-400 text-[11px] mt-1">Lead: <span class="text-white">${lead.name}${ICC_CONFIG.VERIFIED_TICK}</span></p>
                                 <p class="text-zinc-500 text-[10px] mt-0.5 truncate">Project: <span class="${lead.project_name ? 'text-emerald-400' : 'text-zinc-600'}">${lead.project_name || 'TBD'}</span></p>
-                                <div class="card-accent h-0.5 bg-gradient-to-r ${lead.gradient} rounded-full mt-2"></div>
+                                
+                                <!-- Progress Mini Indicator -->
+                                <div class="mt-3 space-y-1">
+                                    <div class="flex items-center justify-between text-[9px] font-bold">
+                                        <span class="text-zinc-500 uppercase tracking-wider">Progress</span>
+                                        <span class="${progress > 0 ? 'text-emerald-400' : 'text-zinc-600'}">${progress}%</span>
+                                    </div>
+                                    <div class="w-full h-1 bg-zinc-950 rounded-full overflow-hidden border border-zinc-800/30">
+                                        <div class="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-500" style="width: ${progress}%"></div>
+                                    </div>
+                                </div>
+
+                                <div class="card-accent h-0.5 bg-gradient-to-r ${lead.gradient} rounded-full mt-3 opacity-30"></div>
                             </div>
                         </div>`;
         }).join('')}
@@ -423,6 +440,14 @@ const TeamsView = (() => {
             currentTeamId = null;
             container.innerHTML = renderGrid();
             bindGridEvents();
+            ICCSupabase.subscribeToAllLeads(async () => {
+                await loadLeads();
+                const teamsGrid = document.getElementById('teams-section');
+                if (teamsGrid) {
+                    container.innerHTML = renderGrid();
+                    bindGridEvents();
+                }
+            });
         }
     }
 
