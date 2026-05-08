@@ -1338,6 +1338,10 @@ const ICCSupabase = (() => {
                 event: '*', schema: 'public', table: 'team_join_data',
                 filter: `team_id=eq.${teamId}`
             }, (payload) => onUpdate(payload))
+            .on('postgres_changes', {
+                event: '*', schema: 'public', table: 'core_leads',
+                filter: `id=eq.${teamId}`
+            }, (payload) => onUpdate(payload))
             .subscribe();
         
         activeChannels.push({ name: channelName, channel });

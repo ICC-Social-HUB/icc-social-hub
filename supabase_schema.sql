@@ -279,6 +279,7 @@ CREATE TABLE IF NOT EXISTS public.core_leads (
     color TEXT,
     avatar_url TEXT,
     project_name TEXT,
+    milestones JSONB DEFAULT '{"planning": false, "design": false, "selection": false, "development": false, "programming": false, "testing": false, "optimization": false, "deployment": false}',
     sort_order INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
@@ -292,6 +293,9 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'core_leads' AND column_name = 'project_name') THEN
         ALTER TABLE public.core_leads ADD COLUMN project_name TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'core_leads' AND column_name = 'milestones') THEN
+        ALTER TABLE public.core_leads ADD COLUMN milestones JSONB DEFAULT '{"planning": false, "design": false, "selection": false, "development": false, "programming": false, "testing": false, "optimization": false, "deployment": false}';
     END IF;
 END $$;
 
@@ -469,6 +473,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.comments;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.broadcasts;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.core_leads;
 
 -- ==========================================
 -- 12. STORAGE BUCKETS & POLICIES
