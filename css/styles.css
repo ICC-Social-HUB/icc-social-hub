@@ -18,6 +18,7 @@ html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     overscroll-behavior-y: contain;
+    font-size: 18px; /* Base scale up */
 }
 
 body {
@@ -324,7 +325,7 @@ input, select, textarea { font-size: 16px !important; }
     color: #1f1f1f;
     border-radius: 12px;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 16px;
     transition: all 0.2s ease;
     border: 1px solid #e5e7eb;
 }
@@ -357,7 +358,7 @@ input, select, textarea { font-size: 16px !important; }
     width: 48px;
     height: 56px;
     text-align: center;
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
     background: #09090b;
     border: 2px solid #27272a;
@@ -415,7 +416,7 @@ input, select, textarea { font-size: 16px !important; }
     background: linear-gradient(135deg, #E11D48, #9F1239);
     padding: 2px 10px;
     border-radius: 999px;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -455,7 +456,7 @@ input, select, textarea { font-size: 16px !important; }
     max-width: 80%;
     padding: 10px 14px;
     border-radius: 16px;
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.5;
     word-wrap: break-word;
     animation: slideUp 0.2s ease-out;
@@ -605,7 +606,7 @@ input, select, textarea { font-size: 16px !important; }
 .notif-pill {
     padding: 6px 16px;
     border-radius: 12px;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 600;
     color: #71717a;
     background: #09090b;
@@ -666,7 +667,7 @@ input, select, textarea { font-size: 16px !important; }
     animation: gradient-shift 3s ease infinite;
     padding: 10px 16px;
     text-align: center;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 600;
     color: white;
     position: relative;
@@ -718,7 +719,7 @@ input, select, textarea { font-size: 16px !important; }
     pointer-events: auto;
     padding: 12px 20px;
     border-radius: 12px;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 500;
     display: flex;
     align-items: center;
