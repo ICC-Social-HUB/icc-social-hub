@@ -671,11 +671,7 @@ const ICCSupabase = (() => {
             return { error: { message: 'You already have a pending request for another team. Please cancel it before applying to this one.' } };
         }
         
-        // 3. Check if target team is full
-        const { data: members } = await client.from('team_memberships').select('user_id').eq('team_id', parseInt(teamId));
-        if (members && members.length >= 8) {
-            return { error: { message: 'This team is already full (max 8 members).' } };
-        }
+        // 3. (Limit removed)
         
         // 1. Insert join data
         const { error: dataError } = await client.from('team_join_data').upsert({
@@ -771,11 +767,7 @@ const ICCSupabase = (() => {
             return { error: { message: 'This user is already a member of another team.' } };
         }
 
-        // 0.5. Check if team is full
-        const { data: teamMembers } = await client.from('team_memberships').select('user_id').eq('team_id', teamId);
-        if (teamMembers && teamMembers.length >= 8) {
-            return { error: { message: 'This team is already full (max 8 members). Cannot approve more members.' } };
-        }
+        // 0.5. (Limit removed)
         
         // 1. Cleanup join data
         const { error: delError } = await client.from('team_join_data').delete().eq('user_id', userId).eq('team_id', teamId);
@@ -959,16 +951,7 @@ const ICCSupabase = (() => {
     async function approveLead(userId, teamId) {
         if (!client) return { error: { message: 'Not configured' } };
 
-        // Check limit
-        if (teamId) {
-            const { data: members } = await client.from('team_memberships').select('user_id').eq('team_id', teamId);
-            if (members && members.length >= 8) {
-                const isAlreadyIn = members.some(m => m.user_id === userId);
-                if (!isAlreadyIn) {
-                    return { error: { message: 'This team is already full (max 8 members).' } };
-                }
-            }
-        }
+        // (Limit removed)
 
         const { data, error } = await client.from('profiles')
             .update({ role: 'lead', is_pending_lead: false, team_id: teamId })
@@ -1032,16 +1015,7 @@ const ICCSupabase = (() => {
 
         if (fields.team_id === 'none') fields.team_id = null;
 
-        // If team_id is being changed, check limit
-        if (fields.hasOwnProperty('team_id') && fields.team_id !== null && fields.team_id !== 'none') {
-            const { data: members } = await client.from('team_memberships').select('user_id').eq('team_id', fields.team_id);
-            if (members && members.length >= 8) {
-                const isAlreadyIn = members.some(m => m.user_id === userId);
-                if (!isAlreadyIn) {
-                    return { error: { message: 'Target team is full (8/8).' } };
-                }
-            }
-        }
+        // (Limit removed)
 
         const { data, error } = await client.from('profiles')
             .update(fields).eq('id', userId).select().single();

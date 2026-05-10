@@ -237,15 +237,6 @@ const TeamsView = (() => {
                                         <p class="text-[10px] text-zinc-600 mt-0.5">You already have a pending request for another team. Cancel it to apply here.</p>
                                     </div>`;
 
-                // 8 Members Limit Check
-                if (teamMembers.length >= 8) return `
-                    <div class="flex flex-col gap-1.5">
-                        <div class="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60">
-                            <svg class="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                            <span class="text-zinc-500 text-sm font-semibold">Team Full</span>
-                        </div>
-                        <p class="text-[10px] text-red-500/60 mt-0.5">This team has reached its maximum capacity of 8 members.</p>
-                    </div>`;
 
                 return `<button id="team-join-btn" class="join-btn px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Request to Join ${lead.team}</button>`;
             })()}
