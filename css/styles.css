@@ -407,6 +407,43 @@ input, select, textarea { font-size: 16px !important; }
     transform: scale(1.02);
 }
 
+/* Image Viewer Enhancements */
+#image-viewer-overlay {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+#image-viewer-container {
+    perspective: 1000px;
+}
+
+#viewer-img {
+    box-shadow: 0 0 50px rgba(0,0,0,0.5);
+    border-radius: 4px;
+    will-change: transform;
+}
+
+.viewer-control-btn {
+    padding: 0.75rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+    color: white;
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.viewer-control-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.viewer-control-btn:active {
+    transform: scale(0.95);
+}
+
 .like-btn { transition: all 0.2s ease; }
 .like-btn:active { transform: scale(0.85); }
 .like-btn.liked svg { fill: #E11D48; color: #E11D48; }

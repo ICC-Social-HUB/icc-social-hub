@@ -39,7 +39,7 @@ const PostCard = (() => {
                 </div>
             </div>
 
-            ${post.image_url ? `<div class="post-image-container"><img src="${post.image_url}" alt="Post image" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : ''}
+            ${post.image_url ? `<div class="post-image-container cursor-zoom-in" data-full-image="${post.image_url}"><img src="${post.image_url}" alt="Post image" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : ''}
 
             <div class="px-4 pt-3 pb-2">
                 ${post.caption ? `<p class="text-sm text-zinc-200 leading-relaxed mb-3 whitespace-pre-wrap">${escapeHtml(post.caption)}</p>` : ''}
