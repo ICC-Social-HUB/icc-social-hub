@@ -11,8 +11,11 @@ const FeedView = (() => {
 
     function render() {
         return `
-        <section class="min-h-screen pt-2 pb-4 px-4 sm:px-0" id="feed-section">
-            <div class="max-w-lg mx-auto">
+        <section class="min-h-screen pt-2 pb-4 px-4 sm:px-0 relative overflow-hidden" id="feed-section">
+            <div id="ptr-indicator" class="pull-to-refresh" style="transform: translateY(0); opacity: 0;">
+                <div class="spinner"></div>
+            </div>
+            <div class="max-w-lg mx-auto transition-transform duration-200" id="feed-container">
                 <div class="flex items-center justify-between mb-4 px-1">
                     <h1 class="font-heading font-bold text-xl">
                         <span class="gradient-text-static">ICC</span> Feed
@@ -134,6 +137,62 @@ const FeedView = (() => {
             document.getElementById('feed-posts').innerHTML = renderSkeletons();
             await loadPosts();
         });
+
+        // Pull to Refresh Logic
+        let startY = 0;
+        let pullDistance = 0;
+        const section = document.getElementById('feed-section');
+        const container = document.getElementById('feed-container');
+        const indicator = document.getElementById('ptr-indicator');
+
+        if (section && container && indicator) {
+            section.addEventListener('touchstart', (e) => {
+                if (window.scrollY === 0) {
+                    startY = e.touches[0].pageY;
+                    container.style.transition = 'none';
+                    indicator.style.transition = 'none';
+                }
+            }, { passive: true });
+
+            section.addEventListener('touchmove', (e) => {
+                if (window.scrollY === 0) {
+                    const currentY = e.touches[0].pageY;
+                    pullDistance = Math.max(0, (currentY - startY) * 0.4); // Resistance
+                    if (pullDistance > 0) {
+                        container.style.transform = `translateY(${pullDistance}px)`;
+                        indicator.style.transform = `translateY(${pullDistance}px)`;
+                        indicator.style.opacity = Math.min(1, pullDistance / 60);
+                    }
+                }
+            }, { passive: true });
+
+            section.addEventListener('touchend', async () => {
+                if (pullDistance > 60) {
+                    // Trigger Refresh
+                    container.style.transition = 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)';
+                    indicator.style.transition = 'all 0.3s ease';
+                    container.style.transform = 'translateY(50px)';
+                    indicator.style.transform = 'translateY(50px)';
+                    indicator.style.opacity = '1';
+
+                    page = 0; posts = []; hasMore = true;
+                    await loadPosts();
+
+                    // Snap back
+                    container.style.transform = 'translateY(0)';
+                    indicator.style.transform = 'translateY(0)';
+                    indicator.style.opacity = '0';
+                } else {
+                    // Cancel
+                    container.style.transition = 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)';
+                    indicator.style.transition = 'all 0.3s ease';
+                    container.style.transform = 'translateY(0)';
+                    indicator.style.transform = 'translateY(0)';
+                    indicator.style.opacity = '0';
+                }
+                pullDistance = 0;
+            });
+        }
     }
 
     function unmount() { ICCSupabase.unsubscribeChannel('feed'); }

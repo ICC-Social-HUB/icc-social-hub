@@ -81,21 +81,47 @@ const PostCard = (() => {
                 const postId = btn.dataset.postId;
                 const countEl = btn.querySelector('.like-count');
                 const wasLiked = btn.classList.contains('liked');
+                
                 // Optimistic update
-                btn.classList.toggle('liked');
-                const svg = btn.querySelector('svg');
-                svg.setAttribute('fill', wasLiked ? 'none' : 'currentColor');
-                btn.classList.toggle('text-red-500'); btn.classList.toggle('text-zinc-500');
-                countEl.textContent = parseInt(countEl.textContent) + (wasLiked ? -1 : 1);
-                if (!wasLiked) btn.classList.add('animate-heart-burst');
-                await ICCSupabase.toggleLike(postId);
+                const toggleUI = (isLiked) => {
+                    btn.classList.toggle('liked', isLiked);
+                    const svg = btn.querySelector('svg');
+                    svg.setAttribute('fill', isLiked ? 'currentColor' : 'none');
+                    btn.classList.toggle('text-red-500', isLiked);
+                    btn.classList.toggle('text-zinc-500', !isLiked);
+                    countEl.textContent = parseInt(countEl.textContent) + (isLiked ? (wasLiked ? 0 : 1) : (wasLiked ? -1 : 0));
+                    // Note: the logic above for count is slightly flawed if we just toggle. 
+                    // Let's do it cleaner:
+                };
 
-                // Create notification for the post owner (only on like, not unlike)
-                if (!wasLiked) {
+                const currentCount = parseInt(countEl.textContent);
+                btn.classList.toggle('liked');
+                const isNowLiked = btn.classList.contains('liked');
+                const svg = btn.querySelector('svg');
+                svg.setAttribute('fill', isNowLiked ? 'currentColor' : 'none');
+                btn.classList.toggle('text-red-500', isNowLiked);
+                btn.classList.toggle('text-zinc-500', !isNowLiked);
+                countEl.textContent = isNowLiked ? currentCount + 1 : currentCount - 1;
+
+                if (isNowLiked) btn.classList.add('animate-heart-burst');
+                else btn.classList.remove('animate-heart-burst');
+
+                const { error } = await ICCSupabase.toggleLike(postId);
+                
+                if (error) {
+                    // Rollback
+                    btn.classList.toggle('liked');
+                    const revertedLiked = btn.classList.contains('liked');
+                    svg.setAttribute('fill', revertedLiked ? 'currentColor' : 'none');
+                    btn.classList.toggle('text-red-500', revertedLiked);
+                    btn.classList.toggle('text-zinc-500', !revertedLiked);
+                    countEl.textContent = currentCount;
+                    Toast.error('Failed to update like');
+                } else if (isNowLiked) {
+                    // Create notification for the post owner (only on like, not unlike)
                     const postCard = btn.closest('.post-card');
-                    const postOwnerLink = postCard?.querySelector('.user-link');
-                    const postOwnerId = postOwnerLink?.dataset?.userId;
-                    if (postOwnerId) {
+                    const postOwnerId = postCard?.dataset?.ownerId;
+                    if (postOwnerId && postOwnerId !== ICCSupabase.getUser().id) {
                         ICCSupabase.createNotification({
                             userId: postOwnerId,
                             type: 'like',

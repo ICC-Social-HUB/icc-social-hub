@@ -73,6 +73,20 @@
         // 7. Init particles
         initParticles();
 
+        // 8. Smart Hide Nav Bar
+        let lastScrollY = window.scrollY;
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('.bottom-nav');
+            if (!nav) return;
+            const currentScrollY = window.scrollY;
+            if (currentScrollY > lastScrollY && currentScrollY > 100) {
+                nav.classList.add('nav-hidden');
+            } else {
+                nav.classList.remove('nav-hidden');
+            }
+            lastScrollY = currentScrollY;
+        }, { passive: true });
+
         console.log('✅ ICC Social Hub ready');
     });
 
