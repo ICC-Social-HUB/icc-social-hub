@@ -18,7 +18,7 @@ const TeamsView = (() => {
                     <p class="text-zinc-500 text-sm max-w-md mx-auto">Find the team that matches your passion.</p>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" id="leads-grid">
-                    ${CORE_LEADS.map((lead, i) => {
+                    ${CORE_LEADS.length === 0 ? renderSkeletons() : CORE_LEADS.map((lead, i) => {
             const isMember = profile?.memberships?.includes(lead.id);
             const isPending = profile?.pending_teams?.includes(lead.id);
             return `
@@ -414,6 +414,18 @@ const TeamsView = (() => {
     function unmount() {
         if (currentTeamId) ICCSupabase.unsubscribeChannel(`team-${currentTeamId}`);
         currentTeamId = null; teamMembers = [];
+    }
+
+    function renderSkeletons() {
+        return Array(8).fill(0).map(() => `
+            <div class="bg-zinc-900/40 border border-zinc-800/30 rounded-xl overflow-hidden p-0 h-48 sm:h-56">
+                <div class="skeleton h-24 sm:h-32 w-full"></div>
+                <div class="p-3 space-y-2">
+                    <div class="skeleton h-3 w-3/4"></div>
+                    <div class="skeleton h-2 w-1/2"></div>
+                    <div class="skeleton h-1.5 w-full mt-4"></div>
+                </div>
+            </div>`).join('');
     }
 
     return { mount, unmount };
