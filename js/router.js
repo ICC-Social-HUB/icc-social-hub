@@ -29,7 +29,10 @@ const Router = (() => {
             container.innerHTML = ''; // Clear immediately to avoid ghosting
 
             // Route matching
-            if (hash === '#feed' || hash === '' || hash === '#') {
+            if (hash === '#dashboard' || hash === '' || hash === '#') {
+                previousView = 'dashboard';
+                DashboardView.mount(container);
+            } else if (hash === '#feed') {
                 previousView = 'feed';
                 FeedView.mount(container);
             } else if (hash.startsWith('#post/')) {
@@ -60,7 +63,7 @@ const Router = (() => {
                 ProfileView.mount(container);
             } else if (hash === '#onboarding') {
                 previousView = 'onboarding';
-                if (!ICCSupabase.getUser()) { window.location.hash = '#feed'; return; }
+                if (!ICCSupabase.getUser()) { window.location.hash = '#dashboard'; return; }
                 OnboardingView.mount(container);
             } else if (hash === '#admin') {
                 previousView = 'admin';
@@ -69,8 +72,8 @@ const Router = (() => {
                 previousView = 'notifications';
                 NotificationsView.mount(container);
             } else {
-                previousView = 'feed';
-                FeedView.mount(container);
+                previousView = 'dashboard';
+                DashboardView.mount(container);
             }
 
             // GPU-synced entrance animation

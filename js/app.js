@@ -59,7 +59,7 @@
 
             if (event === 'SIGNED_OUT') {
                 subscriptionsStarted = false;
-                window.location.hash = '#feed';
+                window.location.hash = '#dashboard';
             }
         });
 
