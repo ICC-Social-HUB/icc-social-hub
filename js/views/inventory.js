@@ -8,6 +8,7 @@ const InventoryView = (() => {
     let allRequests = []; // Admin only
     let isLoading = true;
     let searchQuery = '';
+    let managementFilter = 'all'; // all, pending, taken, completed, cancelled
 
     async function mount(container) {
         try {
@@ -267,6 +268,11 @@ const InventoryView = (() => {
     }
 
     function renderManagement() {
+        const filteredRequests = allRequests.filter(req => {
+            if (managementFilter === 'all') return true;
+            return req.status === managementFilter;
+        });
+
         return `
             <div class="space-y-8 animate-slide-up">
                 
@@ -292,13 +298,23 @@ const InventoryView = (() => {
 
                 <!-- Requests Tracking -->
                 <div>
-                    <div class="flex items-center justify-between mb-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                         <h2 class="text-xs font-bold text-zinc-500 uppercase tracking-widest">Borrower Activity</h2>
-                        <span class="text-[10px] text-zinc-600 bg-zinc-900 px-2 py-1 rounded-lg border border-zinc-800">Showing all logs</span>
+                        
+                        <!-- Status Filter -->
+                        <div class="flex items-center gap-1 bg-zinc-950 p-1 rounded-xl border border-zinc-800/50 overflow-x-auto no-scrollbar">
+                            ${['all', 'pending', 'taken', 'completed', 'cancelled'].map(f => `
+                                <button onclick="InventoryView.setManagementFilter('${f}')" 
+                                        class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all
+                                        ${managementFilter === f ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}">
+                                    ${f}
+                                </button>
+                            `).join('')}
+                        </div>
                     </div>
                     
                     <div class="grid grid-cols-1 gap-4">
-                        ${allRequests.map(req => {
+                        ${filteredRequests.length > 0 ? filteredRequests.map(req => {
                             const statusStyle = 
                                 req.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
                                 req.status === 'taken' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
@@ -356,12 +372,21 @@ const InventoryView = (() => {
                                     </div>
                                 </div>
                             `;
-                        }).join('')}
+                        }).join('') : `
+                            <div class="flex flex-col items-center justify-center py-20 text-center bg-zinc-900/30 rounded-3xl border border-dashed border-zinc-800">
+                                <p class="text-zinc-500 text-sm">No ${managementFilter === 'all' ? '' : managementFilter} requests found.</p>
+                            </div>
+                        `}
                     </div>
                 </div>
 
             </div>
         `;
+    }
+
+    function setManagementFilter(filter) {
+        managementFilter = filter;
+        render(document.getElementById('app'));
     }
 
     function renderStockControl() {
@@ -843,6 +868,6 @@ const InventoryView = (() => {
         mount, setTab, openRequestModal, closeModal, submitRequest, 
         openAddModal, submitAddItem, updateStatus, deleteItem,
         openEditModal, submitEditItem, handleSearch, clearSearch,
-        cancelMyRequest
+        cancelMyRequest, setManagementFilter
     };
 })();
