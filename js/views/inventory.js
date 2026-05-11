@@ -601,18 +601,16 @@ const InventoryView = (() => {
             Toast.show(error.message, 'error');
         } else {
             Toast.show('Request cancelled', 'success');
-            // 1. Immediately remove from local state
-            myRequests = myRequests.filter(r => r.id !== requestId);
-            // 2. Patch just the content area — no hash check needed
+            // Mark the item as cancelled in-place (avoids string vs number ID mismatch)
+            // renderMyRequests already filters out status === 'cancelled'
+            const match = myRequests.find(r => String(r.id) === String(requestId));
+            if (match) match.status = 'cancelled';
+            // Re-render the content area immediately
             const contentEl = document.getElementById('inventory-content');
             if (contentEl) {
                 contentEl.innerHTML = renderTabContent();
-            } else {
-                // Fallback: full re-render
-                const appEl = document.getElementById('app');
-                if (appEl) render(appEl);
             }
-            // 3. Background DB refresh to sync with server
+            // Background DB refresh to confirm server state
             refreshData().then(() => {
                 const contentEl = document.getElementById('inventory-content');
                 if (contentEl) contentEl.innerHTML = renderTabContent();
