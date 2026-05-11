@@ -8,10 +8,10 @@ const Sidebar = (() => {
         return `
         <!-- Sidebar Toggle Button (Inside Sticky Header) -->
         <button id="sidebar-toggle-btn" class="w-10 h-10 flex items-center justify-center bg-zinc-900/50 hover:bg-zinc-800 rounded-xl transition-all text-zinc-400 hover:text-white group active:scale-95 border border-zinc-800/50">
-            <div class="flex flex-col gap-1.2 items-start">
-                <span class="w-4 h-0.5 bg-current rounded-full group-hover:w-5 transition-all"></span>
-                <span class="w-5 h-0.5 bg-current rounded-full"></span>
-                <span class="w-3 h-0.5 bg-current rounded-full group-hover:w-5 transition-all"></span>
+            <div class="flex flex-col gap-1.5 items-center justify-center">
+                <span class="w-5 h-0.5 bg-current rounded-full transition-all"></span>
+                <span class="w-5 h-0.5 bg-current rounded-full transition-all"></span>
+                <span class="w-5 h-0.5 bg-current rounded-full transition-all"></span>
             </div>
         </button>
         `;
