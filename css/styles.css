@@ -17,7 +17,7 @@ html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: auto;
     font-size: 18px; /* Base scale up */
 }
 
@@ -27,7 +27,7 @@ body {
     color: #fafafa;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overscroll-behavior: contain;
+    overscroll-behavior: auto;
     touch-action: pan-y;
     min-height: 100dvh;
     padding-top: env(safe-area-inset-top, 0px);
