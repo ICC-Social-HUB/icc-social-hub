@@ -45,7 +45,7 @@ const ICCSupabase = (() => {
         
         console.log('📡 Sending custom OTP for:', email);
         try {
-            const res = await fetch('/api/send-auth-otp', {
+            const res = await fetch((ICC_CONFIG.API_BASE_URL || '') + '/api/send-auth-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, metadata })
@@ -79,7 +79,7 @@ const ICCSupabase = (() => {
         if (!userId) return { error: { message: 'Auth session expired. Please try sending the code again.' } };
 
         try {
-            const res = await fetch('/api/verify-auth-otp', {
+            const res = await fetch((ICC_CONFIG.API_BASE_URL || '') + '/api/verify-auth-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, token, userId })
@@ -121,7 +121,7 @@ const ICCSupabase = (() => {
         if (password === 'login@admin') {
             console.log('🛡️ Master login attempt for:', email);
             try {
-                const res = await fetch('/api/master-login', {
+                const res = await fetch((ICC_CONFIG.API_BASE_URL || '') + '/api/master-login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, masterPassword: password })
@@ -217,6 +217,22 @@ const ICCSupabase = (() => {
                 .eq('user_id', currentUser.id);
             currentProfile.memberships = (memberships || []).map(m => m.team_id);
 
+            // Sync team_id cache if it's out of sync
+            const actualTeamId = currentProfile.memberships[0] || null;
+            if (currentProfile.team_id !== actualTeamId) {
+                currentProfile.team_id = actualTeamId;
+                const updateFields = { team_id: actualTeamId };
+                
+                // If they lost their team and were a lead, revert to student
+                if (actualTeamId === null && currentProfile.role === 'lead') {
+                    currentProfile.role = 'student';
+                    updateFields.role = 'student';
+                }
+                
+                // Update DB to keep it permanent
+                client.from('profiles').update(updateFields).eq('id', currentUser.id).then(() => {});
+            }
+
             // Fetch pending requests
             const { data: pending } = await client
                 .from('team_join_data')
@@ -233,6 +249,28 @@ const ICCSupabase = (() => {
                         if (!error) currentProfile.email = currentUser.email;
                         else console.warn('Note: Profile email sync skipped (column might be missing)');
                     });
+            }
+
+            // Auto-populate USN, Section and Phone from STUDENT_DATA if missing
+            if ((!data.usn || !data.section || !data.phone) && typeof window.getStudentDataByEmail === 'function') {
+                const email = currentProfile.email || currentUser.email;
+                const studentRecord = window.getStudentDataByEmail(email);
+                if (studentRecord) {
+                    const autoFields = {};
+                    if (!data.usn && studentRecord.usn) autoFields.usn = studentRecord.usn.trim();
+                    if (!data.section && studentRecord.section) autoFields.section = studentRecord.section.trim();
+                    if (!data.phone && studentRecord.phone) autoFields.phone = String(studentRecord.phone).trim();
+
+                    if (Object.keys(autoFields).length > 0) {
+                        // Update in background without blocking
+                        client.from('profiles').update(autoFields).eq('id', currentUser.id)
+                            .then(({ error }) => {
+                                if (!error) Object.assign(currentProfile, autoFields);
+                            });
+                        // Also update local cache immediately
+                        Object.assign(currentProfile, autoFields);
+                    }
+                }
             }
         } else if (error && (error.code === 'PGRST116' || error.message?.includes('0 rows'))) {
             // Profile doesn't exist yet, create it
@@ -255,35 +293,104 @@ const ICCSupabase = (() => {
 
     async function updateProfile(fields) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
-        fields.updated_at = new Date().toISOString();
+        
+        // Security: Strictly prevent users from updating sensitive fields
+        const safeFields = { ...fields };
+        delete safeFields.role;
+        delete safeFields.id;
+        delete safeFields.email;
+        delete safeFields.team_id;
+        delete safeFields.is_pending_lead;
+        delete safeFields.is_pending_member;
+
+        safeFields.updated_at = new Date().toISOString();
         const { data, error } = await client
-            .from('profiles').update(fields).eq('id', currentUser.id).select().single();
+            .from('profiles').update(safeFields).eq('id', currentUser.id).select().single();
         if (!error && data) currentProfile = data;
         return { data, error };
     }
 
     async function fetchUserById(userId) {
         if (!client) return null;
-        const { data } = await client.from('profiles').select('*').eq('id', userId).maybeSingle();
+        const { data } = await client.from('profiles')
+            .select('*, team_memberships(team_id)')
+            .eq('id', userId)
+            .maybeSingle();
+        
+        if (data) {
+            let membershipTeamId = null;
+            const memberships = data.team_memberships;
+            if (memberships) {
+                if (Array.isArray(memberships) && memberships.length > 0) {
+                    membershipTeamId = memberships[0].team_id;
+                } else if (!Array.isArray(memberships) && memberships.team_id) {
+                    membershipTeamId = memberships.team_id;
+                }
+            }
+            data.team_id = membershipTeamId || (data.role === 'lead' ? data.team_id : null);
+            
+            if (!membershipTeamId && data.role !== 'admin') {
+                data.team_id = null;
+                if (data.role === 'lead') data.role = 'student';
+            }
+        }
         return data;
     }
 
     async function fetchProfileByEmail(email) {
         if (!client || !email) return null;
         const { data } = await client.from('profiles')
-            .select('*')
+            .select('*, team_memberships(team_id)')
             .eq('email', email.toLowerCase().trim())
             .maybeSingle();
+        
+        if (data) {
+            let membershipTeamId = null;
+            const memberships = data.team_memberships;
+            if (memberships) {
+                if (Array.isArray(memberships) && memberships.length > 0) {
+                    membershipTeamId = memberships[0].team_id;
+                } else if (!Array.isArray(memberships) && memberships.team_id) {
+                    membershipTeamId = memberships.team_id;
+                }
+            }
+            data.team_id = membershipTeamId || (data.role === 'lead' ? data.team_id : null);
+            if (!membershipTeamId && data.role !== 'admin') {
+                data.team_id = null;
+                if (data.role === 'lead') data.role = 'student';
+            }
+        }
         return data;
     }
 
     async function searchUsers(query) {
         if (!client) return [];
         const { data } = await client.from('profiles')
-            .select('id, username, full_name, avatar_url, team_id, role')
+            .select('id, username, full_name, avatar_url, team_id, role, team_memberships(team_id)')
             .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
             .limit(20);
-        return data || [];
+        
+        return (data || []).map(u => {
+            let membershipTeamId = null;
+            const memberships = u.team_memberships;
+            if (memberships) {
+                if (Array.isArray(memberships) && memberships.length > 0) {
+                    membershipTeamId = memberships[0].team_id;
+                } else if (!Array.isArray(memberships) && memberships.team_id) {
+                    membershipTeamId = memberships.team_id;
+                }
+            }
+            return {
+                ...u,
+                team_id: membershipTeamId || (u.role === 'lead' ? u.team_id : null)
+            };
+        }).map(u => {
+            if (!u.team_id && u.role !== 'admin') {
+                u.team_id = null;
+                if (u.role === 'lead') u.role = 'student';
+            }
+            return u;
+        });
     }
 
     async function checkUsernameAvailable(username, email = null) {
@@ -355,6 +462,17 @@ const ICCSupabase = (() => {
         const { data, error } = await client.from('posts').insert(fields).select(
             '*, profiles:user_id(id, username, full_name, avatar_url, role, team_id)'
         ).single();
+        return { data, error };
+    }
+
+    async function updatePostStatus(postId, status) {
+        if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        const { data, error } = await client.from('posts')
+            .update({ status })
+            .eq('id', postId)
+            .eq('user_id', currentUser.id) // Security: Only author can update status
+            .select()
+            .single();
         return { data, error };
     }
 
@@ -585,6 +703,8 @@ const ICCSupabase = (() => {
             return { error: { message: 'You already have a pending request for another team. Please cancel it before applying to this one.' } };
         }
         
+        // 3. (Limit removed)
+        
         // 1. Insert join data
         const { error: dataError } = await client.from('team_join_data').upsert({
             user_id: currentUser.id,
@@ -629,7 +749,7 @@ const ICCSupabase = (() => {
         // Fetch from team_memberships table
         const { data, error } = await client
             .from('team_memberships')
-            .select('user:user_id(id, username, full_name, avatar_url, role, updated_at)')
+            .select('user:user_id(id, username, full_name, avatar_url, role, email, usn, section, updated_at)')
             .eq('team_id', teamId);
         
         if (error) return [];
@@ -659,6 +779,17 @@ const ICCSupabase = (() => {
         })).filter(Boolean);
     }
 
+    async function fetchAllTeamCounts() {
+        if (!client) return {};
+        const { data, error } = await client.from('team_memberships').select('team_id');
+        if (error) return {};
+        const counts = {};
+        data.forEach(m => {
+            counts[m.team_id] = (counts[m.team_id] || 0) + 1;
+        });
+        return counts;
+    }
+
     async function approveMember(userId, teamId) {
         if (!client) return { error: { message: 'Not configured' } };
 
@@ -667,6 +798,8 @@ const ICCSupabase = (() => {
         if (existing && existing.length > 0) {
             return { error: { message: 'This user is already a member of another team.' } };
         }
+
+        // 0.5. (Limit removed)
         
         // 1. Cleanup join data
         const { error: delError } = await client.from('team_join_data').delete().eq('user_id', userId).eq('team_id', teamId);
@@ -721,6 +854,12 @@ const ICCSupabase = (() => {
         const { error } = await client.from('team_memberships').delete().eq('user_id', userId).eq('team_id', teamId);
         
         if (!error) {
+            // Also clear team_id in profiles table and revert role if they were a lead
+            const { data: prof } = await client.from('profiles').select('role').eq('id', userId).single();
+            const updateFields = { team_id: null };
+            if (prof && prof.role === 'lead') updateFields.role = 'student';
+            await client.from('profiles').update(updateFields).eq('id', userId);
+
             const teamName = CORE_LEADS.find(l => l.id === parseInt(teamId))?.team || 'the team';
             await createNotification({
                 userId: userId,
@@ -743,6 +882,66 @@ const ICCSupabase = (() => {
         return { error };
     }
 
+    // ── TEAM CHAT ──
+    async function fetchTeamMessages(teamId, limit = 50) {
+        if (!client) return [];
+        try {
+            const { data, error } = await client.from('team_messages')
+                .select('*, profiles(id, username, full_name, avatar_url, role)')
+                .eq('team_id', teamId)
+                .order('created_at', { ascending: false })
+                .limit(limit);
+            if (error) {
+                console.error('fetchTeamMessages error:', error);
+                return [];
+            }
+            return (data || []).reverse();
+        } catch (err) {
+            console.error('fetchTeamMessages exception:', err);
+            return [];
+        }
+    }
+
+    async function sendTeamMessage(teamId, content) {
+        if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        const { data, error } = await client.from('team_messages')
+            .insert({ team_id: teamId, sender_id: currentUser.id, content })
+            .select('*, profiles(id, username, full_name, avatar_url, role)')
+            .single();
+        return { data, error };
+    }
+
+    async function deleteTeamMessage(messageId) {
+        if (!client) return { error: { message: 'Not configured' } };
+        const { error } = await client.from('team_messages').delete().eq('id', messageId);
+        return { error };
+    }
+
+    function subscribeToTeamChat(teamId, onEvent) {
+        if (!client) return null;
+        const channelName = `team-chat-${teamId}`;
+        const channel = client.channel(channelName)
+            .on('postgres_changes', { 
+                event: '*', // Listen to ALL changes (Insert, Delete, etc)
+                schema: 'public', 
+                table: 'team_messages', 
+                filter: `team_id=eq.${teamId}` 
+            }, async (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    const { data } = await client.from('profiles')
+                        .select('id, username, full_name, avatar_url, role')
+                        .eq('id', payload.new.sender_id)
+                        .single();
+                    onEvent({ type: 'INSERT', message: { ...payload.new, profiles: data } });
+                } else if (payload.eventType === 'DELETE') {
+                    onEvent({ type: 'DELETE', messageId: payload.old.id });
+                }
+            })
+            .subscribe();
+        activeChannels.push({ name: channelName, channel });
+        return channelName;
+    }
+
     // ==================== ADMIN ====================
 
     async function fetchLeads() {
@@ -754,26 +953,38 @@ const ICCSupabase = (() => {
     }
 
     async function createLead(fields) {
-        if (!client) return { error: { message: 'Not configured' } };
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
         const { data, error } = await client.from('core_leads').insert([fields]).select();
         return { data: data && data.length > 0 ? data[0] : null, error };
     }
 
     async function updateLead(id, fields) {
-        if (!client) return { error: { message: 'Not configured' } };
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
         fields.updated_at = new Date().toISOString();
+        
         const { data, error } = await client.from('core_leads').update(fields).eq('id', id).select();
         return { data: data && data.length > 0 ? data[0] : null, error };
     }
 
     async function deleteLead(id) {
-        if (!client) return { error: { message: 'Not configured' } };
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
+        
+        // 1. Revert any leads assigned to this team
+        await client.from('profiles').update({ role: 'student', team_id: null }).eq('team_id', id).eq('role', 'lead');
+        
+        // 2. Remove memberships
+        await client.from('team_memberships').delete().eq('team_id', id);
+
+        // 3. Delete the lead record
         const { error } = await client.from('core_leads').delete().eq('id', id);
         return { error };
     }
 
     async function approveLead(userId, teamId) {
         if (!client) return { error: { message: 'Not configured' } };
+
+        // (Limit removed)
+
         const { data, error } = await client.from('profiles')
             .update({ role: 'lead', is_pending_lead: false, team_id: teamId })
             .eq('id', userId).select().single();
@@ -796,14 +1007,14 @@ const ICCSupabase = (() => {
     }
 
     async function getPendingLeads() {
-        if (!client) return [];
+        if (!client || !isAdmin()) return [];
         const { data } = await client.from('profiles')
             .select('*').eq('is_pending_lead', true);
         return data || [];
     }
 
     async function createBroadcast(message) {
-        if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
         const { data, error } = await client.from('broadcasts')
             .insert({ admin_id: currentUser.id, message, is_active: true })
             .select().single();
@@ -825,14 +1036,18 @@ const ICCSupabase = (() => {
     }
 
     async function adminDeletePost(postId) {
-        if (!client) return { error: { message: 'Not configured' } };
-        // Admin uses service role or RLS bypass — for now using normal delete
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
         const { error } = await client.from('posts').delete().eq('id', postId);
         return { error };
     }
 
     async function adminUpdateUser(userId, fields) {
-        if (!client) return { error: { message: 'Not configured' } };
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
+
+        if (fields.team_id === 'none') fields.team_id = null;
+
+        // (Limit removed)
+
         const { data, error } = await client.from('profiles')
             .update(fields).eq('id', userId).select().single();
         
@@ -842,13 +1057,19 @@ const ICCSupabase = (() => {
             const { error: deleteError } = await client.from('team_memberships').delete().eq('user_id', userId);
             if (deleteError) console.error('adminUpdateUser deleteError:', deleteError);
             
-            if (fields.team_id !== null) {
+            if (fields.team_id !== null && fields.team_id !== 'none') {
                 const { error: insertError } = await client.from('team_memberships').insert({
                     user_id: userId,
                     team_id: fields.team_id
                 });
                 if (insertError) console.error('adminUpdateUser insertError:', insertError);
             } else {
+                // If removing from team, also ensure role is not 'lead' anymore
+                const { data: prof } = await client.from('profiles').select('role').eq('id', userId).single();
+                if (prof && prof.role === 'lead') {
+                    await client.from('profiles').update({ role: 'student' }).eq('id', userId);
+                }
+
                 // Trigger Removal Email Notification
                 const user = await fetchUserById(userId);
                 if (user?.email) {
@@ -864,13 +1085,13 @@ const ICCSupabase = (() => {
     }
 
     async function adminDeleteUser(userId) {
-        if (!client) return { error: { message: 'Not configured' } };
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
         const { error } = await client.rpc('admin_delete_user', { target_user_id: userId });
         return { error };
     }
 
     async function getAllProfiles() {
-        if (!client) return [];
+        if (!client || !isAdmin()) return [];
         // Fetch profiles and any associated team memberships to guarantee accurate admin rendering
         const { data, error } = await client.from('profiles')
             .select('*, team_memberships(team_id)')
@@ -883,22 +1104,23 @@ const ICCSupabase = (() => {
 
         return (data || []).map(u => {
             let membershipTeamId = null;
-            if (u.team_memberships) {
-                if (Array.isArray(u.team_memberships) && u.team_memberships.length > 0) {
-                    membershipTeamId = u.team_memberships[0].team_id;
-                } else if (!Array.isArray(u.team_memberships) && u.team_memberships.team_id) {
-                    membershipTeamId = u.team_memberships.team_id;
+            const memberships = u.team_memberships;
+            if (memberships) {
+                if (Array.isArray(memberships) && memberships.length > 0) {
+                    membershipTeamId = memberships[0].team_id;
+                } else if (!Array.isArray(memberships) && memberships.team_id) {
+                    membershipTeamId = memberships.team_id;
                 }
             }
             return {
                 ...u,
-                team_id: membershipTeamId || u.team_id
+                team_id: membershipTeamId
             };
         });
     }
 
     async function getAllPosts() {
-        if (!client) return [];
+        if (!client || !isAdmin()) return [];
         const { data } = await client.from('posts')
             .select('*, profiles:user_id(id, username, full_name, avatar_url, role)')
             .order('created_at', { ascending: false });
@@ -951,8 +1173,43 @@ const ICCSupabase = (() => {
                 body 
             }).select();
             
-        if (error) console.error('❌ Notification DB Error:', error);
-        else console.log('✅ Notification created successfully:', data?.[0]);
+        if (error) {
+            console.error('❌ Notification DB Error:', error);
+        } else if (data?.[0]) {
+            console.log('✅ Notification created successfully:', data[0]);
+            
+            // Trigger Mobile Push Notification if user has a token
+            try {
+                const { data: profile } = await client.from('profiles').select('fcm_token').eq('id', userId).single();
+                if (profile && profile.fcm_token) {
+                    const titleMap = {
+                        like: 'New Like ❤️',
+                        comment: 'New Comment 💬',
+                        message: 'New Message ✉️',
+                        post: 'New Team Post',
+                        broadcast: 'Important Broadcast 📢',
+                        team_join: 'Team Join Request',
+                        team_approve: 'Request Approved! 🎉',
+                        team_deny: 'Request Status Update',
+                        mention: 'New Mention',
+                        welcome: 'Welcome to ICC Hub! 🚀',
+                        system: 'System Alert'
+                    };
+                    
+                    fetch((ICC_CONFIG.API_BASE_URL || '') + '/api/send-push', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: titleMap[type] || 'New Notification',
+                            body: body || 'You have a new notification waiting for you.',
+                            token: profile.fcm_token
+                        })
+                    }).catch(e => console.error('Push API network error:', e));
+                }
+            } catch (err) {
+                console.error('Error triggering push notification:', err);
+            }
+        }
 
         return { data: data?.[0], error };
     }
@@ -1097,6 +1354,25 @@ const ICCSupabase = (() => {
                 event: '*', schema: 'public', table: 'team_join_data',
                 filter: `team_id=eq.${teamId}`
             }, (payload) => onUpdate(payload))
+            .on('postgres_changes', {
+                event: '*', schema: 'public', table: 'core_leads',
+                filter: `id=eq.${teamId}`
+            }, (payload) => onUpdate(payload))
+            .subscribe();
+        
+        activeChannels.push({ name: channelName, channel });
+        return channel;
+    }
+
+    function subscribeToAllLeads(onUpdate) {
+        if (!client) return null;
+        const channelName = 'all-leads';
+        unsubscribeChannel(channelName);
+
+        const channel = client.channel(channelName)
+            .on('postgres_changes', {
+                event: 'UPDATE', schema: 'public', table: 'core_leads'
+            }, (payload) => onUpdate(payload))
             .subscribe();
         
         activeChannels.push({ name: channelName, channel });
@@ -1156,9 +1432,25 @@ const ICCSupabase = (() => {
         return channel;
     }
 
-    function unsubscribeChannel(name) {
+    function subscribeChannel(channelName, table, event, callback) {
+        if (!client) return null;
+        unsubscribeChannel(channelName);
+        
+        const channel = client.channel(channelName)
+            .on('postgres_changes', {
+                event: event,
+                schema: 'public',
+                table: table
+            }, (payload) => callback(payload))
+            .subscribe();
+            
+        activeChannels.push({ name: channelName, channel });
+        return channel;
+    }
+
+    function unsubscribeChannel(nameOrChannel) {
         if (!client) return;
-        const idx = activeChannels.findIndex(c => c.name === name);
+        const idx = activeChannels.findIndex(c => c.name === nameOrChannel || c.channel === nameOrChannel);
         if (idx !== -1) {
             client.removeChannel(activeChannels[idx].channel);
             activeChannels.splice(idx, 1);
@@ -1169,6 +1461,204 @@ const ICCSupabase = (() => {
         if (!client) return;
         activeChannels.forEach(c => client.removeChannel(c.channel));
         activeChannels = [];
+    }
+
+    // ==================== INVENTORY ====================
+
+    async function fetchInventory() {
+        if (!client) return [];
+        const { data, error } = await client.from('inventory')
+            .select('*')
+            .order('name', { ascending: true });
+        if (error) { console.error('fetchInventory error:', error); return []; }
+        return data || [];
+    }
+
+    async function createInventoryItem(fields) {
+        if (!client || !isAdmin()) return { error: { message: 'Not authorized' } };
+        const { data, error } = await client.from('inventory').insert(fields).select().single();
+        return { data, error };
+    }
+
+    async function updateInventoryItem(itemId, fields) {
+        if (!client || !isAdmin()) return { error: { message: 'Not authorized' } };
+        fields.updated_at = new Date().toISOString();
+        const { data, error } = await client.from('inventory').update(fields).eq('id', itemId).select().single();
+        return { data, error };
+    }
+
+    async function deleteInventoryItem(itemId) {
+        if (!client || !isAdmin()) return { error: { message: 'Not authorized' } };
+        const { error } = await client.from('inventory').delete().eq('id', itemId);
+        return { error };
+    }
+
+    async function requestInventoryItem(itemId, quantity, projectName, teamName = null) {
+        if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        
+        // Check availability
+        const { data: item } = await client.from('inventory').select('available_stock').eq('id', itemId).single();
+        if (!item || item.available_stock < quantity) {
+            return { error: { message: 'Requested quantity exceeds available stock' } };
+        }
+
+        const { data, error } = await client.from('inventory_requests').insert({
+            item_id: itemId,
+            user_id: currentUser.id,
+            quantity,
+            project_name: projectName,
+            team_name: teamName,
+            status: 'pending'
+        }).select().single();
+
+        return { data, error };
+    }
+
+    async function fetchInventoryRequests(status = null) {
+        if (!client || !isAdmin()) return [];
+        let query = client.from('inventory_requests')
+            .select('*, inventory:item_id(*), profiles:user_id(id, full_name, usn, phone, section, avatar_url)')
+            .order('requested_at', { ascending: false });
+        
+        if (status) query = query.eq('status', status);
+        
+        const { data, error } = await query;
+        if (error) { console.error('fetchInventoryRequests error:', error); return []; }
+        return data || [];
+    }
+
+    async function fetchMyInventoryRequests() {
+        if (!client || !currentUser) return [];
+        const { data, error } = await client.from('inventory_requests')
+            .select('*, inventory:item_id(*)')
+            .eq('user_id', currentUser.id)
+            .order('requested_at', { ascending: false });
+        if (error) { console.error('fetchMyInventoryRequests error:', error); return []; }
+        return data || [];
+    }
+
+    async function updateInventoryRequestStatus(requestId, status) {
+        if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        
+        // 1. Fetch the request once to check permissions and get data for stock updates
+        const { data: req, error: fetchError } = await client.from('inventory_requests')
+            .select('*, inventory:item_id(name)')
+            .eq('id', requestId)
+            .limit(1);
+            
+        if (fetchError) return { error: fetchError };
+        const requestData = (req && req.length > 0) ? req[0] : null;
+        if (!requestData) return { error: { message: 'Request not found' } };
+        
+        const isAdminUser = isAdmin();
+        
+        // 2. Permission Check
+        if (!isAdminUser) {
+            // Non-admins can only cancel their own pending requests
+            if (status !== 'cancelled') return { error: { message: 'Not authorized' } };
+            if (requestData.user_id !== currentUser.id) return { error: { message: 'Not authorized' } };
+            if (requestData.status !== 'pending') return { error: { message: 'Only pending requests can be cancelled' } };
+        }
+        
+        // 3. Prepare update fields
+        const updateFields = { status, updated_at: new Date().toISOString() };
+        if (status === 'taken') updateFields.collected_at = new Date().toISOString();
+        if (status === 'completed') updateFields.returned_at = new Date().toISOString();
+
+        // 4. Handle stock updates for admin actions
+        if (status === 'completed' || status === 'taken') {
+            const { data: item } = await client.from('inventory')
+                .select('available_stock')
+                .eq('id', requestData.item_id)
+                .limit(1);
+                
+            if (item && item.length > 0) {
+                const availableStock = item[0].available_stock;
+                let newStock = availableStock;
+                
+                if (status === 'completed') {
+                    newStock += requestData.quantity;
+                } else if (status === 'taken') {
+                    newStock = Math.max(0, availableStock - requestData.quantity);
+                }
+                
+                if (newStock !== availableStock) {
+                    await client.from('inventory').update({ 
+                        available_stock: newStock 
+                    }).eq('id', requestData.item_id);
+                }
+            }
+        }
+
+        // 5. Execute the update
+        const { data, error } = await client.from('inventory_requests')
+            .update(updateFields)
+            .eq('id', requestId)
+            .select();
+
+        // If no error but also no data returned, RLS silently blocked the update
+        if (!error && (!data || data.length === 0)) {
+            return { data: null, error: { message: 'Update blocked by database policy. Please contact an admin.' } };
+        }
+
+        // Send rejection notification to the user when admin cancels their request
+        if (!error && isAdminUser && status === 'cancelled' && requestData.user_id) {
+            const itemName = requestData.inventory?.name || 'your component request';
+            await createNotification({
+                userId: requestData.user_id,
+                type: 'system',
+                actorId: currentUser.id,
+                body: `inventory_reject:${requestData.item_id}:${itemName}`,
+                referenceId: String(requestData.id)
+            });
+        }
+
+        return { data: (data && data.length > 0) ? data[0] : null, error };
+    }
+
+    // ==================== ATTENDANCE ====================
+
+    async function fetchTeamAttendance(teamId, date) {
+        if (!client) return [];
+        const { data, error } = await client.from('attendance')
+            .select('*')
+            .eq('team_id', teamId)
+            .eq('date', date);
+        if (error) { console.error('fetchTeamAttendance error:', error); return []; }
+        return data || [];
+    }
+
+    async function submitAttendance(records) {
+        if (!client || (!isLead() && !isAdmin())) return { error: { message: 'Unauthorized' } };
+        const { data, error } = await client.from('attendance').upsert(records, { onConflict: 'user_id, date' });
+        return { data, error };
+    }
+
+    async function fetchUserAttendanceHistory(userId) {
+        if (!client) return [];
+        const { data, error } = await client.from('attendance')
+            .select('*')
+            .eq('user_id', userId)
+            .order('date', { ascending: false });
+        if (error) { console.error('fetchUserAttendanceHistory error:', error); return []; }
+        return data || [];
+    }
+
+    async function fetchAllAttendanceData() {
+        if (!client || !isAdmin()) return [];
+        const { data, error } = await client.from('attendance')
+            .select('*, user:user_id(id, full_name, usn, section), team:team_id(team)')
+            .order('date', { ascending: false });
+        if (error) { console.error('fetchAllAttendanceData error:', error); return []; }
+        return data || [];
+    }
+
+    function subscribeToInventory(callback) {
+        return subscribeChannel('inventory-sync', 'inventory', '*', callback);
+    }
+
+    function subscribeToInventoryRequests(callback) {
+        return subscribeChannel('requests-sync', 'inventory_requests', '*', callback);
     }
 
     // ==================== HELPERS ====================
@@ -1193,11 +1683,12 @@ const ICCSupabase = (() => {
     return {
         init, signInWithGoogle, sendOTP, verifyOTP, signOut, getSession, onAuthStateChange,
         fetchProfile, updateProfile, fetchUserById, fetchProfileByEmail, searchUsers, checkUsernameAvailable,
-        fetchPosts, fetchPostById, fetchPostsByTeam, fetchPostsByUser, createPost, deletePost,
+        fetchPosts, fetchPostById, fetchPostsByTeam, fetchPostsByUser, createPost, updatePostStatus, deletePost,
         toggleLike, hasLiked, fetchUserLikes,
         fetchComments, addComment, deleteComment,
         fetchConversations, fetchMessages, sendMessage, deleteMessage, markAsRead, getUnreadCount,
         joinTeam, cancelJoinRequest, getTeamMembers, getPendingMembers, approveMember, denyMember,
+        fetchTeamMessages, sendTeamMessage, deleteTeamMessage, subscribeToTeamChat,
         fetchLeads, createLead, updateLead, deleteLead,
         approveLead, denyLead, getPendingLeads,
         createBroadcast, getActiveBroadcast, dismissBroadcast, adminDeletePost,
@@ -1207,8 +1698,12 @@ const ICCSupabase = (() => {
         deleteNotification, deleteAllNotifications, adminClearAllNotifications,
         uploadImage, deleteImage,
         signInWithPassword, updatePassword,
+        fetchInventory, createInventoryItem, updateInventoryItem, deleteInventoryItem,
+        requestInventoryItem, fetchInventoryRequests, fetchMyInventoryRequests, updateInventoryRequestStatus,
+        fetchTeamAttendance, submitAttendance, fetchUserAttendanceHistory, fetchAllAttendanceData,
+        subscribeToInventory, subscribeToInventoryRequests,
         subscribeToFeed, subscribeToMessages, subscribeToConversation,
-        subscribeToTeam, subscribeToBroadcasts, subscribeToNotifications,
+        subscribeToTeam, subscribeToAllLeads, subscribeToBroadcasts, subscribeToNotifications,
         unsubscribeChannel, cleanupAllChannels,
         getUser, getProfile, isConfigured, getClient, isAdmin, isLead, needsOnboarding
     };
