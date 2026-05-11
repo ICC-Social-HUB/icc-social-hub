@@ -60,14 +60,13 @@ const InventoryView = (() => {
             });
         });
 
-        if (ICCSupabase.isAdmin()) {
-            ICCSupabase.subscribeToInventoryRequests(() => {
-                refreshData().then(() => {
-                    const container = document.getElementById('app');
-                    if (container && window.location.hash === '#inventory') render(container);
-                });
+        // Subscribe all users (not just admins) to request changes for real-time updates
+        ICCSupabase.subscribeToInventoryRequests(() => {
+            refreshData().then(() => {
+                const container = document.getElementById('app');
+                if (container && window.location.hash === '#inventory') render(container);
             });
-        }
+        });
     }
 
     function render(container) {
@@ -598,10 +597,19 @@ const InventoryView = (() => {
     async function cancelMyRequest(requestId) {
         if (!confirm('Are you sure you want to cancel this borrow request?')) return;
         const { error } = await ICCSupabase.updateInventoryRequestStatus(requestId, 'cancelled');
-        if (error) Toast.show(error.message, 'error');
-        else {
+        if (error) {
+            Toast.show(error.message, 'error');
+        } else {
             Toast.show('Request cancelled', 'success');
-            refreshData().then(() => render(document.getElementById('app')));
+            // Optimistically remove from local state for instant UI feedback
+            myRequests = myRequests.filter(r => r.id !== requestId);
+            const container = document.getElementById('app');
+            if (container && window.location.hash === '#inventory') render(container);
+            // Then do a full refresh in the background
+            refreshData().then(() => {
+                const container = document.getElementById('app');
+                if (container && window.location.hash === '#inventory') render(container);
+            });
         }
     }
 
