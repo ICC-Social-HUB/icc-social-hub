@@ -552,7 +552,11 @@ const InventoryView = (() => {
                 btn.innerText = 'Add to Inventory';
                 return;
             }
-            const { url, error: uploadError } = await ICCSupabase.uploadImage('inventory', imageFile);
+            
+            // Auto-compress and crop to 16:9
+            const processedFile = await processInventoryImage(imageFile);
+            
+            const { url, error: uploadError } = await ICCSupabase.uploadImage('inventory', processedFile);
             if (uploadError) {
                 Toast.show('Failed to upload image', 'error');
                 console.error(uploadError);
@@ -673,7 +677,11 @@ const InventoryView = (() => {
                 btn.innerText = 'Update Item';
                 return;
             }
-            const { url, error: uploadError } = await ICCSupabase.uploadImage('inventory', imageFile);
+
+            // Auto-compress and crop to 16:9
+            const processedFile = await processInventoryImage(imageFile);
+
+            const { url, error: uploadError } = await ICCSupabase.uploadImage('inventory', processedFile);
             if (uploadError) {
                 Toast.show('Failed to upload image', 'error');
             } else {
@@ -725,6 +733,51 @@ const InventoryView = (() => {
     function clearSearch() {
         searchQuery = '';
         render(document.getElementById('app'));
+    }
+
+    async function processInventoryImage(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (e) => {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    // Target dimensions for 16:9 storefront cards
+                    const targetWidth = 800;
+                    const targetHeight = 450; 
+                    canvas.width = targetWidth;
+                    canvas.height = targetHeight;
+                    const ctx = canvas.getContext('2d');
+
+                    // Calculate cropping to center-fill the 16:9 area
+                    const imgAspect = img.width / img.height;
+                    const targetAspect = targetWidth / targetHeight;
+                    let sx, sy, sWidth, sHeight;
+
+                    if (imgAspect > targetAspect) {
+                        sHeight = img.height;
+                        sWidth = img.height * targetAspect;
+                        sx = (img.width - sWidth) / 2;
+                        sy = 0;
+                    } else {
+                        sWidth = img.width;
+                        sHeight = img.width / targetAspect;
+                        sx = 0;
+                        sy = (img.height - sHeight) / 2;
+                    }
+
+                    ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
+
+                    canvas.toBlob((blob) => {
+                        // Generate a new filename with .jpg extension as we've compressed to jpeg
+                        const newName = file.name.substring(0, file.name.lastIndexOf('.')) + '.jpg';
+                        resolve(new File([blob], newName, { type: 'image/jpeg' }));
+                    }, 'image/jpeg', 0.85); // 85% quality is optimal for web
+                };
+            };
+        });
     }
 
     return { 
