@@ -52,13 +52,13 @@
 
 
     <!-- Global Sticky Top Bar -->
-    <header class="sticky top-0 z-[500] w-full bg-obsidian/80 backdrop-blur-xl border-b border-zinc-800/50 h-16 flex items-center justify-between px-4">
+    <header class="sticky top-0 z-[500] w-full bg-obsidian/80 backdrop-blur-xl border-b border-zinc-800/50 h-16 flex items-center justify-between px-4 md:pl-[72px]">
         <div id="sidebar-toggle-root"></div>
         <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-gradient-to-br from-crimson to-crimson-dark rounded-lg flex items-center justify-center font-heading font-bold text-[10px]">ICC</div>
             <span class="font-heading font-bold text-sm tracking-tight">Social Hub</span>
         </div>
-        <div id="notif-bell-root-header"></div>
+        <div id="notif-bell-root"></div>
     </header>
 
     <!-- Modal Root (Auth, Create Post, User Profile) -->
@@ -73,8 +73,7 @@
     <!-- Toast Notifications -->
     <div id="toast-root" class="fixed top-20 right-4 z-[300] space-y-2 pointer-events-none"></div>
 
-    <!-- Floating Notification Bell (hidden, header bell used instead) -->
-    <div id="notif-bell-root" class="hidden"></div>
+
 
     <!-- Floating Particles Background -->
     <div id="particles-bg" class="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true"></div>
