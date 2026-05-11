@@ -252,8 +252,10 @@ const AttendanceView = (() => {
                         <tr>
                             <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider">Student</th>
                             <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider">Team</th>
+                            <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-center">Branch</th>
+                            <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-center">Sec</th>
                             <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-center">Status</th>
-                            <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-right">Recorded At</th>
+                            <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-right">Time</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-zinc-800/50">
@@ -261,14 +263,19 @@ const AttendanceView = (() => {
                             const u = r.user || {};
                             const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
                             const fullName = u.full_name || (student ? student.fullName : 'Unknown');
+                            const usn = u.usn || (student ? student.usn : '—');
+                            const section = u.section || (student ? student.section : '—');
+                            const branch = parseBranch(usn);
                             
                             return `
                             <tr class="hover:bg-zinc-800/20 transition-colors">
                                 <td class="px-4 py-3">
                                     <p class="font-semibold text-white">${fullName}</p>
-                                    <p class="text-[10px] text-zinc-500 font-mono">${u.usn || '—'}</p>
+                                    <p class="text-[10px] text-zinc-500 font-mono">${usn}</p>
                                 </td>
                                 <td class="px-4 py-3 text-zinc-400">${r.team?.team || 'No Team'}</td>
+                                <td class="px-4 py-3 text-center text-zinc-500">${branch}</td>
+                                <td class="px-4 py-3 text-center text-zinc-500">${section}</td>
                                 <td class="px-4 py-3 text-center">
                                     <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${r.status === 'present' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}">
                                         ${r.status}
@@ -278,7 +285,7 @@ const AttendanceView = (() => {
                                     ${new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </td>
                             </tr>
-                        `}).join('') : `<tr><td colspan="4" class="px-4 py-12 text-center">
+                        `}).join('') : `<tr><td colspan="6" class="px-4 py-12 text-center">
                             <div class="text-zinc-500 italic mb-1">No entries for this date.</div>
                             <div class="text-[10px] text-zinc-600">Leads may not have submitted attendance yet.</div>
                         </td></tr>`}
@@ -548,12 +555,15 @@ const AttendanceView = (() => {
     }
 
     function exportLogToCSV() {
-        let csv = 'Date,Student,USN,Team,Status,Recorded At\n';
+        let csv = 'Date,Student,USN,Branch,Section,Team,Status,Recorded At\n';
         rawRecords.forEach(r => {
             const u = r.user || {};
             const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
             const fullName = u.full_name || (student ? student.fullName : 'Unknown');
-            csv += `"${r.date}","${fullName}","${u.usn || ''}","${r.team?.team || ''}","${r.status}","${r.created_at}"\n`;
+            const usn = u.usn || (student ? student.usn : '');
+            const section = u.section || (student ? student.section : '');
+            const branch = parseBranch(usn);
+            csv += `"${r.date}","${fullName}","${usn}","${branch}","${section}","${r.team?.team || ''}","${r.status}","${r.created_at}"\n`;
         });
         downloadCSV(csv, `attendance_log_${new Date().toISOString().split('T')[0]}.csv`);
     }
