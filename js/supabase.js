@@ -250,6 +250,28 @@ const ICCSupabase = (() => {
                         else console.warn('Note: Profile email sync skipped (column might be missing)');
                     });
             }
+
+            // Auto-populate USN, Section and Phone from STUDENT_DATA if missing
+            if ((!data.usn || !data.section || !data.phone) && typeof window.getStudentDataByEmail === 'function') {
+                const email = currentProfile.email || currentUser.email;
+                const studentRecord = window.getStudentDataByEmail(email);
+                if (studentRecord) {
+                    const autoFields = {};
+                    if (!data.usn && studentRecord.usn) autoFields.usn = studentRecord.usn.trim();
+                    if (!data.section && studentRecord.section) autoFields.section = studentRecord.section.trim();
+                    if (!data.phone && studentRecord.phone) autoFields.phone = String(studentRecord.phone).trim();
+
+                    if (Object.keys(autoFields).length > 0) {
+                        // Update in background without blocking
+                        client.from('profiles').update(autoFields).eq('id', currentUser.id)
+                            .then(({ error }) => {
+                                if (!error) Object.assign(currentProfile, autoFields);
+                            });
+                        // Also update local cache immediately
+                        Object.assign(currentProfile, autoFields);
+                    }
+                }
+            }
         } else if (error && (error.code === 'PGRST116' || error.message?.includes('0 rows'))) {
             // Profile doesn't exist yet, create it
             const meta = currentUser.user_metadata || {};
