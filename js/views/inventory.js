@@ -510,15 +510,15 @@ const InventoryView = (() => {
                             </div>
 
                             <div>
-                                <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-2 ml-1 tracking-wider">Component Image (.png only)</label>
+                                <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-2 ml-1 tracking-wider">Component Image (.png, .jpg, .jpeg)</label>
                                 <div class="relative group">
-                                    <input type="file" id="add-image" accept=".png" class="hidden" onchange="document.getElementById('file-name-add').textContent = this.files[0]?.name || 'Select PNG Image'">
+                                    <input type="file" id="add-image" accept=".png,.jpg,.jpeg" class="hidden" onchange="document.getElementById('file-name-add').textContent = this.files[0]?.name || 'Select Image'">
                                     <label for="add-image" class="flex flex-col items-center justify-center gap-3 w-full bg-zinc-950/50 border-2 border-dashed border-zinc-800 rounded-2xl p-8 text-sm text-zinc-500 cursor-pointer hover:border-crimson/50 hover:bg-zinc-900/50 transition-all group-active:scale-[0.98]">
                                         <div class="w-12 h-12 bg-zinc-900 rounded-xl flex items-center justify-center text-zinc-400 group-hover:text-crimson transition-colors shadow-inner">
                                             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                         </div>
-                                        <span id="file-name-add" class="font-medium">Select PNG Image</span>
-                                        <span class="text-[10px] text-zinc-600 uppercase">Optional • PNG only</span>
+                                        <span id="file-name-add" class="font-medium">Select Image</span>
+                                        <span class="text-[10px] text-zinc-600 uppercase">Optional • PNG, JPG, JPEG</span>
                                     </label>
                                 </div>
                             </div>
@@ -544,8 +544,10 @@ const InventoryView = (() => {
         const imageFile = document.getElementById('add-image').files[0];
         
         if (imageFile) {
-            if (!imageFile.name.toLowerCase().endsWith('.png')) {
-                Toast.show('Only PNG images are allowed', 'error');
+            const validTypes = ['.png', '.jpg', '.jpeg'];
+            const isValid = validTypes.some(ext => imageFile.name.toLowerCase().endsWith(ext));
+            if (!isValid) {
+                Toast.show('Only PNG, JPG, and JPEG images are allowed', 'error');
                 btn.disabled = false;
                 btn.innerText = 'Add to Inventory';
                 return;
@@ -635,12 +637,12 @@ const InventoryView = (() => {
                                 <input type="number" id="edit-available" value="${item.available_stock}" min="0" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-crimson outline-none transition-all">
                             </div>
                             <div class="col-span-2">
-                                <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-1 ml-1 tracking-wider">Component Image (.png only, optional)</label>
+                                <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-1 ml-1 tracking-wider">Component Image (.png, .jpg, .jpeg, optional)</label>
                                 <div class="relative group">
-                                    <input type="file" id="edit-image" accept=".png" class="hidden" onchange="document.getElementById('file-name-edit').textContent = this.files[0]?.name || 'No file selected'">
+                                    <input type="file" id="edit-image" accept=".png,.jpg,.jpeg" class="hidden" onchange="document.getElementById('file-name-edit').textContent = this.files[0]?.name || 'No file selected'">
                                     <label for="edit-image" class="flex items-center justify-center gap-2 w-full bg-zinc-950 border-2 border-dashed border-zinc-800 rounded-xl px-4 py-6 text-sm text-zinc-500 cursor-pointer hover:border-crimson/50 hover:bg-zinc-900/50 transition-all">
                                         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                        <span id="file-name-edit">${item.image_url ? 'Change Image' : 'Select PNG Image'}</span>
+                                        <span id="file-name-edit">${item.image_url ? 'Change Image' : 'Select Image'}</span>
                                     </label>
                                 </div>
                             </div>
@@ -663,8 +665,10 @@ const InventoryView = (() => {
         const imageFile = document.getElementById('edit-image').files[0];
         
         if (imageFile) {
-            if (!imageFile.name.toLowerCase().endsWith('.png')) {
-                Toast.show('Only PNG images are allowed', 'error');
+            const validTypes = ['.png', '.jpg', '.jpeg'];
+            const isValid = validTypes.some(ext => imageFile.name.toLowerCase().endsWith(ext));
+            if (!isValid) {
+                Toast.show('Only PNG, JPG, and JPEG images are allowed', 'error');
                 btn.disabled = false;
                 btn.innerText = 'Update Item';
                 return;
