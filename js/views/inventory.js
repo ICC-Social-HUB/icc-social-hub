@@ -96,6 +96,7 @@ const InventoryView = (() => {
                         <button onclick="InventoryView.setTab('my-requests')" class="px-6 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${currentTab === 'my-requests' ? 'bg-crimson text-white shadow-lg shadow-crimson/20' : 'bg-zinc-900/50 text-zinc-500 hover:text-zinc-300'}">My Borrows</button>
                         ${isAdmin ? `
                             <button onclick="InventoryView.setTab('management')" class="px-6 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${currentTab === 'management' ? 'bg-crimson text-white shadow-lg shadow-crimson/20' : 'bg-zinc-900/50 text-zinc-500 hover:text-zinc-300'}">Admin Panel</button>
+                            <button onclick="InventoryView.setTab('stock-control')" class="px-6 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${currentTab === 'stock-control' ? 'bg-crimson text-white shadow-lg shadow-crimson/20' : 'bg-zinc-900/50 text-zinc-500 hover:text-zinc-300'}">Stock Control</button>
                         ` : ''}
                     </div>
 
@@ -119,11 +120,11 @@ const InventoryView = (() => {
         } else if (currentTab === 'my-requests') {
             return renderMyRequests();
         } else if (currentTab === 'management') {
-            if (!ICCSupabase.isAdmin()) {
-                currentTab = 'storefront';
-                return renderStorefront();
-            }
+            if (!ICCSupabase.isAdmin()) { currentTab = 'storefront'; return renderStorefront(); }
             return renderManagement();
+        } else if (currentTab === 'stock-control') {
+            if (!ICCSupabase.isAdmin()) { currentTab = 'storefront'; return renderStorefront(); }
+            return renderStockControl();
         }
     }
 
@@ -361,28 +362,43 @@ const InventoryView = (() => {
                     </div>
                 </div>
 
-                <!-- Product Inventory CRUD List -->
-                <div>
-                    <h2 class="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-4">Stock Control</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        ${inventory.map(item => `
-                            <div class="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800 flex items-center justify-between gap-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center border border-zinc-700 overflow-hidden">
-                                        ${item.image_url ? `<img src="${item.image_url}" class="w-full h-full object-cover">` : `<svg class="w-5 h-5 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`}
-                                    </div>
-                                    <div>
-                                        <div class="font-bold text-xs">${item.name}</div>
-                                        <div class="text-[10px] text-zinc-500">${item.available_stock} / ${item.total_stock} Available</div>
-                                    </div>
+            </div>
+        `;
+    }
+
+    function renderStockControl() {
+        return `
+            <div class="space-y-6 animate-slide-up">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-bold text-zinc-500 uppercase tracking-widest">Stock Control</h2>
+                    <span class="text-[10px] text-zinc-600 bg-zinc-900 px-2 py-1 rounded-lg border border-zinc-800">${inventory.length} components</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${inventory.map(item => `
+                        <div class="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800 flex items-center justify-between gap-4 hover:border-zinc-700 transition-all">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center border border-zinc-700 overflow-hidden shrink-0">
+                                    ${item.image_url ? `<img src="${item.image_url}" class="w-full h-full object-cover">` : `<svg class="w-6 h-6 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`}
                                 </div>
-                                <div class="flex items-center gap-1">
-                                    <button onclick="InventoryView.openEditModal('${item.id}')" class="p-2 text-zinc-400 hover:text-white transition-all"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
-                                    <button onclick="InventoryView.deleteItem('${item.id}')" class="p-2 text-zinc-400 hover:text-red-500 transition-all"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                                <div>
+                                    <div class="font-bold text-sm">${item.name}</div>
+                                    <div class="text-[10px] text-zinc-500 mt-0.5">${item.category}</div>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-[10px] font-bold ${item.available_stock > 0 ? 'text-emerald-400' : 'text-red-400'}">${item.available_stock} available</span>
+                                        <span class="text-[10px] text-zinc-600">/ ${item.total_stock} total</span>
+                                    </div>
                                 </div>
                             </div>
-                        `).join('')}
-                    </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button onclick="InventoryView.openEditModal('${item.id}')" class="p-2 text-zinc-400 hover:text-white transition-all" title="Edit">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                </button>
+                                <button onclick="InventoryView.deleteItem('${item.id}')" class="p-2 text-zinc-400 hover:text-red-500 transition-all" title="Delete">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
             </div>
         `;
