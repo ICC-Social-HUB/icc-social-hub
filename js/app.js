@@ -64,6 +64,7 @@
         });
 
         // 5. Mount components
+        Sidebar.mount();
         BottomNav.mount();
         NotifBell.mount();
 

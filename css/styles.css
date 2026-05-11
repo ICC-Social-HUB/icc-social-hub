@@ -217,7 +217,7 @@ input, select, textarea { font-size: 16px !important; }
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 50;
+    z-index: 1000;
     background: rgba(3, 3, 3, 0.92);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
@@ -949,7 +949,7 @@ input, select, textarea { font-size: 16px !important; }
         flex-direction: column;
         align-items: center;
         padding: 16px 0;
-        z-index: 50;
+        z-index: 1000;
     }
 
     .desktop-nav-item {
@@ -1240,3 +1240,49 @@ input, select, textarea { font-size: 16px !important; }
     .tile-action { grid-column: span 2; }
 }
 
+/* ---------- Inventory Specifics ---------- */
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.inventory-card {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.inventory-card:hover {
+    transform: translateY(-8px);
+}
+
+
+/* Attendance View Styles */
+.mode-tab {
+    padding: 6px 16px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    color: #71717a;
+}
+.mode-tab:hover {
+    color: #d4d4d8;
+}
+.mode-tab.active {
+    background-color: #27272a;
+    color: #ffffff;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.status-toggle-btn {
+    transition: all 0.2s;
+}
+.status-toggle-btn:active {
+    transform: scale(0.9);
+}
+
+.spinner-sm {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+}

@@ -66,11 +66,21 @@ const Router = (() => {
                 if (!ICCSupabase.getUser()) { window.location.hash = '#dashboard'; return; }
                 OnboardingView.mount(container);
             } else if (hash === '#admin') {
+                if (!ICCSupabase.isAdmin()) {
+                    window.location.hash = '#dashboard';
+                    return;
+                }
                 previousView = 'admin';
                 AdminView.mount(container);
             } else if (hash === '#notifications') {
                 previousView = 'notifications';
                 NotificationsView.mount(container);
+            } else if (hash === '#inventory') {
+                previousView = 'inventory';
+                InventoryView.mount(container);
+            } else if (hash === '#attendance') {
+                previousView = 'attendance';
+                AttendanceView.mount(container);
             } else {
                 previousView = 'dashboard';
                 DashboardView.mount(container);
