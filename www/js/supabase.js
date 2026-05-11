@@ -959,7 +959,8 @@ const ICCSupabase = (() => {
     }
 
     async function updateLead(id, fields) {
-        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
+        const canUpdate = isAdmin() || (isLead() && Number(currentProfile?.team_id) === Number(id));
+        if (!client || !canUpdate) return { error: { message: 'Unauthorized' } };
         fields.updated_at = new Date().toISOString();
         
         const { data, error } = await client.from('core_leads').update(fields).eq('id', id).select();
