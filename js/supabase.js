@@ -1520,7 +1520,7 @@ const ICCSupabase = (() => {
         
         // 1. Fetch the request once to check permissions and get data for stock updates
         const { data: req, error: fetchError } = await client.from('inventory_requests')
-            .select('*')
+            .select('*, inventory:item_id(name)')
             .eq('id', requestId)
             .limit(1);
             
@@ -1578,7 +1578,19 @@ const ICCSupabase = (() => {
         if (!error && (!data || data.length === 0)) {
             return { data: null, error: { message: 'Update blocked by database policy. Please contact an admin.' } };
         }
-            
+
+        // Send rejection notification to the user when admin cancels their request
+        if (!error && isAdminUser && status === 'cancelled' && requestData.user_id) {
+            const itemName = requestData.inventory?.name || 'your component request';
+            await createNotification({
+                userId: requestData.user_id,
+                type: 'system',
+                actorId: currentUser.id,
+                body: `inventory_reject:${requestData.item_id}:${itemName}`,
+                referenceId: String(requestData.id)
+            });
+        }
+
         return { data: (data && data.length > 0) ? data[0] : null, error };
     }
 

@@ -124,6 +124,15 @@ const NotificationsView = (() => {
             case 'team_approve': return `🎉 Approved! You are now a member of <span class="text-emerald-400 font-semibold">${escapeHtml(n.body || 'the team')}</span>`;
             case 'team_deny': return `Your request to join <span class="text-zinc-400 font-semibold">${escapeHtml(n.body || 'the team')}</span> was declined.`;
             case 'welcome': return `Welcome to <span class="gradient-text-static">ICC</span>! 🚀 Start by exploring the feed.`;
+            case 'system': {
+                // Handle inventory rejection: body format = 'inventory_reject:<item_id>:<item_name>'
+                if (n.body?.startsWith('inventory_reject:')) {
+                    const parts = n.body.split(':');
+                    const itemName = parts.slice(2).join(':') || 'your component';
+                    return `❌ Your borrow request for <span class="text-white font-semibold">${escapeHtml(itemName)}</span> was <span class="text-red-400 font-semibold">rejected</span> by an admin.`;
+                }
+                return n.body || 'New notification';
+            }
             default: return n.body || 'New notification';
         }
     }
@@ -137,6 +146,11 @@ const NotificationsView = (() => {
             case 'team_join': 
             case 'team_approve':
             case 'team_deny': return `#teams/${n.reference_id || ''}`;
+            case 'system': {
+                // Inventory reject notification links back to the inventory page
+                if (n.body?.startsWith('inventory_reject:')) return '#inventory';
+                return '#';
+            }
             default: return '#';
         }
     }
