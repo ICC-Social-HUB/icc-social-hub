@@ -321,6 +321,9 @@ const InventoryView = (() => {
                                 req.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
                                 'bg-red-500/10 text-red-500 border-red-500/20';
                             
+                            const leads = (typeof CORE_LEADS !== 'undefined' ? CORE_LEADS : (typeof CORE_LEADS_STATIC !== 'undefined' ? CORE_LEADS_STATIC : []));
+                            const isLead = leads.some(l => l.email === req.profiles?.email);
+                            
                             return `
                                 <div class="bg-zinc-900/40 border border-zinc-800/50 rounded-2xl p-5 hover:bg-zinc-900/60 transition-all group">
                                     <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
@@ -330,10 +333,21 @@ const InventoryView = (() => {
                                                 ${req.profiles?.avatar_url ? `<img src="${req.profiles.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center font-bold text-xl text-zinc-600">${req.profiles?.full_name?.charAt(0) || '?'}</div>`}
                                             </div>
                                             <div class="min-w-0">
-                                                <h3 class="font-bold text-white text-base truncate">${req.profiles?.full_name || 'Anonymous Innovator'}</h3>
+                                                <div class="flex items-center gap-1.5">
+                                                    <h3 class="font-bold text-white text-base truncate">${req.profiles?.full_name || 'Anonymous Innovator'}</h3>
+                                                    ${isLead ? `
+                                                        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.64.304 1.24.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                                        </svg>
+                                                    ` : ''}
+                                                </div>
                                                 <div class="flex flex-wrap gap-x-3 gap-y-1 mt-1">
-                                                    <span class="text-[11px] font-medium text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">USN: ${req.profiles?.usn || 'N/A'}</span>
-                                                    <span class="text-[11px] font-medium text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">Sec: ${req.profiles?.section || 'N/A'}</span>
+                                                    ${isLead ? `
+                                                        <span class="text-[10px] font-black uppercase tracking-widest text-emerald-500">Verified Lead</span>
+                                                    ` : `
+                                                        <span class="text-[11px] font-medium text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">USN: ${req.profiles?.usn || 'N/A'}</span>
+                                                        <span class="text-[11px] font-medium text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">Sec: ${req.profiles?.section || 'N/A'}</span>
+                                                    `}
                                                     <span class="text-[11px] font-medium text-emerald-400/80 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10">${req.profiles?.phone || 'No Phone'}</span>
                                                 </div>
                                             </div>
@@ -460,28 +474,6 @@ const InventoryView = (() => {
                             </div>
                         </div>
 
-                        <!-- Auto-populated user details -->
-                        <div class="mb-5 p-4 bg-zinc-950/70 rounded-2xl border ${missingFields ? 'border-amber-500/30' : 'border-zinc-800/60'}">
-                            <div class="flex items-center justify-between mb-3">
-                                <p class="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Your Details</p>
-                                ${missingFields ? `<a href="#profile" onclick="InventoryView.closeModal()" class="text-[10px] text-amber-400 font-bold hover:underline">⚠ Update Profile</a>` : `<span class="text-[10px] text-emerald-400 font-semibold">✓ Auto-filled</span>`}
-                            </div>
-                            <div class="grid grid-cols-3 gap-3">
-                                <div class="flex flex-col gap-1">
-                                    <span class="text-[9px] uppercase text-zinc-600 tracking-wider font-bold">Section</span>
-                                    <span class="text-sm font-semibold ${section ? 'text-white' : 'text-zinc-600 italic'}">${section || 'Not set'}</span>
-                                </div>
-                                <div class="flex flex-col gap-1">
-                                    <span class="text-[9px] uppercase text-zinc-600 tracking-wider font-bold">USN</span>
-                                    <span class="text-sm font-semibold ${usn ? 'text-white' : 'text-zinc-600 italic'}">${usn || 'Not set'}</span>
-                                </div>
-                                <div class="flex flex-col gap-1">
-                                    <span class="text-[9px] uppercase text-zinc-600 tracking-wider font-bold">Phone</span>
-                                    <span class="text-sm font-semibold ${phone ? 'text-white' : 'text-zinc-600 italic'}">${phone || 'Not set'}</span>
-                                </div>
-                            </div>
-                        </div>
-
                         <form onsubmit="InventoryView.submitRequest(event, '${itemId}')" class="space-y-4">
                             <div>
                                 <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-1 ml-1 tracking-wider">Quantity</label>
@@ -500,8 +492,8 @@ const InventoryView = (() => {
                                         .map(l => `<option value="${l.team}">${l.team}</option>`).join('')}
                                 </select>
                             </div>
-                            <button type="submit" ${missingFields ? 'disabled' : ''} class="w-full py-4 bg-crimson text-white rounded-xl font-bold hover:bg-crimson-dark transition-all shadow-lg shadow-crimson/20 mt-4 disabled:opacity-40 disabled:cursor-not-allowed">
-                                ${missingFields ? '⚠ Complete Profile to Request' : 'Confirm Request'}
+                            <button type="submit" class="w-full py-4 bg-crimson text-white rounded-xl font-bold hover:bg-crimson-dark transition-all shadow-lg shadow-crimson/20 mt-4">
+                                Confirm Request
                             </button>
                         </form>
                     </div>
