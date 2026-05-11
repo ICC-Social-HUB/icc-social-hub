@@ -427,8 +427,8 @@ const InventoryView = (() => {
                                 <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-1 ml-1 tracking-wider">Team Name (Optional)</label>
                                 <select id="req-team" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-crimson outline-none transition-all appearance-none cursor-pointer">
                                     <option value="">No Specific Team</option>
-                                    ${(window.CORE_LEADS || window.CORE_LEADS_STATIC || [])
-                                        .sort((a, b) => a.team.localeCompare(b.team))
+                                    ${(typeof CORE_LEADS !== 'undefined' ? CORE_LEADS : (typeof CORE_LEADS_STATIC !== 'undefined' ? CORE_LEADS_STATIC : []))
+                                        .sort((a, b) => (a.team || '').localeCompare(b.team || ''))
                                         .map(l => `<option value="${l.team}">${l.team}</option>`).join('')}
                                 </select>
                             </div>
