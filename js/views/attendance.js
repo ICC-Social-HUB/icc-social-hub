@@ -129,7 +129,7 @@ const AttendanceView = (() => {
                                     ${m.avatar_url ? `<img src="${m.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center font-bold text-zinc-500">${m.full_name?.charAt(0) || 'I'}</div>`}
                                 </div>
                                 <div class="min-w-0">
-                                    <p class="text-sm font-semibold truncate">${m.full_name || m.username}</p>
+                                    <p class="text-sm font-semibold truncate">${m.full_name || (student ? student.fullName : m.username)}</p>
                                     <p class="text-[10px] text-zinc-500 uppercase tracking-tight">${student ? `${student.usn} • Sec ${student.section}` : m.username}</p>
                                 </div>
                             </div>
@@ -269,11 +269,15 @@ const AttendanceView = (() => {
         raw.forEach(r => {
             if (!map[r.user_id]) {
                 const u = r.user || {};
-                const branch = parseBranch(u.usn);
+                const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
+                
+                const usn = u.usn || (student ? student.usn : '—');
+                const branch = parseBranch(usn);
+                
                 map[r.user_id] = {
-                    fullName: u.full_name || 'Unknown',
-                    usn: u.usn || '—',
-                    section: u.section || '—',
+                    fullName: u.full_name || (student ? student.fullName : 'Unknown'),
+                    usn: usn,
+                    section: u.section || (student ? student.section : '—'),
                     branch: branch,
                     team: r.team?.team || 'No Team',
                     present: 0,

@@ -1647,7 +1647,7 @@ const ICCSupabase = (() => {
     async function fetchAllAttendanceData() {
         if (!client || !isAdmin()) return [];
         const { data, error } = await client.from('attendance')
-            .select('*, user:user_id(id, full_name, usn, section), team:team_id(team)')
+            .select('*, user:user_id(id, full_name, email, usn, section), team:team_id(team)')
             .order('date', { ascending: false });
         if (error) { console.error('fetchAllAttendanceData error:', error); return []; }
         return data || [];
