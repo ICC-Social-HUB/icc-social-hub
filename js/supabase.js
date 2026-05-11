@@ -1516,7 +1516,24 @@ const ICCSupabase = (() => {
     }
 
     async function updateInventoryRequestStatus(requestId, status) {
-        if (!client || !isAdmin()) return { error: { message: 'Not authorized' } };
+        if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        
+        const isAdminUser = isAdmin();
+        
+        // If not admin, only 'cancelled' is allowed and only for their own pending requests
+        if (!isAdminUser) {
+            if (status !== 'cancelled') return { error: { message: 'Not authorized' } };
+            
+            // Verify ownership and status
+            const { data: req, error: fetchError } = await client.from('inventory_requests')
+                .select('user_id, status')
+                .eq('id', requestId)
+                .single();
+                
+            if (fetchError || !req) return { error: { message: 'Request not found' } };
+            if (req.user_id !== currentUser.id) return { error: { message: 'Not authorized' } };
+            if (req.status !== 'pending') return { error: { message: 'Only pending requests can be cancelled' } };
+        }
         
         const updateFields = { status, updated_at: new Date().toISOString() };
         if (status === 'taken') updateFields.collected_at = new Date().toISOString();
