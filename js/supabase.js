@@ -1573,6 +1573,11 @@ const ICCSupabase = (() => {
             .update(updateFields)
             .eq('id', requestId)
             .select();
+
+        // If no error but also no data returned, RLS silently blocked the update
+        if (!error && (!data || data.length === 0)) {
+            return { data: null, error: { message: 'Update blocked by database policy. Please contact an admin.' } };
+        }
             
         return { data: (data && data.length > 0) ? data[0] : null, error };
     }
