@@ -601,14 +601,21 @@ const InventoryView = (() => {
             Toast.show(error.message, 'error');
         } else {
             Toast.show('Request cancelled', 'success');
-            // Optimistically remove from local state for instant UI feedback
+            // 1. Immediately remove from local state
             myRequests = myRequests.filter(r => r.id !== requestId);
-            const container = document.getElementById('app');
-            if (container && window.location.hash === '#inventory') render(container);
-            // Then do a full refresh in the background
+            // 2. Patch just the content area — no hash check needed
+            const contentEl = document.getElementById('inventory-content');
+            if (contentEl) {
+                contentEl.innerHTML = renderTabContent();
+            } else {
+                // Fallback: full re-render
+                const appEl = document.getElementById('app');
+                if (appEl) render(appEl);
+            }
+            // 3. Background DB refresh to sync with server
             refreshData().then(() => {
-                const container = document.getElementById('app');
-                if (container && window.location.hash === '#inventory') render(container);
+                const contentEl = document.getElementById('inventory-content');
+                if (contentEl) contentEl.innerHTML = renderTabContent();
             });
         }
     }
