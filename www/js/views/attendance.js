@@ -3,13 +3,15 @@
    ============================================ */
 const AttendanceView = (() => {
     let mode = 'student'; // 'student', 'lead', 'admin'
+    let adminTab = 'overview'; // 'overview', 'daily'
     let currentTeamId = null;
     let teammates = [];
     let attendanceRecords = {}; // user_id -> status
     let history = [];
     let stats = []; // For Admin
+    let rawRecords = []; // For Admin Log
     let selectedDate = new Date().toISOString().split('T')[0];
-    let filters = { team: '', section: '', branch: '' };
+    let filters = { team: '', section: '', branch: '', date: new Date().toISOString().split('T')[0] };
 
     function render() {
         const user = ICCSupabase.getUser();
@@ -146,21 +148,22 @@ const AttendanceView = (() => {
 
     // --- ADMIN VIEW ---
     function renderAdminView() {
-        // Apply filters to stats
-        const filteredStats = stats.filter(s => {
-            const matchesTeam = !filters.team || s.team === filters.team;
-            const matchesSection = !filters.section || s.section === filters.section;
-            const matchesBranch = !filters.branch || s.branch === filters.branch;
-            return matchesTeam && matchesSection && matchesBranch;
-        });
-
         const teams = [...new Set(stats.map(s => s.team))].sort();
         const branches = [...new Set(stats.map(s => s.branch))].sort();
 
         return `
         <div class="space-y-4">
+            <!-- Admin Tabs -->
+            <div class="flex p-1 bg-zinc-900 rounded-xl border border-zinc-800 w-fit">
+                <button class="adm-tab ${adminTab === 'overview' ? 'active' : ''}" data-tab="overview">Overview</button>
+                <button class="adm-tab ${adminTab === 'daily' ? 'active' : ''}" data-tab="daily">Daily Log</button>
+            </div>
+
             <!-- Filter Bar -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                ${adminTab === 'daily' ? `
+                    <input type="date" id="adm-filter-date" value="${filters.date}" class="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                ` : ''}
                 <select id="adm-filter-team" class="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
                     <option value="">All Teams</option>
                     ${teams.map(t => `<option value="${t}" ${filters.team === t ? 'selected' : ''}>${t}</option>`).join('')}
@@ -169,47 +172,118 @@ const AttendanceView = (() => {
                     <option value="">All Branches</option>
                     ${branches.map(b => `<option value="${b}" ${filters.branch === b ? 'selected' : ''}>${b}</option>`).join('')}
                 </select>
+                ${adminTab === 'overview' ? `
                 <select id="adm-filter-section" class="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
                     <option value="">All Secs</option>
                     ${['A','B','C','D','E','F','G','H','I','J','K'].map(s => `<option value="${s}" ${filters.section === s ? 'selected' : ''}>Sec ${s}</option>`).join('')}
                 </select>
+                ` : `
                 <button id="adm-export-btn" class="bg-zinc-100 hover:bg-white text-zinc-900 rounded-xl px-3 py-2 text-xs font-bold transition-all flex items-center justify-center gap-2">
                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                    Download Report
+                    Export
                 </button>
+                `}
             </div>
 
-            <!-- Master Table -->
-            <div class="glass-card rounded-2xl overflow-hidden">
-                <div class="overflow-x-auto no-scrollbar">
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-zinc-900/50 border-b border-zinc-800">
-                            <tr>
-                                <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider">Student</th>
-                                <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider">Team</th>
-                                <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-center">Branch</th>
-                                <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-center">Sec</th>
-                                <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-right">Attendance %</th>
+            ${adminTab === 'overview' ? renderAdminOverview() : renderAdminDailyLog()}
+        </div>`;
+    }
+
+    function renderAdminOverview() {
+        const filteredStats = stats.filter(s => {
+            const matchesTeam = !filters.team || s.team === filters.team;
+            const matchesSection = !filters.section || s.section === filters.section;
+            const matchesBranch = !filters.branch || s.branch === filters.branch;
+            return matchesTeam && matchesSection && matchesBranch;
+        });
+
+        return `
+        <div class="glass-card rounded-2xl overflow-hidden">
+            <div class="overflow-x-auto no-scrollbar">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-zinc-900/50 border-b border-zinc-800">
+                        <tr>
+                            <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider">Student</th>
+                            <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider">Team</th>
+                            <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-center">Branch</th>
+                            <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-center">Sec</th>
+                            <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-right">Attendance %</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-800/50">
+                        ${filteredStats.length > 0 ? filteredStats.map(s => `
+                            <tr class="hover:bg-zinc-800/20 transition-colors">
+                                <td class="px-4 py-3">
+                                    <p class="font-semibold text-white">${s.fullName}</p>
+                                    <p class="text-[10px] text-zinc-500 font-mono">${s.usn}</p>
+                                </td>
+                                <td class="px-4 py-3 text-zinc-400">${s.team}</td>
+                                <td class="px-4 py-3 text-center text-zinc-500">${s.branch}</td>
+                                <td class="px-4 py-3 text-center text-zinc-500">${s.section}</td>
+                                <td class="px-4 py-3 text-right">
+                                    <span class="font-bold ${s.percent >= 75 ? 'text-emerald-400' : s.percent >= 50 ? 'text-amber-400' : 'text-red-400'}">${s.percent}%</span>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody class="divide-y divide-zinc-800/50">
-                            ${filteredStats.length > 0 ? filteredStats.map(s => `
-                                <tr class="hover:bg-zinc-800/20 transition-colors">
-                                    <td class="px-4 py-3">
-                                        <p class="font-semibold text-white">${s.fullName}</p>
-                                        <p class="text-[10px] text-zinc-500 font-mono">${s.usn}</p>
-                                    </td>
-                                    <td class="px-4 py-3 text-zinc-400">${s.team}</td>
-                                    <td class="px-4 py-3 text-center text-zinc-500">${s.branch}</td>
-                                    <td class="px-4 py-3 text-center text-zinc-500">${s.section}</td>
-                                    <td class="px-4 py-3 text-right">
-                                        <span class="font-bold ${s.percent >= 75 ? 'text-emerald-400' : s.percent >= 50 ? 'text-amber-400' : 'text-red-400'}">${s.percent}%</span>
-                                    </td>
-                                </tr>
-                            `).join('') : `<tr><td colspan="5" class="px-4 py-8 text-center text-zinc-500 italic">No matching records found.</td></tr>`}
-                        </tbody>
-                    </table>
-                </div>
+                        `).join('') : `<tr><td colspan="5" class="px-4 py-8 text-center text-zinc-500 italic">No matching records found.</td></tr>`}
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+    }
+
+    function renderAdminDailyLog() {
+        const filteredLog = rawRecords.filter(r => {
+            const matchesDate = r.date === filters.date;
+            const teamName = r.team?.team || 'No Team';
+            const matchesTeam = !filters.team || teamName === filters.team;
+            
+            const u = r.user || {};
+            const branch = parseBranch(u.usn);
+            const matchesBranch = !filters.branch || branch === filters.branch;
+            
+            return matchesDate && matchesTeam && matchesBranch;
+        });
+
+        return `
+        <div class="glass-card rounded-2xl overflow-hidden">
+            <div class="overflow-x-auto no-scrollbar">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-zinc-900/50 border-b border-zinc-800">
+                        <tr>
+                            <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider">Student</th>
+                            <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider">Team</th>
+                            <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-center">Status</th>
+                            <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-right">Recorded At</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-800/50">
+                        ${filteredLog.length > 0 ? filteredLog.map(r => {
+                            const u = r.user || {};
+                            const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
+                            const fullName = u.full_name || (student ? student.fullName : 'Unknown');
+                            
+                            return `
+                            <tr class="hover:bg-zinc-800/20 transition-colors">
+                                <td class="px-4 py-3">
+                                    <p class="font-semibold text-white">${fullName}</p>
+                                    <p class="text-[10px] text-zinc-500 font-mono">${u.usn || '—'}</p>
+                                </td>
+                                <td class="px-4 py-3 text-zinc-400">${r.team?.team || 'No Team'}</td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${r.status === 'present' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}">
+                                        ${r.status}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-right text-zinc-500 text-[10px]">
+                                    ${new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </td>
+                            </tr>
+                        `}).join('') : `<tr><td colspan="4" class="px-4 py-12 text-center">
+                            <div class="text-zinc-500 italic mb-1">No entries for this date.</div>
+                            <div class="text-[10px] text-zinc-600">Leads may not have submitted attendance yet.</div>
+                        </td></tr>`}
+                    </tbody>
+                </table>
             </div>
         </div>`;
     }
@@ -259,8 +333,8 @@ const AttendanceView = (() => {
             teammates.forEach(m => attendanceRecords[m.id] = 'present');
             existing.forEach(r => attendanceRecords[r.user_id] = r.status);
         } else if (mode === 'admin') {
-            const raw = await ICCSupabase.fetchAllAttendanceData();
-            processAdminStats(raw);
+            rawRecords = await ICCSupabase.fetchAllAttendanceData();
+            processAdminStats(rawRecords);
         }
     }
 
@@ -328,6 +402,43 @@ const AttendanceView = (() => {
                 bindEvents(container);
             });
         }
+
+        // Admin: Tab switching
+        container.querySelectorAll('.adm-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                adminTab = btn.dataset.tab;
+                container.innerHTML = render();
+                bindEvents(container);
+            });
+        });
+
+        // Admin: Filters
+        const filtersList = [
+            { id: 'adm-filter-team', key: 'team' },
+            { id: 'adm-filter-branch', key: 'branch' },
+            { id: 'adm-filter-section', key: 'section' },
+            { id: 'adm-filter-date', key: 'date' }
+        ];
+
+        filtersList.forEach(f => {
+            const el = document.getElementById(f.id);
+            if (el) {
+                el.addEventListener('change', (e) => {
+                    filters[f.key] = e.target.value;
+                    container.innerHTML = render();
+                    bindEvents(container);
+                });
+            }
+        });
+
+        // Admin: Export
+        document.getElementById('adm-export-btn')?.addEventListener('click', () => {
+            if (adminTab === 'overview') {
+                exportOverviewToCSV();
+            } else {
+                exportLogToCSV();
+            }
+        });
 
         // Lead: Status toggle
         container.querySelectorAll('.status-toggle-btn').forEach(btn => {
@@ -426,6 +537,37 @@ const AttendanceView = (() => {
         link.click();
         document.body.removeChild(link);
         Toast.success('Report downloaded! 📊');
+    }
+
+    function exportOverviewToCSV() {
+        let csv = 'Student,USN,Team,Branch,Section,Attendance %\n';
+        stats.forEach(s => {
+            csv += `"${s.fullName}","${s.usn}","${s.team}","${s.branch}","${s.section}",${s.percent}%\n`;
+        });
+        downloadCSV(csv, `attendance_overview_${new Date().toISOString().split('T')[0]}.csv`);
+    }
+
+    function exportLogToCSV() {
+        let csv = 'Date,Student,USN,Team,Status,Recorded At\n';
+        rawRecords.forEach(r => {
+            const u = r.user || {};
+            const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
+            const fullName = u.full_name || (student ? student.fullName : 'Unknown');
+            csv += `"${r.date}","${fullName}","${u.usn || ''}","${r.team?.team || ''}","${r.status}","${r.created_at}"\n`;
+        });
+        downloadCSV(csv, `attendance_log_${new Date().toISOString().split('T')[0]}.csv`);
+    }
+
+    function downloadCSV(csv, filename) {
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     return { mount };

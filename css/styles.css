@@ -1257,7 +1257,7 @@ input, select, textarea { font-size: 16px !important; }
 
 
 /* Attendance View Styles */
-.mode-tab {
+.mode-tab, .adm-tab {
     padding: 6px 16px;
     border-radius: 8px;
     font-size: 0.75rem;
@@ -1265,10 +1265,10 @@ input, select, textarea { font-size: 16px !important; }
     transition: all 0.2s;
     color: #71717a;
 }
-.mode-tab:hover {
+.mode-tab:hover, .adm-tab:hover {
     color: #d4d4d8;
 }
-.mode-tab.active {
+.mode-tab.active, .adm-tab.active {
     background-color: #27272a;
     color: #ffffff;
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
