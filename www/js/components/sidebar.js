@@ -1,0 +1,132 @@
+/* ============================================
+   ICC Social Hub — Sidebar (Hamburger Menu)
+   ============================================ */
+const Sidebar = (() => {
+    let isOpen = false;
+
+    function render() {
+        return `
+        <!-- Sidebar Toggle Button (Inside Sticky Header) -->
+        <button id="sidebar-toggle-btn" class="w-10 h-10 flex items-center justify-center bg-zinc-900/50 hover:bg-zinc-800 rounded-xl transition-all text-zinc-400 hover:text-white group active:scale-95 border border-zinc-800/50">
+            <div class="flex flex-col gap-1.5 items-center justify-center">
+                <span class="w-5 h-0.5 bg-current rounded-full transition-all"></span>
+                <span class="w-5 h-0.5 bg-current rounded-full transition-all"></span>
+                <span class="w-5 h-0.5 bg-current rounded-full transition-all"></span>
+            </div>
+        </button>
+        `;
+    }
+
+    function renderDrawer() {
+        const profile = ICCSupabase.getProfile();
+        const isAdmin = ICCSupabase.isAdmin();
+
+        const menuItems = [
+            { id: 'home', label: 'Home', hash: '#dashboard', icon: homeIcon(false) },
+            { id: 'feed', label: 'Innovation Feed', hash: '#feed', icon: feedIcon(false) },
+            { id: 'teams', label: 'Teams & Projects', hash: '#teams', icon: teamsIcon(false) },
+            { id: 'attendance', label: 'Attendance', hash: '#attendance', icon: attendanceIcon() },
+            { id: 'inventory', label: 'Inventory', hash: '#inventory', icon: inventoryIcon() },
+            { id: 'notifications', label: 'Notifications', hash: '#notifications', icon: notifIcon(false) },
+        ];
+
+        if (isAdmin) {
+            menuItems.push({ id: 'admin', label: 'Admin Dashboard', hash: '#admin', icon: adminIcon(false) });
+        }
+
+        return `
+        <!-- Sidebar Backdrop -->
+        <div id="sidebar-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}" onclick="Sidebar.close()"></div>
+
+        <!-- Sidebar Drawer -->
+        <aside id="sidebar-drawer" class="fixed top-0 left-0 bottom-0 w-[280px] bg-obsidian border-r border-zinc-800 z-[1001] transition-transform duration-300 ease-out shadow-2xl ${isOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col">
+            <!-- Header -->
+            <div class="p-6 border-b border-zinc-800 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-crimson to-crimson-dark rounded-xl flex items-center justify-center font-heading font-bold text-sm">ICC</div>
+                    <span class="font-heading font-bold text-lg tracking-tight">Social Hub</span>
+                </div>
+                <button onclick="Sidebar.close()" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-400">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- Profile Section -->
+            <div class="px-6 py-4">
+                <div class="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800/50">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden border border-zinc-700">
+                            ${profile?.avatar_url ? `<img src="${profile.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center font-bold text-lg">${profile?.full_name?.charAt(0) || 'I'}</div>`}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-bold text-sm truncate">${profile?.full_name || 'Innovator'}</h4>
+                            <p class="text-xs text-zinc-500 truncate">${profile?.email || 'Student'}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Menu Items -->
+            <nav class="flex-1 px-4 py-2 space-y-1 overflow-y-auto no-scrollbar">
+                ${menuItems.map(item => `
+                    <a href="${item.hash}" onclick="Sidebar.close()" class="flex items-center gap-4 px-4 py-3 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900 transition-all group ${window.location.hash.startsWith(item.hash) ? 'bg-crimson/10 text-crimson' : ''}">
+                        <div class="w-6 h-6 transition-transform group-active:scale-90">
+                            ${item.icon}
+                        </div>
+                        <span class="font-medium text-sm">${item.label}</span>
+                    </a>
+                `).join('')}
+            </nav>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-zinc-800">
+                <button onclick="ICCSupabase.signOut()" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-zinc-500 hover:text-red-500 hover:bg-red-500/10 transition-all">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    <span class="font-medium text-sm">Sign Out</span>
+                </button>
+            </div>
+        </aside>
+        `;
+    }
+
+    function inventoryIcon() {
+        return `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`;
+    }
+
+    function attendanceIcon() {
+        return `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>`;
+    }
+
+    function mount() {
+        const toggleRoot = document.getElementById('sidebar-toggle-root');
+        if (toggleRoot) toggleRoot.innerHTML = render();
+
+        let drawerRoot = document.getElementById('sidebar-drawer-root');
+        if (!drawerRoot) {
+            drawerRoot = document.createElement('div');
+            drawerRoot.id = 'sidebar-drawer-root';
+            document.body.appendChild(drawerRoot);
+        }
+        drawerRoot.innerHTML = renderDrawer();
+        
+        bindEvents();
+    }
+
+    function bindEvents() {
+        document.getElementById('sidebar-toggle-btn')?.addEventListener('click', open);
+    }
+
+    function open() {
+        isOpen = true;
+        mount();
+        document.body.style.overflow = 'hidden';
+    }
+
+    function close() {
+        isOpen = false;
+        mount();
+        document.body.style.overflow = '';
+    }
+
+    return { mount, open, close };
+})();

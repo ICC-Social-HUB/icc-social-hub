@@ -26,6 +26,7 @@
         // 4. Listen for auth state changes
         ICCSupabase.onAuthStateChange(async (event, session) => {
             console.log('🔑 Auth event:', event);
+            Sidebar.mount();
             BottomNav.mount();
             
             if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
@@ -61,6 +62,7 @@
         });
 
         // 5. Mount components
+        Sidebar.mount();
         BottomNav.mount();
         NotifBell.mount();
 
