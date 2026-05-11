@@ -213,7 +213,8 @@ const InventoryView = (() => {
     }
 
     function renderMyRequests() {
-        if (myRequests.length === 0) {
+        const activeRequests = myRequests.filter(r => r.status !== 'cancelled');
+        if (activeRequests.length === 0) {
             return `
                 <div class="flex flex-col items-center justify-center py-20 text-center bg-zinc-900/30 rounded-3xl border border-dashed border-zinc-800">
                     <div class="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mb-4">
@@ -228,7 +229,7 @@ const InventoryView = (() => {
         return `
             <div class="space-y-4">
                 <h2 class="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-4">Currently Borrowed & History</h2>
-                ${myRequests.map(req => {
+                ${activeRequests.map(req => {
                     const statusColors = {
                         'pending': 'text-amber-400 bg-amber-400/10 border-amber-400/20',
                         'taken': 'text-blue-400 bg-blue-400/10 border-blue-400/20',
