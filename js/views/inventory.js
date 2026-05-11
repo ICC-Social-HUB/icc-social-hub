@@ -783,6 +783,7 @@ const InventoryView = (() => {
     return { 
         mount, setTab, openRequestModal, closeModal, submitRequest, 
         openAddModal, submitAddItem, updateStatus, deleteItem,
-        openEditModal, submitEditItem, handleSearch, clearSearch
+        openEditModal, submitEditItem, handleSearch, clearSearch,
+        cancelMyRequest
     };
 })();
