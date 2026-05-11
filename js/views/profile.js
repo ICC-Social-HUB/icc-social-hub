@@ -98,6 +98,17 @@ const ProfileView = (() => {
 
                 <div><label class="block text-[11px] font-medium text-zinc-500 mb-1">Bio</label><textarea id="edit-bio" rows="2" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${profile.bio || ''}</textarea></div>
                 <div><label class="block text-[11px] font-medium text-zinc-500 mb-1">Skills <span class="text-zinc-600">(comma separated)</span></label><input type="text" id="edit-skills" value="${(profile.skills || []).join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" placeholder="React, Design, ML..."></div>
+
+                <!-- Contact & Academic Details (used in inventory admin panel) -->
+                <div class="pt-1 pb-1">
+                    <p class="text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-2">Academic Info <span class="text-crimson">*</span> <span class="text-zinc-700 normal-case">(shown to admins for component requests)</span></p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="block text-[11px] font-medium text-zinc-500 mb-1">USN</label><input type="text" id="edit-usn" value="${profile.usn || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" placeholder="1DA22CS001"></div>
+                        <div><label class="block text-[11px] font-medium text-zinc-500 mb-1">Section</label><input type="text" id="edit-section" value="${profile.section || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" placeholder="A / B / C"></div>
+                    </div>
+                    <div class="mt-2"><label class="block text-[11px] font-medium text-zinc-500 mb-1">Phone Number</label><input type="tel" id="edit-phone" value="${profile.phone || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" placeholder="9876543210"></div>
+                </div>
+
                 <div class="flex gap-2 pt-1">
                     <button type="submit" id="edit-save-btn" class="flex-1 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-xs font-semibold transition-all">Save</button>
                     <button type="button" id="edit-cancel" class="flex-1 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors">Cancel</button>
@@ -193,7 +204,10 @@ const ProfileView = (() => {
             const fields = {
                 full_name: document.getElementById('edit-name').value.trim(),
                 bio: document.getElementById('edit-bio').value.trim(),
-                skills: document.getElementById('edit-skills').value.split(',').map(s => s.trim()).filter(Boolean)
+                skills: document.getElementById('edit-skills').value.split(',').map(s => s.trim()).filter(Boolean),
+                usn: document.getElementById('edit-usn').value.trim(),
+                section: document.getElementById('edit-section').value.trim(),
+                phone: document.getElementById('edit-phone').value.trim()
             };
 
             // Upload avatar if file selected
