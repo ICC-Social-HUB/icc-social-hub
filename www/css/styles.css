@@ -1286,3 +1286,19 @@ input, select, textarea { font-size: 16px !important; }
     height: 16px;
     border-width: 2px;
 }
+
+/* Fix scrolling on attendance table */
+.overflow-x-auto.no-scrollbar {
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+}
+
+.overflow-x-auto.no-scrollbar table {
+    touch-action: pan-y;
+}
+
+.overflow-x-auto.no-scrollbar td, 
+.overflow-x-auto.no-scrollbar th {
+    touch-action: pan-y;
+    pointer-events: auto;
+}
