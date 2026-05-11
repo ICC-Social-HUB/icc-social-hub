@@ -1565,36 +1565,14 @@ const ICCSupabase = (() => {
         if (status === 'taken') updateFields.collected_at = new Date().toISOString();
         if (status === 'completed') updateFields.returned_at = new Date().toISOString();
 
-        // 4. Handle stock updates for admin actions
-        if (status === 'completed' || status === 'taken') {
-            const { data: item } = await client.from('inventory')
-                .select('available_stock')
-                .eq('id', requestData.item_id)
-                .limit(1);
-                
-            if (item && item.length > 0) {
-                const availableStock = item[0].available_stock;
-                let newStock = availableStock;
-                
-                if (status === 'completed') {
-                    newStock += requestData.quantity;
-                } else if (status === 'taken') {
-                    newStock = Math.max(0, availableStock - requestData.quantity);
-                }
-                
-                if (newStock !== availableStock) {
-                    await client.from('inventory').update({ 
-                        available_stock: newStock 
-                    }).eq('id', requestData.item_id);
-                }
-            }
-        }
-
-        // 5. Execute the update
+        // 4. Execute the update
+        // Note: Stock updates are now handled automatically by the 'tr_inventory_stock_sync' 
+        // database trigger in public.inventory_requests.
         const { data, error } = await client.from('inventory_requests')
             .update(updateFields)
             .eq('id', requestId)
-            .select();
+            .select('*, inventory:item_id(*)'); // Select with inventory join for notification info
+
 
         // If no error but also no data returned, RLS silently blocked the update
         if (!error && (!data || data.length === 0)) {
