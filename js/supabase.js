@@ -1518,55 +1518,63 @@ const ICCSupabase = (() => {
     async function updateInventoryRequestStatus(requestId, status) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
         
+        // 1. Fetch the request once to check permissions and get data for stock updates
+        const { data: req, error: fetchError } = await client.from('inventory_requests')
+            .select('*')
+            .eq('id', requestId)
+            .limit(1);
+            
+        if (fetchError) return { error: fetchError };
+        const requestData = (req && req.length > 0) ? req[0] : null;
+        if (!requestData) return { error: { message: 'Request not found' } };
+        
         const isAdminUser = isAdmin();
         
-        // If not admin, only 'cancelled' is allowed and only for their own pending requests
+        // 2. Permission Check
         if (!isAdminUser) {
+            // Non-admins can only cancel their own pending requests
             if (status !== 'cancelled') return { error: { message: 'Not authorized' } };
-            
-            // Verify ownership and status
-            const { data: req, error: fetchError } = await client.from('inventory_requests')
-                .select('user_id, status')
-                .eq('id', requestId)
-                .single();
-                
-            if (fetchError || !req) return { error: { message: 'Request not found' } };
-            if (req.user_id !== currentUser.id) return { error: { message: 'Not authorized' } };
-            if (req.status !== 'pending') return { error: { message: 'Only pending requests can be cancelled' } };
+            if (requestData.user_id !== currentUser.id) return { error: { message: 'Not authorized' } };
+            if (requestData.status !== 'pending') return { error: { message: 'Only pending requests can be cancelled' } };
         }
         
+        // 3. Prepare update fields
         const updateFields = { status, updated_at: new Date().toISOString() };
         if (status === 'taken') updateFields.collected_at = new Date().toISOString();
         if (status === 'completed') updateFields.returned_at = new Date().toISOString();
 
-        // If completed, increment stock
-        if (status === 'completed') {
-            const { data: req } = await client.from('inventory_requests').select('item_id, quantity').eq('id', requestId).single();
-            if (req) {
-                const { data: item } = await client.from('inventory').select('available_stock').eq('id', req.item_id).single();
-                if (item) {
-                    await client.from('inventory').update({ 
-                        available_stock: item.available_stock + req.quantity 
-                    }).eq('id', req.item_id);
+        // 4. Handle stock updates for admin actions
+        if (status === 'completed' || status === 'taken') {
+            const { data: item } = await client.from('inventory')
+                .select('available_stock')
+                .eq('id', requestData.item_id)
+                .limit(1);
+                
+            if (item && item.length > 0) {
+                const availableStock = item[0].available_stock;
+                let newStock = availableStock;
+                
+                if (status === 'completed') {
+                    newStock += requestData.quantity;
+                } else if (status === 'taken') {
+                    newStock = Math.max(0, availableStock - requestData.quantity);
                 }
-            }
-        }
-        
-        // If taken, decrement stock
-        if (status === 'taken') {
-            const { data: req } = await client.from('inventory_requests').select('item_id, quantity').eq('id', requestId).single();
-            if (req) {
-                const { data: item } = await client.from('inventory').select('available_stock').eq('id', req.item_id).single();
-                if (item) {
+                
+                if (newStock !== availableStock) {
                     await client.from('inventory').update({ 
-                        available_stock: Math.max(0, item.available_stock - req.quantity) 
-                    }).eq('id', req.item_id);
+                        available_stock: newStock 
+                    }).eq('id', requestData.item_id);
                 }
             }
         }
 
-        const { data, error } = await client.from('inventory_requests').update(updateFields).eq('id', requestId).select().single();
-        return { data, error };
+        // 5. Execute the update
+        const { data, error } = await client.from('inventory_requests')
+            .update(updateFields)
+            .eq('id', requestId)
+            .select();
+            
+        return { data: (data && data.length > 0) ? data[0] : null, error };
     }
 
     // ==================== ATTENDANCE ====================
