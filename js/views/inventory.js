@@ -393,6 +393,13 @@ const InventoryView = (() => {
         const item = inventory.find(i => i.id === itemId);
         if (!item) return;
 
+        // Fetch current user's profile details
+        const profile = ICCSupabase.getProfile();
+        const usn = profile?.usn || '';
+        const section = profile?.section || '';
+        const phone = profile?.phone || '';
+        const missingFields = !usn || !section || !phone;
+
         const root = document.getElementById('inventory-modal-root');
         root.innerHTML = `
             <div class="fixed inset-0 z-[600] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
@@ -404,13 +411,35 @@ const InventoryView = (() => {
                             <button onclick="InventoryView.closeModal()" class="text-zinc-500 hover:text-white"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
                         </div>
                         
-                        <div class="flex items-center gap-4 mb-8 p-4 bg-zinc-950 rounded-2xl border border-zinc-800">
+                        <div class="flex items-center gap-4 mb-6 p-4 bg-zinc-950 rounded-2xl border border-zinc-800">
                             <div class="w-14 h-14 bg-zinc-900 rounded-xl flex items-center justify-center border border-zinc-800">
                                 ${item.image_url ? `<img src="${item.image_url}" class="w-full h-full object-cover">` : `<svg class="w-8 h-8 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`}
                             </div>
                             <div>
                                 <div class="font-bold">${item.name}</div>
                                 <div class="text-xs text-zinc-500">${item.available_stock} Units Available</div>
+                            </div>
+                        </div>
+
+                        <!-- Auto-populated user details -->
+                        <div class="mb-5 p-4 bg-zinc-950/70 rounded-2xl border ${missingFields ? 'border-amber-500/30' : 'border-zinc-800/60'}">
+                            <div class="flex items-center justify-between mb-3">
+                                <p class="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Your Details</p>
+                                ${missingFields ? `<a href="#profile" onclick="InventoryView.closeModal()" class="text-[10px] text-amber-400 font-bold hover:underline">⚠ Update Profile</a>` : `<span class="text-[10px] text-emerald-400 font-semibold">✓ Auto-filled</span>`}
+                            </div>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div class="flex flex-col gap-1">
+                                    <span class="text-[9px] uppercase text-zinc-600 tracking-wider font-bold">Section</span>
+                                    <span class="text-sm font-semibold ${section ? 'text-white' : 'text-zinc-600 italic'}">${section || 'Not set'}</span>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <span class="text-[9px] uppercase text-zinc-600 tracking-wider font-bold">USN</span>
+                                    <span class="text-sm font-semibold ${usn ? 'text-white' : 'text-zinc-600 italic'}">${usn || 'Not set'}</span>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <span class="text-[9px] uppercase text-zinc-600 tracking-wider font-bold">Phone</span>
+                                    <span class="text-sm font-semibold ${phone ? 'text-white' : 'text-zinc-600 italic'}">${phone || 'Not set'}</span>
+                                </div>
                             </div>
                         </div>
 
@@ -432,7 +461,9 @@ const InventoryView = (() => {
                                         .map(l => `<option value="${l.team}">${l.team}</option>`).join('')}
                                 </select>
                             </div>
-                            <button type="submit" class="w-full py-4 bg-crimson text-white rounded-xl font-bold hover:bg-crimson-dark transition-all shadow-lg shadow-crimson/20 mt-4">Confirm Request</button>
+                            <button type="submit" ${missingFields ? 'disabled' : ''} class="w-full py-4 bg-crimson text-white rounded-xl font-bold hover:bg-crimson-dark transition-all shadow-lg shadow-crimson/20 mt-4 disabled:opacity-40 disabled:cursor-not-allowed">
+                                ${missingFields ? '⚠ Complete Profile to Request' : 'Confirm Request'}
+                            </button>
                         </form>
                     </div>
                 </div>
