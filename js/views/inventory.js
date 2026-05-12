@@ -443,7 +443,7 @@ const InventoryView = (() => {
 
     // Modal Helpers
     function openRequestModal(itemId) {
-        const item = inventory.find(i => i.id === itemId);
+        const item = inventory.find(i => String(i.id) === String(itemId));
         if (!item) return;
 
         // Fetch current user's profile details
@@ -710,8 +710,16 @@ const InventoryView = (() => {
 
         const root = document.getElementById('inventory-modal-root');
         if (!root) {
-            render(document.getElementById('app'));
-            return openEditModal(itemId);
+            console.error('❌ inventory-modal-root not found. Attempting to restore...');
+            const app = document.getElementById('app');
+            if (app) {
+                render(app);
+                // Try again after a small delay to allow DOM update
+                setTimeout(() => openEditModal(itemId), 50);
+                return;
+            }
+            Toast.show('System error: Modal root missing', 'error');
+            return;
         }
 
         root.innerHTML = `
@@ -775,8 +783,14 @@ const InventoryView = (() => {
         btn.disabled = true;
         btn.innerHTML = `<div class="spinner mx-auto"></div>`;
 
-        const item = inventory.find(i => i.id === itemId);
-        let imageUrl = item.image_url;
+        try {
+            // Use robust matching for item ID
+            const item = inventory.find(i => String(i.id) === String(itemId));
+            if (!item) {
+                throw new Error('Component not found in current session');
+            }
+            
+            let imageUrl = item.image_url;
         const imageFile = document.getElementById('edit-image').files[0];
         
         if (imageFile) {
@@ -817,9 +831,18 @@ const InventoryView = (() => {
         } else {
             Toast.show('Item updated', 'success');
             closeModal();
-            refreshData().then(() => render(document.getElementById('app')));
+            refreshData().then(() => {
+                const container = document.getElementById('app');
+                if (container) render(container);
+            });
         }
+    } catch (err) {
+        console.error('submitEditItem error:', err);
+        Toast.show(err.message || 'Failed to update component', 'error');
+        btn.disabled = false;
+        btn.innerText = 'Update Item';
     }
+}
 
     function setTab(tab) {
         currentTab = tab;
