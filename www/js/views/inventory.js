@@ -688,14 +688,26 @@ const InventoryView = (() => {
     }
 
     function openEditModal(itemId) {
-        if (!ICCSupabase.isAdmin()) return;
+        console.log('🛠️ Opening edit modal for item:', itemId);
+        Toast.show('Opening editor...', 'info');
+        
+        if (!ICCSupabase.isAdmin()) {
+            Toast.show('Admin permissions required', 'error');
+            return;
+        }
         const item = inventory.find(i => String(i.id) === String(itemId));
         if (!item) {
-            console.error('Item not found in inventory:', itemId);
+            console.error('❌ Item not found in inventory:', itemId);
+            Toast.show('Item not found', 'error');
             return;
         }
 
         const root = document.getElementById('inventory-modal-root');
+        if (!root) {
+            console.error('❌ inventory-modal-root not found');
+            Toast.show('System error: Modal root missing', 'error');
+            return;
+        }
         root.innerHTML = `
             <div class="fixed inset-0 z-[600] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
                 <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="InventoryView.closeModal()"></div>
@@ -867,10 +879,13 @@ const InventoryView = (() => {
         });
     }
 
-    return { 
+    // Explicitly attach to window for global access (especially for onclick handlers)
+    window.InventoryView = { 
         mount, setTab, openRequestModal, closeModal, submitRequest, 
         openAddModal, submitAddItem, updateStatus, deleteItem,
         openEditModal, submitEditItem, handleSearch, clearSearch,
         cancelMyRequest, setManagementFilter
     };
+
+    return window.InventoryView;
 })();
