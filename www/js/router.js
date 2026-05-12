@@ -19,6 +19,8 @@ const Router = (() => {
         if (previousView === 'teams') TeamsView.unmount?.();
         if (previousView === 'chat') ChatView.unmount?.();
         if (previousView === 'profile') ProfileView.unmount?.();
+        if (previousView === 'inventory') InventoryView.unmount?.();
+        if (previousView === 'attendance') AttendanceView.unmount?.();
 
         // Transition — keep delay short for snappy mobile feel
         container.classList.remove('view-enter');
@@ -65,6 +67,12 @@ const Router = (() => {
             } else if (hash === '#admin') {
                 previousView = 'admin';
                 AdminView.mount(container);
+            } else if (hash === '#inventory') {
+                previousView = 'inventory';
+                InventoryView.mount(container);
+            } else if (hash === '#attendance') {
+                previousView = 'attendance';
+                AttendanceView.mount(container);
             } else if (hash === '#notifications') {
                 previousView = 'notifications';
                 NotificationsView.mount(container);

@@ -322,7 +322,7 @@ const InventoryView = (() => {
                                 'bg-red-500/10 text-red-500 border-red-500/20';
                             
                             const leads = (typeof CORE_LEADS !== 'undefined' ? CORE_LEADS : (typeof CORE_LEADS_STATIC !== 'undefined' ? CORE_LEADS_STATIC : []));
-                            const isLead = leads.some(l => l.email === req.profiles?.email);
+                            const isLead = req.profiles?.role === 'lead';
                             
                             return `
                                 <div class="bg-zinc-900/40 border border-zinc-800/50 rounded-2xl p-5 hover:bg-zinc-900/60 transition-all group">
@@ -347,8 +347,8 @@ const InventoryView = (() => {
                                                     ` : `
                                                         <span class="text-[11px] font-medium text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">USN: ${req.profiles?.usn || 'N/A'}</span>
                                                         <span class="text-[11px] font-medium text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">Sec: ${req.profiles?.section || 'N/A'}</span>
+                                                        <span class="text-[11px] font-medium text-emerald-400/80 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10">${req.profiles?.phone || 'No Phone'}</span>
                                                     `}
-                                                    <span class="text-[11px] font-medium text-emerald-400/80 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10">${req.profiles?.phone || 'No Phone'}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -448,10 +448,6 @@ const InventoryView = (() => {
 
         // Fetch current user's profile details
         const profile = ICCSupabase.getProfile();
-        const usn = profile?.usn || '';
-        const section = profile?.section || '';
-        const phone = profile?.phone || '';
-        const missingFields = !usn || !section || !phone;
 
         const root = document.getElementById('inventory-modal-root');
         root.innerHTML = `
