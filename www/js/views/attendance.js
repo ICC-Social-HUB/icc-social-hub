@@ -168,10 +168,6 @@ const AttendanceView = (() => {
                     <option value="">All Teams</option>
                     ${teams.map(t => `<option value="${t}" ${filters.team === t ? 'selected' : ''}>${t}</option>`).join('')}
                 </select>
-                <select id="adm-filter-branch" class="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
-                    <option value="">All Branches</option>
-                    ${branches.map(b => `<option value="${b}" ${filters.branch === b ? 'selected' : ''}>${b}</option>`).join('')}
-                </select>
                 ${adminTab === 'overview' ? `
                 <select id="adm-filter-section" class="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
                     <option value="">All Secs</option>
@@ -205,7 +201,6 @@ const AttendanceView = (() => {
                         <tr>
                             <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider">Student</th>
                             <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider">Team</th>
-                            <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-center">Branch</th>
                             <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-center">Sec</th>
                             <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-right">Attendance %</th>
                         </tr>
@@ -218,7 +213,6 @@ const AttendanceView = (() => {
                                     <p class="text-[10px] text-zinc-500 font-mono">${s.usn}</p>
                                 </td>
                                 <td class="px-4 py-3 text-zinc-400">${s.team}</td>
-                                <td class="px-4 py-3 text-center text-zinc-500">${s.branch}</td>
                                 <td class="px-4 py-3 text-center text-zinc-500">${s.section}</td>
                                 <td class="px-4 py-3 text-right">
                                     <span class="font-bold ${s.percent >= 75 ? 'text-emerald-400' : s.percent >= 50 ? 'text-amber-400' : 'text-red-400'}">${s.percent}%</span>
@@ -252,7 +246,6 @@ const AttendanceView = (() => {
                         <tr>
                             <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider">Student</th>
                             <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider">Team</th>
-                            <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-center">Branch</th>
                             <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-center">Sec</th>
                             <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-center">Status</th>
                             <th class="px-4 py-3 font-semibold text-zinc-400 uppercase tracking-wider text-right">Time</th>
@@ -274,7 +267,6 @@ const AttendanceView = (() => {
                                     <p class="text-[10px] text-zinc-500 font-mono">${usn}</p>
                                 </td>
                                 <td class="px-4 py-3 text-zinc-400">${r.team?.team || 'No Team'}</td>
-                                <td class="px-4 py-3 text-center text-zinc-500">${branch}</td>
                                 <td class="px-4 py-3 text-center text-zinc-500">${section}</td>
                                 <td class="px-4 py-3 text-center">
                                     <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${r.status === 'present' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}">
@@ -527,9 +519,9 @@ const AttendanceView = (() => {
     }
 
     function exportToCSV() {
-        const headers = ['Full Name', 'USN', 'Section', 'Branch', 'Team', 'Present Days', 'Total Sessions', 'Attendance %'];
+        const headers = ['Full Name', 'USN', 'Section', 'Team', 'Present Days', 'Total Sessions', 'Attendance %'];
         const rows = stats.map(s => [
-            s.fullName, s.usn, s.section, s.branch, s.team, s.present, s.total, `${s.percent}%`
+            s.fullName, s.usn, s.section, s.team, s.present, s.total, `${s.percent}%`
         ]);
 
         let csvContent = "data:text/csv;charset=utf-8," 
@@ -547,23 +539,22 @@ const AttendanceView = (() => {
     }
 
     function exportOverviewToCSV() {
-        let csv = 'Student,USN,Team,Branch,Section,Attendance %\n';
+        let csv = 'Student,USN,Team,Section,Attendance %\n';
         stats.forEach(s => {
-            csv += `"${s.fullName}","${s.usn}","${s.team}","${s.branch}","${s.section}",${s.percent}%\n`;
+            csv += `"${s.fullName}","${s.usn}","${s.team}","${s.section}",${s.percent}%\n`;
         });
         downloadCSV(csv, `attendance_overview_${new Date().toISOString().split('T')[0]}.csv`);
     }
 
     function exportLogToCSV() {
-        let csv = 'Date,Student,USN,Branch,Section,Team,Status,Recorded At\n';
+        let csv = 'Date,Student,USN,Section,Team,Status,Recorded At\n';
         rawRecords.forEach(r => {
             const u = r.user || {};
             const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
             const fullName = u.full_name || (student ? student.fullName : 'Unknown');
             const usn = u.usn || (student ? student.usn : '');
             const section = u.section || (student ? student.section : '');
-            const branch = parseBranch(usn);
-            csv += `"${r.date}","${fullName}","${usn}","${branch}","${section}","${r.team?.team || ''}","${r.status}","${r.created_at}"\n`;
+            csv += `"${r.date}","${fullName}","${usn}","${section}","${r.team?.team || ''}","${r.status}","${r.created_at}"\n`;
         });
         downloadCSV(csv, `attendance_log_${new Date().toISOString().split('T')[0]}.csv`);
     }
