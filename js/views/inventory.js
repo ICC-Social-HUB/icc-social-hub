@@ -768,7 +768,7 @@ const InventoryView = (() => {
                                     </label>
                                 </div>
                             </div>
-                            <button type="submit" class="col-span-2 mt-4 py-4 bg-zinc-100 text-black rounded-xl font-bold hover:bg-white transition-all">Update Item</button>
+                            <button type="submit" class="col-span-2 mt-4 py-4 bg-crimson text-white rounded-xl font-bold hover:bg-crimson-dark transition-all shadow-lg shadow-crimson/20">Update Item</button>
                         </form>
                     </div>
                 </div>
@@ -779,70 +779,89 @@ const InventoryView = (() => {
 
     async function submitEditItem(e, itemId) {
         e.preventDefault();
-        const btn = e.target.querySelector('button');
+        console.log('🚀 Submitting edit for item:', itemId);
+        
+        const btn = e.target.querySelector('button[type="submit"]');
+        if (!btn) {
+            console.error('❌ Submit button not found in form');
+            return;
+        }
+
+        const originalBtnText = btn.innerText;
         btn.disabled = true;
         btn.innerHTML = `<div class="spinner mx-auto"></div>`;
 
         try {
+            // Trim itemId to prevent space-related mismatches
+            const cleanItemId = String(itemId).trim();
+            
             // Use robust matching for item ID
-            const item = inventory.find(i => String(i.id) === String(itemId));
+            const item = inventory.find(i => String(i.id) === cleanItemId);
             if (!item) {
-                throw new Error('Component not found in current session');
+                console.error('❌ Item not found in state:', cleanItemId, 'Inventory size:', inventory.length);
+                throw new Error('Component not found in current session. Please refresh the page.');
             }
             
             let imageUrl = item.image_url;
-        const imageFile = document.getElementById('edit-image').files[0];
-        
-        if (imageFile) {
-            const validTypes = ['.png', '.jpg', '.jpeg'];
-            const isValid = validTypes.some(ext => imageFile.name.toLowerCase().endsWith(ext));
-            if (!isValid) {
-                Toast.show('Only PNG, JPG, and JPEG images are allowed', 'error');
-                btn.disabled = false;
-                btn.innerText = 'Update Item';
-                return;
+            const imageFile = document.getElementById('edit-image').files[0];
+            
+            if (imageFile) {
+                console.log('📸 Processing new image:', imageFile.name);
+                const validTypes = ['.png', '.jpg', '.jpeg'];
+                const isValid = validTypes.some(ext => imageFile.name.toLowerCase().endsWith(ext));
+                if (!isValid) {
+                    throw new Error('Only PNG, JPG, and JPEG images are allowed');
+                }
+
+                // Auto-compress and crop to 16:9
+                const processedFile = await processInventoryImage(imageFile);
+
+                const { url, error: uploadError } = await ICCSupabase.uploadImage('inventory', processedFile);
+                if (uploadError) {
+                    console.error('❌ Image upload failed:', uploadError);
+                    Toast.show('Failed to upload image. Updating other fields...', 'info');
+                } else {
+                    console.log('✅ Image uploaded successfully:', url);
+                    // Optionally delete old image
+                    if (item.image_url && item.image_url.includes('inventory/')) {
+                        await ICCSupabase.deleteImage('inventory', item.image_url);
+                    }
+                    imageUrl = url;
+                }
             }
 
-            // Auto-compress and crop to 16:9
-            const processedFile = await processInventoryImage(imageFile);
+            const fields = {
+                name: document.getElementById('edit-name').value.trim(),
+                category: document.getElementById('edit-category').value,
+                total_stock: parseInt(document.getElementById('edit-stock').value) || 0,
+                available_stock: parseInt(document.getElementById('edit-available').value) || 0,
+                image_url: imageUrl
+            };
 
-            const { url, error: uploadError } = await ICCSupabase.uploadImage('inventory', processedFile);
-            if (uploadError) {
-                Toast.show('Failed to upload image', 'error');
-            } else {
-                // Optionally delete old image
-                if (item.image_url) await ICCSupabase.deleteImage('inventory', item.image_url);
-                imageUrl = url;
+            console.log('📡 Sending update to Supabase:', cleanItemId, fields);
+            const { error } = await ICCSupabase.updateInventoryItem(cleanItemId, fields);
+            
+            if (error) {
+                console.error('❌ Supabase update error:', error);
+                throw error;
             }
-        }
 
-        const fields = {
-            name: document.getElementById('edit-name').value,
-            category: document.getElementById('edit-category').value,
-            total_stock: parseInt(document.getElementById('edit-stock').value),
-            available_stock: parseInt(document.getElementById('edit-available').value),
-            image_url: imageUrl
-        };
-        const { error } = await ICCSupabase.updateInventoryItem(itemId, fields);
-        if (error) {
-            Toast.show(error.message, 'error');
+            console.log('✅ Update successful');
+            Toast.show('Item updated successfully', 'success');
+            closeModal();
+            
+            // Refresh and re-render
+            await refreshData();
+            const container = document.getElementById('app');
+            if (container) render(container);
+            
+        } catch (err) {
+            console.error('❌ submitEditItem error:', err);
+            Toast.show(err.message || 'Failed to update component', 'error');
             btn.disabled = false;
             btn.innerText = 'Update Item';
-        } else {
-            Toast.show('Item updated', 'success');
-            closeModal();
-            refreshData().then(() => {
-                const container = document.getElementById('app');
-                if (container) render(container);
-            });
         }
-    } catch (err) {
-        console.error('submitEditItem error:', err);
-        Toast.show(err.message || 'Failed to update component', 'error');
-        btn.disabled = false;
-        btn.innerText = 'Update Item';
     }
-}
 
     function setTab(tab) {
         currentTab = tab;

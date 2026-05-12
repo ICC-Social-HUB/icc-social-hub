@@ -80,3 +80,48 @@ CREATE POLICY "Admins can update requests"
 -- Enable Realtime
 ALTER PUBLICATION supabase_realtime ADD TABLE public.inventory;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.inventory_requests;
+
+-- ==========================================
+18. STORAGE SETUP (Run in SQL Editor)
+-- ==========================================
+-- Create inventory bucket if it doesn't exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('inventory', 'inventory', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Allow public read access to inventory
+CREATE POLICY "Inventory images are publicly accessible"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'inventory');
+
+-- Allow authenticated users to upload to inventory
+CREATE POLICY "Admins can upload inventory images"
+    ON storage.objects FOR INSERT
+    WITH CHECK (
+        bucket_id = 'inventory' AND 
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+-- Allow admins to update/delete inventory images
+CREATE POLICY "Admins can manage inventory images"
+    ON storage.objects FOR UPDATE
+    USING (
+        bucket_id = 'inventory' AND 
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+CREATE POLICY "Admins can delete inventory images"
+    ON storage.objects FOR DELETE
+    USING (
+        bucket_id = 'inventory' AND 
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
