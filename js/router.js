@@ -91,7 +91,7 @@ const Router = (() => {
                 container.classList.add('view-enter');
             });
 
-            BottomNav.mount();
+            Sidebar.mount();
             // Instant scroll — smooth causes jank during view transitions on mobile
             window.scrollTo(0, 0);
         }, 80);

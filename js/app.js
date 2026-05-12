@@ -26,7 +26,7 @@
         // 4. Listen for auth state changes
         ICCSupabase.onAuthStateChange(async (event, session) => {
             console.log('🔑 Auth event:', event);
-            BottomNav.mount();
+            Sidebar.mount();
             
             if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                 if (ICCSupabase.needsOnboarding()) {
@@ -39,16 +39,17 @@
                         window.dispatchEvent(new Event('hashchange'));
                     }
                 }
-                BottomNav.updateAllBadges();
+                Sidebar.updateUnreadCount();
 
                 if (!subscriptionsStarted) {
                     subscriptionsStarted = true;
                     ICCSupabase.subscribeToMessages(() => {
-                        BottomNav.updateUnreadCount();
+                        Sidebar.updateUnreadCount();
                     });
                     ICCSupabase.subscribeToNotifications(() => {
                         NotifBell.update();
-                        BottomNav.updateAllBadges();
+                        NotifBell.update();
+                        Sidebar.updateUnreadCount();
                     });
                     NotifBell.update();
                     
@@ -65,7 +66,6 @@
 
         // 5. Mount components
         Sidebar.mount();
-        BottomNav.mount();
         NotifBell.mount();
 
         // 6.5. Init image viewer
@@ -74,19 +74,7 @@
         // 7. Init particles
         initParticles();
 
-        // 8. Smart Hide Nav Bar
-        let lastScrollY = window.scrollY;
-        window.addEventListener('scroll', () => {
-            const nav = document.querySelector('.bottom-nav');
-            if (!nav) return;
-            const currentScrollY = window.scrollY;
-            if (currentScrollY > lastScrollY && currentScrollY > 100) {
-                nav.classList.add('nav-hidden');
-            } else {
-                nav.classList.remove('nav-hidden');
-            }
-            lastScrollY = currentScrollY;
-        }, { passive: true });
+        // 8. Bottom Nav is hidden in CSS, no scroll hide needed
 
         console.log('✅ ICC Social Hub ready');
     });

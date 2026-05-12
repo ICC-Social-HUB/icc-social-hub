@@ -27,7 +27,7 @@
         ICCSupabase.onAuthStateChange(async (event, session) => {
             console.log('🔑 Auth event:', event);
             Sidebar.mount();
-            BottomNav.mount();
+            Sidebar.mount();
             
             if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                 if (ICCSupabase.needsOnboarding()) {
@@ -45,11 +45,12 @@
                 if (!subscriptionsStarted) {
                     subscriptionsStarted = true;
                     ICCSupabase.subscribeToMessages(() => {
-                        BottomNav.updateUnreadCount();
+                        Sidebar.updateUnreadCount();
                     });
                     ICCSupabase.subscribeToNotifications(() => {
                         NotifBell.update();
-                        BottomNav.updateAllBadges();
+                        NotifBell.update();
+                        Sidebar.updateUnreadCount();
                     });
                     NotifBell.update();
                 }
@@ -63,13 +64,13 @@
 
         // 5. Mount components
         Sidebar.mount();
-        BottomNav.mount();
         NotifBell.mount();
 
         // 6.5. Init image viewer
         ImageViewer.init();
 
         // 7. Init particles
+        // 8. Nav is sidebar drawer only, no scroll logic
         initParticles();
 
         console.log('✅ ICC Social Hub ready');

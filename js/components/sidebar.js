@@ -2,6 +2,7 @@
    ICC Social Hub — Sidebar (Hamburger Menu)
    ============================================ */
 const Sidebar = (() => {
+    let unreadMessages = 0;
     let isOpen = false;
 
     function render() {
@@ -22,12 +23,14 @@ const Sidebar = (() => {
         const isAdmin = ICCSupabase.isAdmin();
 
         const menuItems = [
-            { id: 'home', label: 'Home', hash: '#dashboard', icon: homeIcon(false) },
-            { id: 'feed', label: 'Innovation Feed', hash: '#feed', icon: feedIcon(false) },
-            { id: 'teams', label: 'Teams & Projects', hash: '#teams', icon: teamsIcon(false) },
+            { id: 'home', label: 'Home', hash: '#dashboard', icon: homeIcon(window.location.hash.startsWith('#dashboard')) },
+            { id: 'feed', label: 'Innovation Feed', hash: '#feed', icon: feedIcon(window.location.hash.startsWith('#feed')) },
+            { id: 'teams', label: 'Teams & Projects', hash: '#teams', icon: teamsIcon(window.location.hash.startsWith('#teams')) },
+            { id: 'chat', label: 'Messages', hash: '#chat', icon: chatIcon(window.location.hash.startsWith('#chat')), badge: unreadMessages },
             { id: 'attendance', label: 'Attendance', hash: '#attendance', icon: attendanceIcon() },
             { id: 'inventory', label: 'Inventory', hash: '#inventory', icon: inventoryIcon() },
-            { id: 'notifications', label: 'Notifications', hash: '#notifications', icon: notifIcon(false) },
+            { id: 'profile', label: 'My Profile', hash: '#profile', icon: profileIcon(window.location.hash.startsWith('#profile')) },
+            { id: 'notifications', label: 'Notifications', hash: '#notifications', icon: notifIcon(window.location.hash.startsWith('#notifications')) },
         ];
 
         if (isAdmin) {
@@ -68,12 +71,21 @@ const Sidebar = (() => {
 
             <!-- Menu Items -->
             <nav class="flex-1 px-4 py-2 space-y-1 overflow-y-auto no-scrollbar">
+                <!-- Create Post Action -->
+                <button id="sidebar-create-post" class="w-full flex items-center gap-4 px-4 py-4 mb-4 bg-crimson text-white rounded-2xl font-bold shadow-lg shadow-crimson/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                    <div class="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    </div>
+                    <span>Create New Post</span>
+                </button>
+
                 ${menuItems.map(item => `
-                    <a href="${item.hash}" onclick="Sidebar.close()" class="flex items-center gap-4 px-4 py-3 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900 transition-all group ${window.location.hash.startsWith(item.hash) ? 'bg-crimson/10 text-crimson' : ''}">
-                        <div class="w-6 h-6 transition-transform group-active:scale-90">
+                    <a href="${item.hash}" onclick="Sidebar.close()" class="flex items-center gap-4 px-4 py-3 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900 transition-all group ${window.location.hash.startsWith(item.hash) ? 'bg-crimson/10 text-crimson font-bold' : ''}">
+                        <div class="w-6 h-6 transition-transform group-active:scale-90 relative">
                             ${item.icon}
+                            ${item.badge > 0 ? `<span class="absolute -top-1 -right-1 min-w-[16px] h-4 bg-crimson text-white text-[9px] flex items-center justify-center rounded-full border-2 border-obsidian font-bold px-1">${item.badge > 9 ? '9+' : item.badge}</span>` : ''}
                         </div>
-                        <span class="font-medium text-sm">${item.label}</span>
+                        <span class="text-sm">${item.label}</span>
                     </a>
                 `).join('')}
             </nav>
@@ -114,6 +126,16 @@ const Sidebar = (() => {
 
     function bindEvents() {
         document.getElementById('sidebar-toggle-btn')?.addEventListener('click', open);
+        document.getElementById('sidebar-create-post')?.addEventListener('click', () => {
+            close();
+            if (!ICCSupabase.getUser()) { AuthModal.open(); return; }
+            CreatePostModal.open();
+        });
+    }
+
+    async function updateUnreadCount() {
+        unreadMessages = await ICCSupabase.getUnreadCount();
+        if (isOpen) mount();
     }
 
     function open() {
@@ -128,5 +150,5 @@ const Sidebar = (() => {
         document.body.style.overflow = '';
     }
 
-    return { mount, open, close };
+    return { mount, open, close, updateUnreadCount };
 })();
