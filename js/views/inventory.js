@@ -108,8 +108,7 @@ const InventoryView = (() => {
                 </div>
             </div>
 
-            <!-- Modals Root for Inventory -->
-            <div id="inventory-modal-root"></div>
+            <!-- Note: Modals now use the global modal-root in index.html -->
         `;
     }
 
@@ -427,7 +426,7 @@ const InventoryView = (() => {
                                 </div>
                             </div>
                             <div class="flex items-center gap-1 shrink-0">
-                                <button onclick="InventoryView.openEditModal('${item.id}')" class="p-2 text-zinc-400 hover:text-white transition-all" title="Edit">
+                                <button onclick="console.log('Edit clicked for:', '${item.id}'); InventoryView.openEditModal('${item.id}')" class="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-all" title="Edit Component">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                 </button>
                                 <button onclick="InventoryView.deleteItem('${item.id}')" class="p-2 text-zinc-400 hover:text-red-500 transition-all" title="Delete">
@@ -453,7 +452,7 @@ const InventoryView = (() => {
         const phone = profile?.phone || '';
         const missingFields = !usn || !section || !phone;
 
-        const root = document.getElementById('inventory-modal-root');
+        const root = document.getElementById('modal-root');
         root.innerHTML = `
             <div class="fixed inset-0 z-[600] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
                 <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="InventoryView.closeModal()"></div>
@@ -531,7 +530,7 @@ const InventoryView = (() => {
     // Admin CRUD Helpers
     function openAddModal() {
         if (!ICCSupabase.isAdmin()) return;
-        const root = document.getElementById('inventory-modal-root');
+        const root = document.getElementById('modal-root');
         root.innerHTML = `
             <div class="fixed inset-0 z-[600] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in overflow-y-auto">
                 <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" onclick="InventoryView.closeModal()"></div>
@@ -698,27 +697,19 @@ const InventoryView = (() => {
     }
 
     function openEditModal(itemId) {
-        if (!ICCSupabase.isAdmin()) {
-            Toast.show('Admin permissions required', 'error');
-            return;
-        }
+        console.log('🛠️ openEditModal called for:', itemId);
+        
         const item = inventory.find(i => String(i.id) === String(itemId));
         if (!item) {
+            console.error('❌ Item not found for ID:', itemId);
             Toast.show('Item not found', 'error');
             return;
         }
 
-        const root = document.getElementById('inventory-modal-root');
+        const root = document.getElementById('modal-root');
         if (!root) {
-            console.error('❌ inventory-modal-root not found. Attempting to restore...');
-            const app = document.getElementById('app');
-            if (app) {
-                render(app);
-                // Try again after a small delay to allow DOM update
-                setTimeout(() => openEditModal(itemId), 50);
-                return;
-            }
-            Toast.show('System error: Modal root missing', 'error');
+            console.error('❌ modal-root not found in index.html');
+            Toast.show('System error: Modal container missing', 'error');
             return;
         }
 
@@ -869,8 +860,9 @@ const InventoryView = (() => {
     }
 
     function closeModal() {
-        const root = document.getElementById('inventory-modal-root');
+        const root = document.getElementById('modal-root');
         if (root) root.innerHTML = '';
+        document.body.style.overflow = '';
     }
 
     function handleSearch(val) {
