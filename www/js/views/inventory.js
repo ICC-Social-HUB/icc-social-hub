@@ -689,8 +689,11 @@ const InventoryView = (() => {
 
     function openEditModal(itemId) {
         if (!ICCSupabase.isAdmin()) return;
-        const item = inventory.find(i => i.id === itemId);
-        if (!item) return;
+        const item = inventory.find(i => String(i.id) === String(itemId));
+        if (!item) {
+            console.error('Item not found in inventory:', itemId);
+            return;
+        }
 
         const root = document.getElementById('inventory-modal-root');
         root.innerHTML = `
@@ -711,6 +714,17 @@ const InventoryView = (() => {
                             <div>
                                 <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-1 ml-1 tracking-wider">Available Stock</label>
                                 <input type="number" id="edit-available" value="${item.available_stock}" min="0" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-crimson outline-none transition-all">
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-1 ml-1 tracking-wider">Category</label>
+                                <select id="edit-category" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-crimson outline-none transition-all appearance-none cursor-pointer">
+                                    <option value="Microcontrollers" ${item.category === 'Microcontrollers' ? 'selected' : ''}>Microcontrollers</option>
+                                    <option value="Sensors" ${item.category === 'Sensors' ? 'selected' : ''}>Sensors</option>
+                                    <option value="Actuators" ${item.category === 'Actuators' ? 'selected' : ''}>Actuators</option>
+                                    <option value="Communication" ${item.category === 'Communication' ? 'selected' : ''}>Communication</option>
+                                    <option value="Tools" ${item.category === 'Tools' ? 'selected' : ''}>Tools</option>
+                                    <option value="Other" ${item.category === 'Other' ? 'selected' : ''}>Other</option>
+                                </select>
                             </div>
                             <div class="col-span-2">
                                 <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-1 ml-1 tracking-wider">Component Image (.png, .jpg, .jpeg, optional)</label>
@@ -765,6 +779,7 @@ const InventoryView = (() => {
 
         const fields = {
             name: document.getElementById('edit-name').value,
+            category: document.getElementById('edit-category').value,
             total_stock: parseInt(document.getElementById('edit-stock').value),
             available_stock: parseInt(document.getElementById('edit-available').value),
             image_url: imageUrl
