@@ -451,7 +451,7 @@ const InventoryView = (() => {
         const root = document.getElementById('modal-root');
         if (!root) return;
         root.innerHTML = `
-            <div class="fixed inset-0 z-[600] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
+            <div class="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
                 <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="InventoryView.closeModal()"></div>
                 <div class="relative w-full max-w-md bg-zinc-900 border-t sm:border border-zinc-800 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl animate-slide-up">
                     <div class="p-6">
@@ -530,7 +530,7 @@ const InventoryView = (() => {
         const root = document.getElementById('modal-root');
         if (!root) return;
         root.innerHTML = `
-            <div class="fixed inset-0 z-[600] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in overflow-y-auto">
+            <div class="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in overflow-y-auto">
                 <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" onclick="InventoryView.closeModal()"></div>
                 <div class="relative w-full max-w-lg bg-obsidian border-t sm:border border-zinc-800 rounded-t-3xl sm:rounded-3xl shadow-2xl animate-slide-up mb-0 sm:mb-8">
                     
@@ -706,7 +706,7 @@ const InventoryView = (() => {
         }
 
         root.innerHTML = `
-            <div class="fixed inset-0 z-[600] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
+            <div class="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
                 <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="InventoryView.closeModal()"></div>
                 <div class="relative w-full max-w-lg bg-zinc-900 border-t sm:border border-zinc-800 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl animate-slide-up">
                     <div class="p-6">

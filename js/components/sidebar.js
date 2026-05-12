@@ -36,10 +36,10 @@ const Sidebar = (() => {
 
         return `
         <!-- Sidebar Backdrop -->
-        <div id="sidebar-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}" onclick="Sidebar.close()"></div>
+        <div id="sidebar-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}" onclick="Sidebar.close()"></div>
 
         <!-- Sidebar Drawer -->
-        <aside id="sidebar-drawer" class="fixed top-0 left-0 bottom-0 w-[280px] bg-obsidian border-r border-zinc-800 z-[1001] transition-transform duration-300 ease-out shadow-2xl ${isOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col">
+        <aside id="sidebar-drawer" class="fixed top-0 left-0 bottom-0 w-[280px] bg-obsidian border-r border-zinc-800 z-[2100] transition-transform duration-300 ease-out shadow-2xl ${isOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col">
             <!-- Header -->
             <div class="p-6 border-b border-zinc-800 flex items-center justify-between">
                 <div class="flex items-center gap-3">

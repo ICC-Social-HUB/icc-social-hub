@@ -40,6 +40,7 @@ body {
 }
 
 #toast-root {
+    z-index: 3000 !important;
     top: calc(5rem + env(safe-area-inset-top, 0px)) !important;
 }
 
@@ -949,7 +950,7 @@ input, select, textarea { font-size: 16px !important; }
         flex-direction: column;
         align-items: center;
         padding: 16px 0;
-        z-index: 1000;
+        z-index: 600;
     }
 
     .desktop-nav-item {
