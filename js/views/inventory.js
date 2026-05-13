@@ -17,19 +17,15 @@ const InventoryView = (() => {
         
         if (n.includes('arduino')) return 'https://images.unsplash.com/photo-1553406830-ef2513450d76?auto=format&fit=crop&q=80&w=400';
         if (n.includes('raspberry') || n.includes('pi ')) return 'https://images.unsplash.com/photo-1515940175183-6798529cb860?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('esp32') || n.includes('esp8266') || n.includes('nodemcu')) return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('sensor') || n.includes('ultrasonic') || n.includes('ir ') || n.includes('dht')) return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('motor') || n.includes('servo') || n.includes('stepper') || n.includes('pump')) return 'https://images.unsplash.com/photo-1561144257-e32e8efc6c4f?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('printer') || n.includes('3d') || n.includes('filament')) return 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('solder') || n.includes('iron') || n.includes('flux')) return 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('led') || n.includes('display') || n.includes('lcd') || n.includes('oled')) return 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('wire') || n.includes('jumper') || n.includes('cable')) return 'https://images.unsplash.com/photo-1558494949-ef010cbdcc48?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('battery') || n.includes('power') || n.includes('adapter') || n.includes('charger')) return 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('module') || n.includes('bluetooth') || n.includes('wifi') || n.includes('gsm') || n.includes('gps')) return 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('sensor')) return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('motor') || n.includes('servo')) return 'https://images.unsplash.com/photo-1561144257-e32e8efc6c4f?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('printer') || n.includes('3d')) return 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('solder')) return 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('led') || n.includes('display')) return 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('wire') || n.includes('jumper')) return 'https://images.unsplash.com/photo-1558494949-ef010cbdcc48?auto=format&fit=crop&q=80&w=400';
         
         if (c.includes('microcontrollers')) return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=400';
         if (c.includes('tools')) return 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=400';
-        if (c.includes('power')) return 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&q=80&w=400';
         
         return 'https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?auto=format&fit=crop&q=80&w=400';
     }
@@ -771,17 +767,12 @@ const InventoryView = (() => {
                             </div>
                             <div class="col-span-2">
                                 <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-1 ml-1 tracking-wider">Component Image (.png, .jpg, .jpeg, optional)</label>
-                                <div class="flex items-center gap-4">
-                                    <div class="w-20 h-20 bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden shrink-0">
-                                        <img src="${item.image_url || getComponentImage(item.name, item.category)}" class="w-full h-full object-cover">
-                                    </div>
-                                    <div class="flex-1 relative group">
-                                        <input type="file" id="edit-image" accept=".png,.jpg,.jpeg" class="hidden" onchange="document.getElementById('file-name-edit').textContent = this.files[0]?.name || 'No file selected'">
-                                        <label for="edit-image" class="flex flex-col items-center justify-center gap-1 w-full bg-zinc-950 border-2 border-dashed border-zinc-800 rounded-xl px-4 py-4 text-xs text-zinc-500 cursor-pointer hover:border-crimson/50 hover:bg-zinc-900/50 transition-all">
-                                            <svg class="w-5 h-5 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                            <span id="file-name-edit" class="truncate max-w-[150px]">${item.image_url ? 'Change Image' : 'Select Image'}</span>
-                                        </label>
-                                    </div>
+                                <div class="relative group">
+                                    <input type="file" id="edit-image" accept=".png,.jpg,.jpeg" class="hidden" onchange="document.getElementById('file-name-edit').textContent = this.files[0]?.name || 'No file selected'">
+                                    <label for="edit-image" class="flex items-center justify-center gap-2 w-full bg-zinc-950 border-2 border-dashed border-zinc-800 rounded-xl px-4 py-6 text-sm text-zinc-500 cursor-pointer hover:border-crimson/50 hover:bg-zinc-900/50 transition-all">
+                                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        <span id="file-name-edit">${item.image_url ? 'Change Image' : 'Select Image'}</span>
+                                    </label>
                                 </div>
                             </div>
                             <button type="submit" class="col-span-2 mt-4 py-4 bg-crimson text-white rounded-xl font-bold hover:bg-crimson-dark transition-all shadow-lg shadow-crimson/20">Update Item</button>

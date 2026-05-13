@@ -9,30 +9,6 @@ const InventoryView = (() => {
     let isLoading = true;
     let searchQuery = '';
     let managementFilter = 'all'; // all, pending, taken, completed, cancelled
-    
-    // Default high-quality images from the web for common components
-    function getComponentImage(name, category) {
-        const n = (name || '').toLowerCase();
-        const c = (category || '').toLowerCase();
-        
-        if (n.includes('arduino')) return 'https://images.unsplash.com/photo-1553406830-ef2513450d76?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('raspberry') || n.includes('pi ')) return 'https://images.unsplash.com/photo-1515940175183-6798529cb860?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('esp32') || n.includes('esp8266') || n.includes('nodemcu')) return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('sensor') || n.includes('ultrasonic') || n.includes('ir ') || n.includes('dht')) return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('motor') || n.includes('servo') || n.includes('stepper') || n.includes('pump')) return 'https://images.unsplash.com/photo-1561144257-e32e8efc6c4f?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('printer') || n.includes('3d') || n.includes('filament')) return 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('solder') || n.includes('iron') || n.includes('flux')) return 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('led') || n.includes('display') || n.includes('lcd') || n.includes('oled')) return 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('wire') || n.includes('jumper') || n.includes('cable')) return 'https://images.unsplash.com/photo-1558494949-ef010cbdcc48?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('battery') || n.includes('power') || n.includes('adapter') || n.includes('charger')) return 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&q=80&w=400';
-        if (n.includes('module') || n.includes('bluetooth') || n.includes('wifi') || n.includes('gsm') || n.includes('gps')) return 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80&w=400';
-        
-        if (c.includes('microcontrollers')) return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=400';
-        if (c.includes('tools')) return 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=400';
-        if (c.includes('power')) return 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&q=80&w=400';
-        
-        return 'https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?auto=format&fit=crop&q=80&w=400';
-    }
 
     async function mount(container) {
         try {
@@ -194,7 +170,11 @@ const InventoryView = (() => {
                 ${filteredInventory.length > 0 ? filteredInventory.map(item => `
                     <div class="glass-card rounded-2xl overflow-hidden group border border-zinc-800/50 hover:border-crimson/30 transition-all duration-300 flex flex-col">
                         <div class="aspect-video bg-zinc-900 relative overflow-hidden">
-                            <img src="${item.image_url || getComponentImage(item.name, item.category)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            ${item.image_url ? `<img src="${item.image_url}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">` : `
+                                <div class="w-full h-full flex items-center justify-center text-zinc-700">
+                                    <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                                </div>
+                            `}
                             <div class="absolute top-3 left-3 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg text-[10px] font-bold uppercase tracking-wider text-zinc-300 border border-white/5">${item.category}</div>
                             <div class="absolute bottom-3 right-3 px-2.5 py-1 ${item.available_stock > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'} backdrop-blur-md rounded-lg text-[10px] font-bold border border-white/5">
                                 ${item.available_stock} Available
@@ -260,7 +240,7 @@ const InventoryView = (() => {
                         <div class="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center border border-zinc-700 overflow-hidden">
-                                    <img src="${req.inventory?.image_url || getComponentImage(req.inventory?.name, req.inventory?.category)}" class="w-full h-full object-cover">
+                                    ${req.inventory?.image_url ? `<img src="${req.inventory.image_url}" class="w-full h-full object-cover">` : `<svg class="w-6 h-6 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`}
                                 </div>
                                 <div>
                                     <h4 class="font-bold text-sm">${req.inventory?.name || 'Deleted Item'}</h4>
@@ -376,7 +356,7 @@ const InventoryView = (() => {
                                         <div class="flex-1 p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/80">
                                             <div class="flex items-center gap-3">
                                                 <div class="w-10 h-10 bg-zinc-900 rounded-lg border border-zinc-800 overflow-hidden shrink-0">
-                                                    <img src="${req.inventory?.image_url || getComponentImage(req.inventory?.name, req.inventory?.category)}" class="w-full h-full object-cover">
+                                                    ${req.inventory?.image_url ? `<img src="${req.inventory.image_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center"><svg class="w-5 h-5 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></div>`}
                                                 </div>
                                                 <div class="min-w-0">
                                                     <div class="text-xs font-bold text-zinc-300 truncate">${req.inventory?.name || 'Deleted Component'}</div>
@@ -434,7 +414,7 @@ const InventoryView = (() => {
                         <div class="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800 flex items-center justify-between gap-4 hover:border-zinc-700 transition-all">
                             <div class="flex items-center gap-3">
                                 <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center border border-zinc-700 overflow-hidden shrink-0">
-                                    <img src="${item.image_url || getComponentImage(item.name, item.category)}" class="w-full h-full object-cover">
+                                    ${item.image_url ? `<img src="${item.image_url}" class="w-full h-full object-cover">` : `<svg class="w-6 h-6 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`}
                                 </div>
                                 <div>
                                     <div class="font-bold text-sm">${item.name}</div>
@@ -482,7 +462,7 @@ const InventoryView = (() => {
                         
                         <div class="flex items-center gap-4 mb-6 p-4 bg-zinc-950 rounded-2xl border border-zinc-800">
                             <div class="w-14 h-14 bg-zinc-900 rounded-xl flex items-center justify-center border border-zinc-800">
-                                <img src="${item.image_url || getComponentImage(item.name, item.category)}" class="w-full h-full object-cover">
+                                ${item.image_url ? `<img src="${item.image_url}" class="w-full h-full object-cover">` : `<svg class="w-8 h-8 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`}
                             </div>
                             <div>
                                 <div class="font-bold">${item.name}</div>
@@ -757,17 +737,12 @@ const InventoryView = (() => {
                             </div>
                             <div class="col-span-2">
                                 <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-1 ml-1 tracking-wider">Component Image (.png, .jpg, .jpeg, optional)</label>
-                                <div class="flex items-center gap-4">
-                                    <div class="w-20 h-20 bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden shrink-0">
-                                        <img src="${item.image_url || getComponentImage(item.name, item.category)}" class="w-full h-full object-cover">
-                                    </div>
-                                    <div class="flex-1 relative group">
-                                        <input type="file" id="edit-image" accept=".png,.jpg,.jpeg" class="hidden" onchange="document.getElementById('file-name-edit').textContent = this.files[0]?.name || 'No file selected'">
-                                        <label for="edit-image" class="flex flex-col items-center justify-center gap-1 w-full bg-zinc-950 border-2 border-dashed border-zinc-800 rounded-xl px-4 py-4 text-xs text-zinc-500 cursor-pointer hover:border-crimson/50 hover:bg-zinc-900/50 transition-all">
-                                            <svg class="w-5 h-5 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                            <span id="file-name-edit" class="truncate max-w-[150px]">${item.image_url ? 'Change Image' : 'Select Image'}</span>
-                                        </label>
-                                    </div>
+                                <div class="relative group">
+                                    <input type="file" id="edit-image" accept=".png,.jpg,.jpeg" class="hidden" onchange="document.getElementById('file-name-edit').textContent = this.files[0]?.name || 'No file selected'">
+                                    <label for="edit-image" class="flex items-center justify-center gap-2 w-full bg-zinc-950 border-2 border-dashed border-zinc-800 rounded-xl px-4 py-6 text-sm text-zinc-500 cursor-pointer hover:border-crimson/50 hover:bg-zinc-900/50 transition-all">
+                                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        <span id="file-name-edit">${item.image_url ? 'Change Image' : 'Select Image'}</span>
+                                    </label>
                                 </div>
                             </div>
                             <button type="submit" class="col-span-2 mt-4 py-4 bg-crimson text-white rounded-xl font-bold hover:bg-crimson-dark transition-all shadow-lg shadow-crimson/20">Update Item</button>
