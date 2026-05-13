@@ -13,7 +13,7 @@ const InventoryView = (() => {
     async function mount(container) {
         try {
             container.innerHTML = `<div class="flex items-center justify-center min-h-[60vh]"><div class="spinner"></div></div>`;
-
+            
             const user = ICCSupabase.getUser();
             if (!user) {
                 container.innerHTML = `
@@ -72,7 +72,7 @@ const InventoryView = (() => {
 
     function render(container) {
         const isAdmin = ICCSupabase.isAdmin();
-
+        
         container.innerHTML = `
             <div class="min-h-screen pb-24 px-4 pt-4 animate-fade-in">
                 <div class="max-w-5xl mx-auto">
@@ -138,7 +138,7 @@ const InventoryView = (() => {
         }
 
         const categories = [...new Set(inventory.map(i => i.category))];
-        const filteredInventory = inventory.filter(item =>
+        const filteredInventory = inventory.filter(item => 
             (item.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
             (item.category || '').toLowerCase().includes(searchQuery.toLowerCase())
         );
@@ -230,13 +230,13 @@ const InventoryView = (() => {
             <div class="space-y-4">
                 <h2 class="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-4">Currently Borrowed & History</h2>
                 ${activeRequests.map(req => {
-            const statusColors = {
-                'pending': 'text-amber-400 bg-amber-400/10 border-amber-400/20',
-                'taken': 'text-blue-400 bg-blue-400/10 border-blue-400/20',
-                'completed': 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-                'cancelled': 'text-zinc-500 bg-zinc-500/10 border-zinc-500/20'
-            };
-            return `
+                    const statusColors = {
+                        'pending': 'text-amber-400 bg-amber-400/10 border-amber-400/20',
+                        'taken': 'text-blue-400 bg-blue-400/10 border-blue-400/20',
+                        'completed': 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
+                        'cancelled': 'text-zinc-500 bg-zinc-500/10 border-zinc-500/20'
+                    };
+                    return `
                         <div class="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center border border-zinc-700 overflow-hidden">
@@ -246,7 +246,7 @@ const InventoryView = (() => {
                                     <h4 class="font-bold text-sm">${req.inventory?.name || 'Deleted Item'}</h4>
                                     <p class="text-[10px] text-zinc-500">${req.quantity} Unit(s) • Project: ${req.project_name || 'N/A'}</p>
                                     ${req.team_name ? `<p class="text-[10px] text-crimson font-bold uppercase tracking-tight">${req.team_name}</p>` : ''}
-                                    <p class="text-[10px] text-zinc-600 mt-1">${new Date(req.requested_at).toLocaleDateString()} • ${new Date(req.requested_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                    <p class="text-[10px] text-zinc-600 mt-1">${new Date(req.requested_at).toLocaleDateString()} • ${new Date(req.requested_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between sm:justify-end gap-3">
@@ -261,7 +261,7 @@ const InventoryView = (() => {
                             </div>
                         </div>
                     `;
-        }).join('')}
+                }).join('')}
             </div>
         `;
     }
@@ -314,16 +314,16 @@ const InventoryView = (() => {
                     
                     <div class="grid grid-cols-1 gap-4">
                         ${filteredRequests.length > 0 ? filteredRequests.map(req => {
-            const statusStyle =
-                req.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                    req.status === 'taken' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                        req.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                            'bg-red-500/10 text-red-500 border-red-500/20';
-
-            const leads = (typeof CORE_LEADS !== 'undefined' ? CORE_LEADS : (typeof CORE_LEADS_STATIC !== 'undefined' ? CORE_LEADS_STATIC : []));
-            const isLead = req.profiles?.role === 'lead';
-
-            return `
+                            const statusStyle = 
+                                req.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                                req.status === 'taken' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                req.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                'bg-red-500/10 text-red-500 border-red-500/20';
+                            
+                            const leads = (typeof CORE_LEADS !== 'undefined' ? CORE_LEADS : (typeof CORE_LEADS_STATIC !== 'undefined' ? CORE_LEADS_STATIC : []));
+                            const isLead = req.profiles?.role === 'lead';
+                            
+                            return `
                                 <div class="bg-zinc-900/40 border border-zinc-800/50 rounded-2xl p-5 hover:bg-zinc-900/60 transition-all group">
                                     <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
                                         <!-- User Info -->
@@ -385,7 +385,7 @@ const InventoryView = (() => {
                                     </div>
                                 </div>
                             `;
-        }).join('') : `
+                        }).join('') : `
                             <div class="flex flex-col items-center justify-center py-20 text-center bg-zinc-900/30 rounded-3xl border border-dashed border-zinc-800">
                                 <p class="text-zinc-500 text-sm">No ${managementFilter === 'all' ? '' : managementFilter} requests found.</p>
                             </div>
@@ -484,8 +484,8 @@ const InventoryView = (() => {
                                 <select id="req-team" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-crimson outline-none transition-all appearance-none cursor-pointer">
                                     <option value="">No Specific Team</option>
                                     ${(typeof CORE_LEADS !== 'undefined' ? CORE_LEADS : (typeof CORE_LEADS_STATIC !== 'undefined' ? CORE_LEADS_STATIC : []))
-                .sort((a, b) => (a.team || '').localeCompare(b.team || ''))
-                .map(l => `<option value="${l.team}">${l.team}</option>`).join('')}
+                                        .sort((a, b) => (a.team || '').localeCompare(b.team || ''))
+                                        .map(l => `<option value="${l.team}">${l.team}</option>`).join('')}
                                 </select>
                             </div>
                             <button type="submit" class="w-full py-4 bg-crimson text-white rounded-xl font-bold hover:bg-crimson-dark transition-all shadow-lg shadow-crimson/20 mt-4">
@@ -503,13 +503,13 @@ const InventoryView = (() => {
         const quantity = parseInt(document.getElementById('req-quantity').value);
         const projectName = document.getElementById('req-project').value;
         const teamName = document.getElementById('req-team').value;
-
+        
         const btn = e.target.querySelector('button');
         btn.disabled = true;
         btn.innerHTML = `<div class="spinner mx-auto"></div>`;
 
         const { error } = await ICCSupabase.requestInventoryItem(itemId, quantity, projectName, teamName);
-
+        
         if (error) {
             Toast.show(error.message, 'error');
             btn.disabled = false;
@@ -601,7 +601,7 @@ const InventoryView = (() => {
 
         let imageUrl = null;
         const imageFile = document.getElementById('add-image').files[0];
-
+        
         if (imageFile) {
             const validTypes = ['.png', '.jpg', '.jpeg'];
             const isValid = validTypes.some(ext => imageFile.name.toLowerCase().endsWith(ext));
@@ -611,10 +611,10 @@ const InventoryView = (() => {
                 btn.innerText = 'Add to Inventory';
                 return;
             }
-
+            
             // Auto-compress and crop to 16:9
             const processedFile = await processInventoryImage(imageFile);
-
+            
             const { url, error: uploadError } = await ICCSupabase.uploadImage('inventory', processedFile);
             if (uploadError) {
                 Toast.show('Failed to upload image', 'error');
@@ -690,7 +690,7 @@ const InventoryView = (() => {
 
     function openEditModal(itemId) {
         console.log('🛠️ openEditModal called for:', itemId);
-
+        
         const item = inventory.find(i => String(i.id) === String(itemId));
         if (!item) {
             console.error('❌ Item not found for ID:', itemId);
@@ -756,7 +756,7 @@ const InventoryView = (() => {
     async function submitEditItem(e, itemId) {
         e.preventDefault();
         console.log('🚀 Submitting edit for item:', itemId);
-
+        
         const btn = e.target.querySelector('button[type="submit"]');
         if (!btn) {
             console.error('❌ Submit button not found in form');
@@ -770,17 +770,17 @@ const InventoryView = (() => {
         try {
             // Trim itemId to prevent space-related mismatches
             const cleanItemId = String(itemId).trim();
-
+            
             // Use robust matching for item ID
             const item = inventory.find(i => String(i.id) === cleanItemId);
             if (!item) {
                 console.error('❌ Item not found in state:', cleanItemId, 'Inventory size:', inventory.length);
                 throw new Error('Component not found in current session. Please refresh the page.');
             }
-
+            
             let imageUrl = item.image_url;
             const imageFile = document.getElementById('edit-image').files[0];
-
+            
             if (imageFile) {
                 console.log('📸 Processing new image:', imageFile.name);
                 const validTypes = ['.png', '.jpg', '.jpeg'];
@@ -816,7 +816,7 @@ const InventoryView = (() => {
 
             console.log('📡 Sending update to Supabase:', cleanItemId, fields);
             const { error } = await ICCSupabase.updateInventoryItem(cleanItemId, fields);
-
+            
             if (error) {
                 console.error('❌ Supabase update error:', error);
                 throw error;
@@ -825,12 +825,12 @@ const InventoryView = (() => {
             console.log('✅ Update successful');
             Toast.show('Item updated successfully', 'success');
             closeModal();
-
+            
             // Refresh and re-render
             await refreshData();
             const container = document.getElementById('app');
             if (container) render(container);
-
+            
         } catch (err) {
             console.error('❌ submitEditItem error:', err);
             Toast.show(err.message || 'Failed to update component', 'error');
@@ -877,7 +877,7 @@ const InventoryView = (() => {
                     const canvas = document.createElement('canvas');
                     // Target dimensions for 16:9 storefront cards
                     const targetWidth = 800;
-                    const targetHeight = 450;
+                    const targetHeight = 450; 
                     canvas.width = targetWidth;
                     canvas.height = targetHeight;
                     const ctx = canvas.getContext('2d');
@@ -912,8 +912,8 @@ const InventoryView = (() => {
     }
 
     // Explicitly attach to window for global access (especially for onclick handlers)
-    window.InventoryView = {
-        mount, setTab, openRequestModal, closeModal, submitRequest,
+    window.InventoryView = { 
+        mount, setTab, openRequestModal, closeModal, submitRequest, 
         openAddModal, submitAddItem, updateStatus, deleteItem,
         openEditModal, submitEditItem, handleSearch, clearSearch,
         cancelMyRequest, setManagementFilter
