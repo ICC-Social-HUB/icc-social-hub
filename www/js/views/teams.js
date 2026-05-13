@@ -129,7 +129,7 @@ const TeamsView = (() => {
                                 <div class="roster-item flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i * 0.04}s">
                                     <div class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity open-user-profile" data-id="${m.id}" title="View Profile">
                                         <div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name || m.username || '?').charAt(0).toUpperCase()}</div>
-                                        <p class="text-xs font-medium truncate">${m.full_name || m.username || 'Anonymous'}</p>
+                                        <p class="text-xs font-medium truncate">${m.full_name || m.username || 'Anonymous'}${m.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</p>
                                     </div>
                                     ${(isLeadOrAdmin && m.id !== profile?.id) ? `<button class="remove-member-btn px-1.5 py-1 bg-red-900/30 text-red-400 hover:bg-red-900/60 rounded text-[10px] font-medium transition-colors" data-id="${m.id}">Remove</button>` : ''}
                                 </div>
@@ -149,7 +149,7 @@ const TeamsView = (() => {
                                                 ${m.avatar_url ? `<img src="${m.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[10px] font-bold bg-zinc-700 text-zinc-400">${(m.full_name || '?').charAt(0).toUpperCase()}</div>`}
                                             </div>
                                             <div class="min-w-0">
-                                                <p class="text-[13px] font-bold truncate cursor-pointer hover:text-emerald-400 transition-colors open-user-profile leading-tight" data-id="${m.id}">${m.full_name || m.username || 'Anon'}</p>
+                                                <p class="text-[13px] font-bold truncate cursor-pointer hover:text-emerald-400 transition-colors open-user-profile leading-tight" data-id="${m.id}">${m.full_name || m.username || 'Anon'}${m.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</p>
                                                 <p class="text-[10px] text-zinc-500 truncate">@${m.username || ''}</p>
                                             </div>
                                         </div>
@@ -218,7 +218,7 @@ const TeamsView = (() => {
                                 <div class="roster-item flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i * 0.04}s">
                                     <div class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity open-user-profile" data-id="${m.id}" title="View Profile">
                                         <div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name || m.username || '?').charAt(0).toUpperCase()}</div>
-                                        <p class="text-xs font-medium truncate">${m.full_name || m.username || 'Anonymous'}</p>
+                                        <p class="text-xs font-medium truncate">${m.full_name || m.username || 'Anonymous'}${m.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</p>
                                     </div>
                                     ${(isLeadOrAdmin && m.id !== profile?.id) ? `<button class="remove-member-btn px-1.5 py-1 bg-red-900/30 text-red-400 hover:bg-red-900/60 rounded text-[10px] font-medium transition-colors" data-id="${m.id}">Remove</button>` : ''}
                                 </div>
@@ -242,7 +242,7 @@ const TeamsView = (() => {
                                                 ${m.avatar_url ? `<img src="${m.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[10px] font-bold bg-zinc-700 text-zinc-400">${(m.full_name || '?').charAt(0).toUpperCase()}</div>`}
                                             </div>
                                             <div class="min-w-0">
-                                                <p class="text-[13px] font-bold truncate cursor-pointer hover:text-emerald-400 transition-colors open-user-profile leading-tight" data-id="${m.id}">${m.full_name || m.username || 'Anon'}</p>
+                                                <p class="text-[13px] font-bold truncate cursor-pointer hover:text-emerald-400 transition-colors open-user-profile leading-tight" data-id="${m.id}">${m.full_name || m.username || 'Anon'}${m.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</p>
                                                 <p class="text-[10px] text-zinc-500 truncate">@${m.username || ''}</p>
                                             </div>
                                         </div>

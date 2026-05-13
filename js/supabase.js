@@ -1518,7 +1518,7 @@ const ICCSupabase = (() => {
     async function fetchInventoryRequests(status = null) {
         if (!client || !isAdmin()) return [];
         let query = client.from('inventory_requests')
-            .select('*, inventory:item_id(*), profiles:user_id(id, full_name, usn, phone, section, avatar_url)')
+            .select('*, inventory:item_id(*), profiles:user_id(id, full_name, usn, phone, section, avatar_url, email, role)')
             .order('requested_at', { ascending: false });
         
         if (status) query = query.eq('status', status);

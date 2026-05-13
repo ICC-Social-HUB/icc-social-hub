@@ -32,7 +32,7 @@ const ProfileView = (() => {
                                         const lead = getLeadByTeamId(tid);
                                         return lead ? `<span class="px-2 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-[10px] text-zinc-300">${lead.team}</span>` : '';
                                     }).join('')}
-                                    ${(profile.role === 'lead' || profile.role === 'admin') ? `<span class="px-2 py-0.5 bg-red-600/15 text-red-400 rounded text-[10px] font-bold uppercase">${profile.role}</span>` : ''}
+                                    ${profile.role === 'lead' ? `<span class="px-2 py-0.5 bg-red-600/15 text-red-400 rounded text-[10px] font-bold uppercase">Lead</span>` : ''}
                                 </div>
                         </div>
                         <button id="profile-edit-btn" class="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">

@@ -112,7 +112,7 @@ const NotificationsView = (() => {
     }
 
     function formatBody(n) {
-        const isVerified = n.actor?.role === 'lead' || n.actor?.role === 'admin';
+        const isVerified = n.actor?.role === 'lead';
         const actor = `<span class="text-white font-semibold">${escapeHtml(n.actor_name || 'Someone')}${isVerified ? ICC_CONFIG.VERIFIED_TICK : ''}</span>`;
         switch (n.type) {
             case 'like': return `${actor} liked your post`;

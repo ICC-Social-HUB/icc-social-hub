@@ -320,8 +320,7 @@ const InventoryView = (() => {
                                 req.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
                                 'bg-red-500/10 text-red-500 border-red-500/20';
                             
-                            const leads = (typeof CORE_LEADS !== 'undefined' ? CORE_LEADS : (typeof CORE_LEADS_STATIC !== 'undefined' ? CORE_LEADS_STATIC : []));
-                            const isLead = leads.some(l => l.email === req.profiles?.email);
+                            const isLead = req.profiles?.role === 'lead';
                             
                             return `
                                 <div class="bg-zinc-900/40 border border-zinc-800/50 rounded-2xl p-5 hover:bg-zinc-900/60 transition-all group">

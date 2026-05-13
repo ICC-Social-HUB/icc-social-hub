@@ -146,7 +146,7 @@ const TeamChatModal = (() => {
             const p = m.profiles || {};
             // Better role detection: check if they are an admin or lead
             const userRole = p.role || 'user';
-            const isVerified = userRole === 'lead' || userRole === 'admin';
+            const isVerified = userRole === 'lead';
             const canDelete = isMe || ICCSupabase.isAdmin();
             
             let timeStr = '';

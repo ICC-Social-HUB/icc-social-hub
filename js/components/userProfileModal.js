@@ -47,13 +47,13 @@ const UserProfileModal = (() => {
                     </div>
                 </div>
                 <div class="pt-14 pb-6 px-6 text-center">
-                    <h3 class="font-heading font-bold text-lg">${profile.full_name || 'User'}${(profile.role === 'lead' || profile.role === 'admin') ? ICC_CONFIG.VERIFIED_TICK : ''}</h3>
+                    <h3 class="font-heading font-bold text-lg">${profile.full_name || 'User'}${profile.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</h3>
                     ${profile.username ? `<p class="text-sm text-zinc-500">@${profile.username}</p>` : ''}
                     ${profile.email ? `<p class="text-xs text-zinc-500 flex items-center justify-center gap-1 mt-1"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>${escapeHtml(profile.email)}</p>` : ''}
                     ${profile.bio ? `<p class="text-xs text-zinc-400 mt-2 max-w-xs mx-auto">${escapeHtml(profile.bio)}</p>` : ''}
                     <div class="flex items-center justify-center gap-3 mt-3">
                         ${teamLead ? `<span class="px-3 py-1 bg-zinc-800 border border-zinc-700 rounded-full text-xs text-zinc-300">${teamLead.team}</span>` : ''}
-                        ${(profile.role === 'lead' || profile.role === 'admin') ? `<span class="px-3 py-1 bg-red-600/15 text-red-400 rounded-full text-xs font-semibold uppercase">${profile.role}</span>` : ''}
+                        ${profile.role === 'lead' ? `<span class="px-3 py-1 bg-red-600/15 text-red-400 rounded-full text-xs font-semibold uppercase">${profile.role}</span>` : ''}
                     </div>
                     ${profile.skills && profile.skills.length ? `<div class="flex flex-wrap justify-center gap-1.5 mt-3">${profile.skills.map(s => `<span class="px-2 py-0.5 bg-zinc-800 rounded text-[10px] text-zinc-400">${s}</span>`).join('')}</div>` : ''}
                     ${!isMe ? `<button id="user-msg-btn" class="mt-4 px-6 py-2.5 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all" data-user-id="${profile.id}">Message</button>` : ''}
