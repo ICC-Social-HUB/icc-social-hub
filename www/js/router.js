@@ -10,7 +10,7 @@ const Router = (() => {
     }
 
     function handleRoute() {
-        const hash = window.location.hash || '#feed';
+        const hash = window.location.hash || '#dashboard';
         const container = document.getElementById('app');
         if (!container) return;
 
@@ -31,7 +31,10 @@ const Router = (() => {
             container.innerHTML = ''; // Clear immediately to avoid ghosting
 
             // Route matching
-            if (hash === '#feed' || hash === '' || hash === '#') {
+            if (hash === '#dashboard' || hash === '' || hash === '#') {
+                previousView = 'dashboard';
+                DashboardView.mount(container);
+            } else if (hash === '#feed') {
                 previousView = 'feed';
                 FeedView.mount(container);
             } else if (hash.startsWith('#post/')) {

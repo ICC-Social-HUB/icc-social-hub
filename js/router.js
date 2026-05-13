@@ -10,7 +10,7 @@ const Router = (() => {
     }
 
     function handleRoute() {
-        const hash = window.location.hash || '#feed';
+        const hash = window.location.hash || '#dashboard';
         const container = document.getElementById('app');
         if (!container) return;
 

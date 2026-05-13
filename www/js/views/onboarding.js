@@ -176,7 +176,7 @@ const OnboardingView = (() => {
                     type: 'welcome',
                     body: 'Welcome to ICC Innovation Hub! Explore projects, connect with teams, and share your ideas.'
                 });
-                window.location.hash = '#feed'; 
+                window.location.hash = '#dashboard'; 
                 BottomNav.mount(); 
             }
         });

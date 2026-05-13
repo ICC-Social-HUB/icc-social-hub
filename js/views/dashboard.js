@@ -108,6 +108,16 @@ const DashboardView = (() => {
                     </div>
 
                 </div>
+
+                <!-- Developer Credit -->
+                <div class="mt-16 mb-12 py-8 border-t border-zinc-800/50 text-center animate-fade-in">
+                    <p class="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-medium mb-3">Crafted with ❤️ by</p>
+                    <a href="https://saravanantm1920.wixsite.com/my-site-4" target="_blank" 
+                       class="inline-flex items-center gap-2 px-5 py-2 bg-zinc-800/50 hover:bg-red-500/10 text-zinc-300 hover:text-red-500 rounded-full border border-zinc-700/50 hover:border-red-500/50 transition-all duration-300 group shadow-lg">
+                        <span class="text-sm font-bold tracking-tight">T M Saravanan</span>
+                        <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+                    </a>
+                </div>
             </div>
         </section>`;
     }
