@@ -61,6 +61,11 @@ const ProfileView = (() => {
                 </div>`}
 
                 ${ICCSupabase.isAdmin() ? `<a href="#admin" class="block w-full text-center px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm font-medium transition-colors border border-zinc-700 mt-4">⚙️ Admin Dashboard</a>` : ''}
+
+                <div class="mt-12 mb-8 text-center">
+                    <p class="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Developed by</p>
+                    <a href="https://saravanantm1920.wixsite.com/my-site-4" target="_blank" class="text-xs text-zinc-500 hover:text-red-500 transition-colors font-semibold mt-1 inline-block">T M Saravanan</a>
+                </div>
             </div>
         </section>`;
     }

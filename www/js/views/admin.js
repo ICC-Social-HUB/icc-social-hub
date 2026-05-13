@@ -32,6 +32,11 @@ const AdminView = (() => {
                     ${['broadcast', 'leads', 'users', 'moderate'].map(t => `<button class="admin-tab ${activeTab === t ? 'active' : ''}" data-tab="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</button>`).join('')}
                 </div>
                 <div id="admin-content">${renderTab()}</div>
+
+                <div class="mt-12 mb-8 text-center border-t border-zinc-800/30 pt-8">
+                    <p class="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Developed by</p>
+                    <a href="https://saravanantm1920.wixsite.com/my-site-4" target="_blank" class="text-xs text-zinc-500 hover:text-red-500 transition-colors font-semibold mt-1 inline-block">T M Saravanan</a>
+                </div>
             </div>
         </section>`;
     }

@@ -29,9 +29,9 @@ const ProfileView = (() => {
                             ${(profile.email || ICCSupabase.getUser()?.email) ? `<p class="text-xs text-zinc-500 flex items-center gap-1 mt-0.5"><svg class="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>${profile.email || ICCSupabase.getUser()?.email}</p>` : ''}
                                 <div class="flex flex-wrap items-center gap-2 mt-1">
                                     ${(profile.memberships || []).map(tid => {
-                                        const lead = getLeadByTeamId(tid);
-                                        return lead ? `<span class="px-2 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-[10px] text-zinc-300">${lead.team}</span>` : '';
-                                    }).join('')}
+            const lead = getLeadByTeamId(tid);
+            return lead ? `<span class="px-2 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-[10px] text-zinc-300">${lead.team}</span>` : '';
+        }).join('')}
                                     ${profile.role === 'lead' ? `<span class="px-2 py-0.5 bg-red-600/15 text-red-400 rounded text-[10px] font-bold uppercase">${profile.role}</span>` : ''}
                                 </div>
                         </div>
@@ -171,15 +171,15 @@ const ProfileView = (() => {
         document.getElementById('profile-reset-password-btn')?.addEventListener('click', async () => {
             const user = ICCSupabase.getUser();
             if (!user || !user.email) return;
-            
+
             if (confirm(`Send a password reset code to ${user.email}?`)) {
                 try {
                     const { error } = await ICCSupabase.sendOTP(user.email);
                     if (error) throw error;
-                    
+
                     Toast.success('Reset code sent! Opening reset window...');
                     // We can reuse AuthModal's forgot-password flow
-                    AuthModal.open('forgot-otp', user.email); 
+                    AuthModal.open('forgot-otp', user.email);
                 } catch (err) {
                     Toast.error('Failed to send reset code: ' + err.message);
                 }

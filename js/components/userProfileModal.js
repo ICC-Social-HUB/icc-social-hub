@@ -65,6 +65,11 @@ const UserProfileModal = (() => {
                         ${posts.slice(0, 9).map(p => `<div class="profile-post-thumb">${p.image_url ? `<img src="${p.image_url}" alt="" loading="lazy">` : `<div class="w-full h-full flex items-center justify-center bg-zinc-800 text-zinc-600 text-xs p-2 text-center">${(p.caption || '').slice(0, 30)}</div>`}</div>`).join('')}
                     </div>
                 </div>` : ''}
+
+                <div class="pb-6 pt-2 text-center border-t border-zinc-800/50">
+                    <p class="text-[9px] text-zinc-600 uppercase tracking-widest font-bold">Developed by</p>
+                    <a href="https://saravanantm1920.wixsite.com/my-site-4" target="_blank" class="text-[11px] text-zinc-500 hover:text-red-500 transition-colors font-semibold inline-block mt-0.5">T M Saravanan</a>
+                </div>
             </div>
         </div>`;
     }
