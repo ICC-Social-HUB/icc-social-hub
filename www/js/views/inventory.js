@@ -9,11 +9,35 @@ const InventoryView = (() => {
     let isLoading = true;
     let searchQuery = '';
     let managementFilter = 'all'; // all, pending, taken, completed, cancelled
+    
+    // Default high-quality images from the web for common components
+    function getComponentImage(name, category) {
+        const n = (name || '').toLowerCase();
+        const c = (category || '').toLowerCase();
+        
+        if (n.includes('arduino')) return 'https://images.unsplash.com/photo-1553406830-ef2513450d76?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('raspberry') || n.includes('pi ')) return 'https://images.unsplash.com/photo-1515940175183-6798529cb860?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('esp32') || n.includes('esp8266') || n.includes('nodemcu')) return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('sensor') || n.includes('ultrasonic') || n.includes('ir ') || n.includes('dht')) return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('motor') || n.includes('servo') || n.includes('stepper') || n.includes('pump')) return 'https://images.unsplash.com/photo-1561144257-e32e8efc6c4f?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('printer') || n.includes('3d') || n.includes('filament')) return 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('solder') || n.includes('iron') || n.includes('flux')) return 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('led') || n.includes('display') || n.includes('lcd') || n.includes('oled')) return 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('wire') || n.includes('jumper') || n.includes('cable')) return 'https://images.unsplash.com/photo-1558494949-ef010cbdcc48?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('battery') || n.includes('power') || n.includes('adapter') || n.includes('charger')) return 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&q=80&w=400';
+        if (n.includes('module') || n.includes('bluetooth') || n.includes('wifi') || n.includes('gsm') || n.includes('gps')) return 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80&w=400';
+        
+        if (c.includes('microcontrollers')) return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=400';
+        if (c.includes('tools')) return 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=400';
+        if (c.includes('power')) return 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&q=80&w=400';
+        
+        return 'https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?auto=format&fit=crop&q=80&w=400';
+    }
 
     async function mount(container) {
         try {
             container.innerHTML = `<div class="flex items-center justify-center min-h-[60vh]"><div class="spinner"></div></div>`;
-            
+
             const user = ICCSupabase.getUser();
             if (!user) {
                 container.innerHTML = `
@@ -72,7 +96,7 @@ const InventoryView = (() => {
 
     function render(container) {
         const isAdmin = ICCSupabase.isAdmin();
-        
+
         container.innerHTML = `
             <div class="min-h-screen pb-24 px-4 pt-4 animate-fade-in">
                 <div class="max-w-5xl mx-auto">
@@ -138,7 +162,7 @@ const InventoryView = (() => {
         }
 
         const categories = [...new Set(inventory.map(i => i.category))];
-        const filteredInventory = inventory.filter(item => 
+        const filteredInventory = inventory.filter(item =>
             (item.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
             (item.category || '').toLowerCase().includes(searchQuery.toLowerCase())
         );
@@ -170,11 +194,7 @@ const InventoryView = (() => {
                 ${filteredInventory.length > 0 ? filteredInventory.map(item => `
                     <div class="glass-card rounded-2xl overflow-hidden group border border-zinc-800/50 hover:border-crimson/30 transition-all duration-300 flex flex-col">
                         <div class="aspect-video bg-zinc-900 relative overflow-hidden">
-                            ${item.image_url ? `<img src="${item.image_url}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">` : `
-                                <div class="w-full h-full flex items-center justify-center text-zinc-700">
-                                    <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                                </div>
-                            `}
+                            <img src="${item.image_url || getComponentImage(item.name, item.category)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                             <div class="absolute top-3 left-3 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg text-[10px] font-bold uppercase tracking-wider text-zinc-300 border border-white/5">${item.category}</div>
                             <div class="absolute bottom-3 right-3 px-2.5 py-1 ${item.available_stock > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'} backdrop-blur-md rounded-lg text-[10px] font-bold border border-white/5">
                                 ${item.available_stock} Available
@@ -230,23 +250,23 @@ const InventoryView = (() => {
             <div class="space-y-4">
                 <h2 class="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-4">Currently Borrowed & History</h2>
                 ${activeRequests.map(req => {
-                    const statusColors = {
-                        'pending': 'text-amber-400 bg-amber-400/10 border-amber-400/20',
-                        'taken': 'text-blue-400 bg-blue-400/10 border-blue-400/20',
-                        'completed': 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-                        'cancelled': 'text-zinc-500 bg-zinc-500/10 border-zinc-500/20'
-                    };
-                    return `
+            const statusColors = {
+                'pending': 'text-amber-400 bg-amber-400/10 border-amber-400/20',
+                'taken': 'text-blue-400 bg-blue-400/10 border-blue-400/20',
+                'completed': 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
+                'cancelled': 'text-zinc-500 bg-zinc-500/10 border-zinc-500/20'
+            };
+            return `
                         <div class="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center border border-zinc-700 overflow-hidden">
-                                    ${req.inventory?.image_url ? `<img src="${req.inventory.image_url}" class="w-full h-full object-cover">` : `<svg class="w-6 h-6 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`}
+                                    <img src="${req.inventory?.image_url || getComponentImage(req.inventory?.name, req.inventory?.category)}" class="w-full h-full object-cover">
                                 </div>
                                 <div>
                                     <h4 class="font-bold text-sm">${req.inventory?.name || 'Deleted Item'}</h4>
                                     <p class="text-[10px] text-zinc-500">${req.quantity} Unit(s) • Project: ${req.project_name || 'N/A'}</p>
                                     ${req.team_name ? `<p class="text-[10px] text-crimson font-bold uppercase tracking-tight">${req.team_name}</p>` : ''}
-                                    <p class="text-[10px] text-zinc-600 mt-1">${new Date(req.requested_at).toLocaleDateString()} • ${new Date(req.requested_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                    <p class="text-[10px] text-zinc-600 mt-1">${new Date(req.requested_at).toLocaleDateString()} • ${new Date(req.requested_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between sm:justify-end gap-3">
@@ -261,7 +281,7 @@ const InventoryView = (() => {
                             </div>
                         </div>
                     `;
-                }).join('')}
+        }).join('')}
             </div>
         `;
     }
@@ -314,16 +334,16 @@ const InventoryView = (() => {
                     
                     <div class="grid grid-cols-1 gap-4">
                         ${filteredRequests.length > 0 ? filteredRequests.map(req => {
-                            const statusStyle = 
-                                req.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                                req.status === 'taken' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                                req.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                'bg-red-500/10 text-red-500 border-red-500/20';
-                            
-                            const leads = (typeof CORE_LEADS !== 'undefined' ? CORE_LEADS : (typeof CORE_LEADS_STATIC !== 'undefined' ? CORE_LEADS_STATIC : []));
-                            const isLead = req.profiles?.role === 'lead';
-                            
-                            return `
+            const statusStyle =
+                req.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                    req.status === 'taken' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                        req.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                            'bg-red-500/10 text-red-500 border-red-500/20';
+
+            const leads = (typeof CORE_LEADS !== 'undefined' ? CORE_LEADS : (typeof CORE_LEADS_STATIC !== 'undefined' ? CORE_LEADS_STATIC : []));
+            const isLead = req.profiles?.role === 'lead';
+
+            return `
                                 <div class="bg-zinc-900/40 border border-zinc-800/50 rounded-2xl p-5 hover:bg-zinc-900/60 transition-all group">
                                     <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
                                         <!-- User Info -->
@@ -356,7 +376,7 @@ const InventoryView = (() => {
                                         <div class="flex-1 p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/80">
                                             <div class="flex items-center gap-3">
                                                 <div class="w-10 h-10 bg-zinc-900 rounded-lg border border-zinc-800 overflow-hidden shrink-0">
-                                                    ${req.inventory?.image_url ? `<img src="${req.inventory.image_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center"><svg class="w-5 h-5 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></div>`}
+                                                    <img src="${req.inventory?.image_url || getComponentImage(req.inventory?.name, req.inventory?.category)}" class="w-full h-full object-cover">
                                                 </div>
                                                 <div class="min-w-0">
                                                     <div class="text-xs font-bold text-zinc-300 truncate">${req.inventory?.name || 'Deleted Component'}</div>
@@ -385,7 +405,7 @@ const InventoryView = (() => {
                                     </div>
                                 </div>
                             `;
-                        }).join('') : `
+        }).join('') : `
                             <div class="flex flex-col items-center justify-center py-20 text-center bg-zinc-900/30 rounded-3xl border border-dashed border-zinc-800">
                                 <p class="text-zinc-500 text-sm">No ${managementFilter === 'all' ? '' : managementFilter} requests found.</p>
                             </div>
@@ -414,7 +434,7 @@ const InventoryView = (() => {
                         <div class="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800 flex items-center justify-between gap-4 hover:border-zinc-700 transition-all">
                             <div class="flex items-center gap-3">
                                 <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center border border-zinc-700 overflow-hidden shrink-0">
-                                    ${item.image_url ? `<img src="${item.image_url}" class="w-full h-full object-cover">` : `<svg class="w-6 h-6 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`}
+                                    <img src="${item.image_url || getComponentImage(item.name, item.category)}" class="w-full h-full object-cover">
                                 </div>
                                 <div>
                                     <div class="font-bold text-sm">${item.name}</div>
@@ -462,7 +482,7 @@ const InventoryView = (() => {
                         
                         <div class="flex items-center gap-4 mb-6 p-4 bg-zinc-950 rounded-2xl border border-zinc-800">
                             <div class="w-14 h-14 bg-zinc-900 rounded-xl flex items-center justify-center border border-zinc-800">
-                                ${item.image_url ? `<img src="${item.image_url}" class="w-full h-full object-cover">` : `<svg class="w-8 h-8 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`}
+                                <img src="${item.image_url || getComponentImage(item.name, item.category)}" class="w-full h-full object-cover">
                             </div>
                             <div>
                                 <div class="font-bold">${item.name}</div>
@@ -484,8 +504,8 @@ const InventoryView = (() => {
                                 <select id="req-team" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-crimson outline-none transition-all appearance-none cursor-pointer">
                                     <option value="">No Specific Team</option>
                                     ${(typeof CORE_LEADS !== 'undefined' ? CORE_LEADS : (typeof CORE_LEADS_STATIC !== 'undefined' ? CORE_LEADS_STATIC : []))
-                                        .sort((a, b) => (a.team || '').localeCompare(b.team || ''))
-                                        .map(l => `<option value="${l.team}">${l.team}</option>`).join('')}
+                .sort((a, b) => (a.team || '').localeCompare(b.team || ''))
+                .map(l => `<option value="${l.team}">${l.team}</option>`).join('')}
                                 </select>
                             </div>
                             <button type="submit" class="w-full py-4 bg-crimson text-white rounded-xl font-bold hover:bg-crimson-dark transition-all shadow-lg shadow-crimson/20 mt-4">
@@ -503,13 +523,13 @@ const InventoryView = (() => {
         const quantity = parseInt(document.getElementById('req-quantity').value);
         const projectName = document.getElementById('req-project').value;
         const teamName = document.getElementById('req-team').value;
-        
+
         const btn = e.target.querySelector('button');
         btn.disabled = true;
         btn.innerHTML = `<div class="spinner mx-auto"></div>`;
 
         const { error } = await ICCSupabase.requestInventoryItem(itemId, quantity, projectName, teamName);
-        
+
         if (error) {
             Toast.show(error.message, 'error');
             btn.disabled = false;
@@ -601,7 +621,7 @@ const InventoryView = (() => {
 
         let imageUrl = null;
         const imageFile = document.getElementById('add-image').files[0];
-        
+
         if (imageFile) {
             const validTypes = ['.png', '.jpg', '.jpeg'];
             const isValid = validTypes.some(ext => imageFile.name.toLowerCase().endsWith(ext));
@@ -611,10 +631,10 @@ const InventoryView = (() => {
                 btn.innerText = 'Add to Inventory';
                 return;
             }
-            
+
             // Auto-compress and crop to 16:9
             const processedFile = await processInventoryImage(imageFile);
-            
+
             const { url, error: uploadError } = await ICCSupabase.uploadImage('inventory', processedFile);
             if (uploadError) {
                 Toast.show('Failed to upload image', 'error');
@@ -690,7 +710,7 @@ const InventoryView = (() => {
 
     function openEditModal(itemId) {
         console.log('🛠️ openEditModal called for:', itemId);
-        
+
         const item = inventory.find(i => String(i.id) === String(itemId));
         if (!item) {
             console.error('❌ Item not found for ID:', itemId);
@@ -737,12 +757,17 @@ const InventoryView = (() => {
                             </div>
                             <div class="col-span-2">
                                 <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-1 ml-1 tracking-wider">Component Image (.png, .jpg, .jpeg, optional)</label>
-                                <div class="relative group">
-                                    <input type="file" id="edit-image" accept=".png,.jpg,.jpeg" class="hidden" onchange="document.getElementById('file-name-edit').textContent = this.files[0]?.name || 'No file selected'">
-                                    <label for="edit-image" class="flex items-center justify-center gap-2 w-full bg-zinc-950 border-2 border-dashed border-zinc-800 rounded-xl px-4 py-6 text-sm text-zinc-500 cursor-pointer hover:border-crimson/50 hover:bg-zinc-900/50 transition-all">
-                                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                        <span id="file-name-edit">${item.image_url ? 'Change Image' : 'Select Image'}</span>
-                                    </label>
+                                <div class="flex items-center gap-4">
+                                    <div class="w-20 h-20 bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden shrink-0">
+                                        <img src="${item.image_url || getComponentImage(item.name, item.category)}" class="w-full h-full object-cover">
+                                    </div>
+                                    <div class="flex-1 relative group">
+                                        <input type="file" id="edit-image" accept=".png,.jpg,.jpeg" class="hidden" onchange="document.getElementById('file-name-edit').textContent = this.files[0]?.name || 'No file selected'">
+                                        <label for="edit-image" class="flex flex-col items-center justify-center gap-1 w-full bg-zinc-950 border-2 border-dashed border-zinc-800 rounded-xl px-4 py-4 text-xs text-zinc-500 cursor-pointer hover:border-crimson/50 hover:bg-zinc-900/50 transition-all">
+                                            <svg class="w-5 h-5 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                            <span id="file-name-edit" class="truncate max-w-[150px]">${item.image_url ? 'Change Image' : 'Select Image'}</span>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                             <button type="submit" class="col-span-2 mt-4 py-4 bg-crimson text-white rounded-xl font-bold hover:bg-crimson-dark transition-all shadow-lg shadow-crimson/20">Update Item</button>
@@ -756,7 +781,7 @@ const InventoryView = (() => {
     async function submitEditItem(e, itemId) {
         e.preventDefault();
         console.log('🚀 Submitting edit for item:', itemId);
-        
+
         const btn = e.target.querySelector('button[type="submit"]');
         if (!btn) {
             console.error('❌ Submit button not found in form');
@@ -770,17 +795,17 @@ const InventoryView = (() => {
         try {
             // Trim itemId to prevent space-related mismatches
             const cleanItemId = String(itemId).trim();
-            
+
             // Use robust matching for item ID
             const item = inventory.find(i => String(i.id) === cleanItemId);
             if (!item) {
                 console.error('❌ Item not found in state:', cleanItemId, 'Inventory size:', inventory.length);
                 throw new Error('Component not found in current session. Please refresh the page.');
             }
-            
+
             let imageUrl = item.image_url;
             const imageFile = document.getElementById('edit-image').files[0];
-            
+
             if (imageFile) {
                 console.log('📸 Processing new image:', imageFile.name);
                 const validTypes = ['.png', '.jpg', '.jpeg'];
@@ -816,7 +841,7 @@ const InventoryView = (() => {
 
             console.log('📡 Sending update to Supabase:', cleanItemId, fields);
             const { error } = await ICCSupabase.updateInventoryItem(cleanItemId, fields);
-            
+
             if (error) {
                 console.error('❌ Supabase update error:', error);
                 throw error;
@@ -825,12 +850,12 @@ const InventoryView = (() => {
             console.log('✅ Update successful');
             Toast.show('Item updated successfully', 'success');
             closeModal();
-            
+
             // Refresh and re-render
             await refreshData();
             const container = document.getElementById('app');
             if (container) render(container);
-            
+
         } catch (err) {
             console.error('❌ submitEditItem error:', err);
             Toast.show(err.message || 'Failed to update component', 'error');
@@ -877,7 +902,7 @@ const InventoryView = (() => {
                     const canvas = document.createElement('canvas');
                     // Target dimensions for 16:9 storefront cards
                     const targetWidth = 800;
-                    const targetHeight = 450; 
+                    const targetHeight = 450;
                     canvas.width = targetWidth;
                     canvas.height = targetHeight;
                     const ctx = canvas.getContext('2d');
@@ -912,8 +937,8 @@ const InventoryView = (() => {
     }
 
     // Explicitly attach to window for global access (especially for onclick handlers)
-    window.InventoryView = { 
-        mount, setTab, openRequestModal, closeModal, submitRequest, 
+    window.InventoryView = {
+        mount, setTab, openRequestModal, closeModal, submitRequest,
         openAddModal, submitAddItem, updateStatus, deleteItem,
         openEditModal, submitEditItem, handleSearch, clearSearch,
         cancelMyRequest, setManagementFilter
