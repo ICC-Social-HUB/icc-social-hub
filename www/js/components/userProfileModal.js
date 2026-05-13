@@ -66,9 +66,14 @@ const UserProfileModal = (() => {
                     </div>
                 </div>` : ''}
 
-                <div class="pb-6 pt-2 text-center border-t border-zinc-800/50">
-                    <p class="text-[9px] text-zinc-600 uppercase tracking-widest font-bold">Developed by</p>
-                    <a href="https://saravanantm1920.wixsite.com/my-site-4" target="_blank" class="text-[11px] text-zinc-500 hover:text-red-500 transition-colors font-semibold inline-block mt-0.5">T M Saravanan</a>
+                <!-- Developer Credit -->
+                <div class="pb-8 pt-4 text-center border-t border-zinc-800/50 mt-2">
+                    <p class="text-[9px] text-zinc-500 uppercase tracking-[0.2em] font-medium mb-3">Crafted with ❤️ by</p>
+                    <a href="https://saravanantm1920.wixsite.com/my-site-4" target="_blank" 
+                       class="inline-flex items-center gap-2 px-4 py-1.5 bg-zinc-800/50 hover:bg-red-500/10 text-zinc-400 hover:text-red-500 rounded-full border border-zinc-700/50 hover:border-red-500/50 transition-all duration-300 group">
+                        <span class="text-xs font-bold tracking-tight">T M Saravanan</span>
+                        <svg class="w-3 h-3 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+                    </a>
                 </div>
             </div>
         </div>`;
