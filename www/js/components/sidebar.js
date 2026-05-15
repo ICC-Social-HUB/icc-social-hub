@@ -53,17 +53,20 @@ const Sidebar = (() => {
 
             <!-- Profile Section -->
             <div class="px-6 py-4">
-                <div class="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800/50">
+                <a href="#profile" onclick="Sidebar.close()" class="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800/50 hover:bg-zinc-800/80 hover:border-zinc-700 transition-all cursor-pointer block group">
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden border border-zinc-700">
+                        <div class="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden border border-zinc-700 group-hover:border-zinc-600 transition-colors">
                             ${profile?.avatar_url ? `<img src="${profile.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center font-bold text-lg">${profile?.full_name?.charAt(0) || 'I'}</div>`}
                         </div>
                         <div class="flex-1 min-w-0">
-                            <h4 class="font-bold text-sm truncate">${profile?.full_name || 'Innovator'}</h4>
+                            <h4 class="font-bold text-sm truncate group-hover:text-white transition-colors">${profile?.full_name || 'Innovator'}</h4>
                             <p class="text-xs text-zinc-500 truncate">${profile?.email || 'Student'}</p>
                         </div>
+                        <div class="text-zinc-600 group-hover:text-zinc-400 transition-colors">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- Menu Items -->
