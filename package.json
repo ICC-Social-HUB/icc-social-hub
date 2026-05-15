@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "ICC Innovoapp with Vercel Serverless Functions",
   "scripts": {
-    "sync": "if not exist www mkdir www && copy index.html www\\ && xcopy js www\\js\\ /s /e /y && xcopy css www\\css\\ /s /e /y && npx cap sync"
+    "sync": "if not exist www mkdir www && copy index.html www\\ && xcopy js www\\js\\ /s /e /y && xcopy css www\\css\\ /s /e /y && xcopy assets www\\assets\\ /s /e /y && xcopy images www\\images\\ /s /e /y && copy manifest.json www\\ && npx cap sync"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",

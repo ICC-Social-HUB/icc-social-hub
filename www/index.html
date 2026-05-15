@@ -7,6 +7,8 @@
     <meta name="description" content="Innovators Creators Club — A social platform for innovators. Share ideas, join teams, collaborate, and build the future together.">
     <meta name="theme-color" content="#030303" media="(prefers-color-scheme: dark)">
     <meta name="theme-color" content="#030303">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="images/icon-192x192.png">
 
     <!-- Mobile Web App -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -37,6 +39,18 @@
             --color-crimson: #E11D48;
             --color-crimson-light: #FB7185;
             --color-crimson-dark: #9F1239;
+
+            /* Scale up standard font sizes */
+            --font-size-xs: 0.875rem;     /* 14px instead of 12px */
+            --font-size-sm: 1rem;         /* 16px instead of 14px */
+            --font-size-base: 1.125rem;   /* 18px instead of 16px */
+            --font-size-lg: 1.25rem;      /* 20px instead of 18px */
+            --font-size-xl: 1.5rem;       /* 24px instead of 20px */
+            --font-size-2xl: 1.875rem;    /* 30px instead of 24px */
+        }
+
+        html {
+            font-size: 17px; /* Increase base reference size */
         }
     </style>
 
@@ -65,15 +79,13 @@
     <div id="modal-root"></div>
 
     <!-- Main App View Container -->
-    <main id="app" class="relative pb-20"></main>
+    <main id="app" class="relative pb-32"></main>
 
     <!-- Bottom Navigation Mount -->
     <div id="bottom-nav-root"></div>
 
     <!-- Toast Notifications -->
     <div id="toast-root" class="fixed top-20 right-4 z-[300] space-y-2 pointer-events-none"></div>
-
-
 
     <!-- Floating Particles Background -->
     <div id="particles-bg" class="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true"></div>
@@ -95,6 +107,7 @@
     <script src="js/components/chatPanel.js?v=2"></script>
     <script src="js/components/userProfileModal.js?v=2"></script>
     <script src="js/components/joinTeamModal.js?v=2"></script>
+    <script src="js/components/teamChatModal.js?v=2"></script>
     <script src="js/views/dashboard.js?v=2"></script>
     <script src="js/views/feed.js?v=2"></script>
     <script src="js/views/teams.js?v=2"></script>
@@ -102,9 +115,10 @@
     <script src="js/views/profile.js?v=2"></script>
     <script src="js/views/onboarding.js?v=2"></script>
     <script src="js/views/admin.js?v=2"></script>
-    <script src="js/views/attendance.js?v=2"></script>
     <script src="js/views/inventory.js?v=2"></script>
+    <script src="js/views/attendance.js?v=2"></script>
     <script src="js/views/notifications.js?v=2"></script>
+    <script src="js/views/download.js?v=2"></script>
     <script src="js/router.js?v=2"></script>
     <script src="js/app.js?v=2"></script>
 </body>
