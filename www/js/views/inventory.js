@@ -29,6 +29,13 @@ const InventoryView = (() => {
                 return;
             }
 
+            // Set default tab based on role
+            if (ICCSupabase.isAdmin()) {
+                currentTab = 'management';
+            } else {
+                currentTab = 'storefront';
+            }
+
             await refreshData();
             render(container);
             setupSubscriptions();
@@ -93,12 +100,13 @@ const InventoryView = (() => {
 
                     <!-- Tabs -->
                     <div class="flex items-center justify-center gap-2 mb-8 overflow-x-auto no-scrollbar pb-2">
-                        <button onclick="InventoryView.setTab('storefront')" class="px-6 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${currentTab === 'storefront' ? 'bg-crimson text-white shadow-lg shadow-crimson/20' : 'bg-zinc-900/50 text-zinc-500 hover:text-zinc-300'}">Storefront</button>
-                        <button onclick="InventoryView.setTab('my-requests')" class="px-6 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${currentTab === 'my-requests' ? 'bg-crimson text-white shadow-lg shadow-crimson/20' : 'bg-zinc-900/50 text-zinc-500 hover:text-zinc-300'}">My Borrows</button>
-                        ${isAdmin ? `
+                        ${!isAdmin ? `
+                            <button onclick="InventoryView.setTab('storefront')" class="px-6 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${currentTab === 'storefront' ? 'bg-crimson text-white shadow-lg shadow-crimson/20' : 'bg-zinc-900/50 text-zinc-500 hover:text-zinc-300'}">Storefront</button>
+                            <button onclick="InventoryView.setTab('my-requests')" class="px-6 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${currentTab === 'my-requests' ? 'bg-crimson text-white shadow-lg shadow-crimson/20' : 'bg-zinc-900/50 text-zinc-500 hover:text-zinc-300'}">My Borrows</button>
+                        ` : `
                             <button onclick="InventoryView.setTab('management')" class="px-6 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${currentTab === 'management' ? 'bg-crimson text-white shadow-lg shadow-crimson/20' : 'bg-zinc-900/50 text-zinc-500 hover:text-zinc-300'}">Admin Panel</button>
                             <button onclick="InventoryView.setTab('stock-control')" class="px-6 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${currentTab === 'stock-control' ? 'bg-crimson text-white shadow-lg shadow-crimson/20' : 'bg-zinc-900/50 text-zinc-500 hover:text-zinc-300'}">Stock Control</button>
-                        ` : ''}
+                        `}
                     </div>
 
                     <!-- Content Area -->
