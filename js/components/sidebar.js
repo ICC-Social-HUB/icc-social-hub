@@ -30,6 +30,7 @@ const Sidebar = (() => {
             { id: 'attendance', label: 'Attendance', hash: '#attendance', icon: attendanceIcon() },
             { id: 'inventory', label: 'Inventory', hash: '#inventory', icon: inventoryIcon() },
             { id: 'profile', label: 'My Profile', hash: '#profile', icon: profileIcon(window.location.hash.startsWith('#profile')) },
+            { id: 'download', label: 'Download App', hash: '#download', icon: downloadIcon(window.location.hash.startsWith('#download')) },
             { id: 'notifications', label: 'Notifications', hash: '#notifications', icon: notifIcon(window.location.hash.startsWith('#notifications')) },
         ];
 
@@ -107,6 +108,10 @@ const Sidebar = (() => {
 
     function attendanceIcon() {
         return `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>`;
+    }
+
+    function downloadIcon(a) {
+        return `<svg class="w-6 h-6" fill="${a?'currentColor':'none'}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="${a?'0':'2'}">${a?'<path d="M12 2L12 15M12 15L8 11M12 15L16 11M5 18H19" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>':'<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M5 20h14"/>'}</svg>`;
     }
 
     function mount() {

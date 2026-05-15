@@ -75,6 +75,9 @@ const Router = (() => {
             } else if (hash === '#notifications') {
                 previousView = 'notifications';
                 NotificationsView.mount(container);
+            } else if (hash === '#download') {
+                previousView = 'download';
+                DownloadView.mount(container);
             } else if (hash === '#inventory') {
                 previousView = 'inventory';
                 InventoryView.mount(container);
