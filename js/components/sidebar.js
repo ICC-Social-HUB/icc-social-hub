@@ -23,6 +23,7 @@ const Sidebar = (() => {
         const isAdmin = ICCSupabase.isAdmin();
 
         const menuItems = [
+            { id: 'notifications', label: 'Notifications', hash: '#notifications', icon: notifIcon(window.location.hash.startsWith('#notifications')) },
             { id: 'home', label: 'Home', hash: '#dashboard', icon: homeIcon(window.location.hash.startsWith('#dashboard')) },
             { id: 'feed', label: 'Innovation Feed', hash: '#feed', icon: feedIcon(window.location.hash.startsWith('#feed')) },
             { id: 'teams', label: 'Teams & Projects', hash: '#teams', icon: teamsIcon(window.location.hash.startsWith('#teams')) },
@@ -31,7 +32,6 @@ const Sidebar = (() => {
             { id: 'inventory', label: 'Inventory', hash: '#inventory', icon: inventoryIcon() },
             { id: 'profile', label: 'My Profile', hash: '#profile', icon: profileIcon(window.location.hash.startsWith('#profile')) },
             { id: 'download', label: 'Download App', hash: '#download', icon: downloadIcon(window.location.hash.startsWith('#download')) },
-            { id: 'notifications', label: 'Notifications', hash: '#notifications', icon: notifIcon(window.location.hash.startsWith('#notifications')) },
         ];
 
         if (isAdmin) {
