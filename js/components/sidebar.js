@@ -30,7 +30,6 @@ const Sidebar = (() => {
             { id: 'chat', label: 'Messages', hash: '#chat', icon: chatIcon(window.location.hash.startsWith('#chat')), badge: unreadMessages },
             { id: 'attendance', label: 'Attendance', hash: '#attendance', icon: attendanceIcon() },
             { id: 'inventory', label: 'Inventory', hash: '#inventory', icon: inventoryIcon() },
-            { id: 'profile', label: 'My Profile', hash: '#profile', icon: profileIcon(window.location.hash.startsWith('#profile')) },
             { id: 'download', label: 'Download App', hash: '#download', icon: downloadIcon(window.location.hash.startsWith('#download')) },
         ];
 
