@@ -59,11 +59,6 @@ const DownloadView = (() => {
                             <div class="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none"></div>
                         </div>
                         
-                        <!-- Floating Badges -->
-                        <div class="absolute -top-4 -right-4 bg-zinc-900 border border-zinc-800 p-4 rounded-2xl shadow-xl animate-bounce-slow">
-                            <div class="text-crimson font-bold text-xl">5.0 ★</div>
-                            <div class="text-zinc-500 text-[10px] uppercase font-bold tracking-tighter">Rating</div>
-                        </div>
                     </div>
                 </div>
             </div>
