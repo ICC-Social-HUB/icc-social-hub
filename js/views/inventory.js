@@ -410,14 +410,41 @@ const InventoryView = (() => {
     }
 
     function renderStockControl() {
+        const filteredInventory = inventory.filter(item => 
+            (item.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (item.category || '').toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
         return `
             <div class="space-y-6 animate-slide-up">
+                <!-- Search Bar -->
+                <div class="mb-6 max-w-md">
+                    <div class="relative group">
+                        <input 
+                            type="text" 
+                            id="inventory-search" 
+                            placeholder="Search in stock control..." 
+                            value="${searchQuery}"
+                            oninput="InventoryView.handleSearch(this.value)"
+                            class="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl px-12 py-4 text-sm focus:border-crimson focus:ring-1 focus:ring-crimson/20 outline-none transition-all placeholder:text-zinc-600"
+                        >
+                        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-crimson transition-colors">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </div>
+                        ${searchQuery ? `
+                            <button onclick="InventoryView.clearSearch()" class="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+
                 <div class="flex items-center justify-between">
                     <h2 class="text-sm font-bold text-zinc-500 uppercase tracking-widest">Stock Control</h2>
-                    <span class="text-[10px] text-zinc-600 bg-zinc-900 px-2 py-1 rounded-lg border border-zinc-800">${inventory.length} components</span>
+                    <span class="text-[10px] text-zinc-600 bg-zinc-900 px-2 py-1 rounded-lg border border-zinc-800">${filteredInventory.length} of ${inventory.length} components</span>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    ${inventory.map(item => `
+                    ${filteredInventory.length > 0 ? filteredInventory.map(item => `
                         <div class="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800 flex items-center justify-between gap-4 hover:border-zinc-700 transition-all">
                             <div class="flex items-center gap-3">
                                 <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center border border-zinc-700 overflow-hidden shrink-0">
@@ -441,7 +468,12 @@ const InventoryView = (() => {
                                 </button>
                             </div>
                         </div>
-                    `).join('')}
+                    `).join('') : `
+                        <div class="col-span-full py-10 text-center animate-fade-in bg-zinc-900/30 rounded-2xl border border-dashed border-zinc-800">
+                            <p class="text-zinc-500 text-sm">No components match your search in stock control.</p>
+                            <button onclick="InventoryView.clearSearch()" class="mt-2 text-crimson text-xs font-bold hover:underline">Clear search</button>
+                        </div>
+                    `}
                 </div>
             </div>
         `;
