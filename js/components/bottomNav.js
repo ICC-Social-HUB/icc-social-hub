@@ -1,30 +1,42 @@
-/* ============================================
-   ICC Social Hub — Bottom Nav + Desktop Sidebar
-   ============================================ */
 const BottomNav = (() => {
     let unreadMessages = 0;
     let unreadNotifs = 0;
 
     function render() {
-        const h = window.location.hash || '#feed';
+        const h = window.location.hash || '#dashboard';
         const u = ICCSupabase.getUser();
+        
         const tabs = [
             { id:'dashboard', hash:'#dashboard', label:'Home', icon:homeIcon },
             { id:'feed', hash:'#feed', label:'Feed', icon:feedIcon },
-            { id:'teams', hash:'#teams', label:'Teams', icon:teamsIcon },
             { id:'fab', isFab:true },
             { id:'chat', hash:'#chat', label:'Chat', icon:chatIcon, badge:unreadMessages },
-            { id:'download', hash:'#download', label:'App', icon:downloadIcon },
             { id:'profile', hash:'#profile', label:'Profile', icon:profileIcon }
         ];
+
         if (ICCSupabase.isAdmin()) {
-            tabs.splice(4, 0, { id:'admin', hash:'#admin', label:'Admin', icon:adminIcon });
+            tabs.splice(2, 0, { id:'admin', hash:'#admin', label:'Admin', icon:adminIcon });
         }
-        const mobile = `<nav class="bottom-nav md:hidden" id="bottom-nav"><div class="flex items-end justify-around px-2 pt-1 pb-1 max-w-lg mx-auto">${tabs.map(t=>{
-            if(t.isFab) return `<button class="fab-create" id="fab-create-btn" aria-label="Create post"><svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button>`;
-            const a=h.startsWith(t.hash);
-            return `<a href="${t.hash}" class="bottom-nav-item ${a?'active':''}" id="nav-${t.id}">${t.icon(a)}<span class="text-[10px] font-medium">${t.label}</span>${t.badge>0?`<span class="nav-badge">${t.badge>9?'9+':t.badge}</span>`:''}</a>`;
-        }).join('')}</div></nav>`;
+
+        const mobile = `
+            <nav class="bottom-nav md:hidden" id="bottom-nav">
+                ${tabs.map(t => {
+                    if(t.isFab) return `
+                        <button class="fab-create" id="fab-create-btn" aria-label="Create post">
+                            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                            </svg>
+                        </button>`;
+                    
+                    const a = h.startsWith(t.hash);
+                    return `
+                        <a href="${t.hash}" class="bottom-nav-item ${a?'active':''}" id="nav-${t.id}">
+                            ${t.icon(a)}
+                            ${t.badge > 0 ? `<span class="nav-badge">${t.badge > 9 ? '9+' : t.badge}</span>` : ''}
+                        </a>`;
+                }).join('')}
+            </nav>`;
+
         const desktopTabs = [
             { id:'dashboard', hash:'#dashboard', label:'Home', icon:homeIcon },
             { id:'feed', hash:'#feed', label:'Feed', icon:feedIcon },
@@ -33,23 +45,60 @@ const BottomNav = (() => {
             { id:'download', hash:'#download', label:'Download App', icon:downloadIcon },
             { id:'profile', hash:'#profile', label:'Profile', icon:profileIcon }
         ];
+
         if (ICCSupabase.isAdmin()) {
             desktopTabs.push({ id:'admin', hash:'#admin', label:'Admin', icon:adminIcon });
         }
-        const desktop = `<nav class="desktop-nav hidden md:flex" id="desktop-nav"><a href="#dashboard" class="block mb-4 mt-2"><div class="w-10 h-10 bg-gradient-to-br from-red-600 to-rose-700 rounded-xl flex items-center justify-center font-heading font-bold text-xs">ICC</div></a><div class="flex-1 flex flex-col items-center gap-1 mt-4">${desktopTabs.map(t=>{const a=h.startsWith(t.hash);return `<a href="${t.hash}" class="desktop-nav-item ${a?'active':''}" title="${t.label}" id="dnav-${t.id}">${t.icon(a)}${t.badge>0?`<span class="nav-badge" style="top:4px;right:4px;transform:none">${t.badge>9?'9+':t.badge}</span>`:''}</a>`;}).join('')}<button class="desktop-nav-item mt-2" id="desktop-fab-btn" title="Create Post" style="color:#E11D48"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></button></div></nav>`;
-        return mobile+desktop;
+
+        const desktop = `
+            <nav class="desktop-nav hidden md:flex" id="desktop-nav">
+                <a href="#dashboard" class="block mb-4 mt-2">
+                    <div class="w-10 h-10 bg-gradient-to-br from-crimson to-crimson-dark rounded-xl flex items-center justify-center font-heading font-bold text-xs">ICC</div>
+                </a>
+                <div class="flex-1 flex flex-col items-center gap-1 mt-4">
+                    ${desktopTabs.map(t => {
+                        const a = h.startsWith(t.hash);
+                        return `
+                            <a href="${t.hash}" class="desktop-nav-item ${a?'active':''}" title="${t.label}" id="dnav-${t.id}">
+                                ${t.icon(a)}
+                                ${t.badge > 0 ? `<span class="nav-badge" style="top:4px;right:4px;transform:none">${t.badge > 9 ? '9+' : t.badge}</span>` : ''}
+                            </a>`;
+                    }).join('')}
+                    <button class="desktop-nav-item mt-2" id="desktop-fab-btn" title="Create Post" style="color:#E11D48">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </button>
+                </div>
+            </nav>`;
+
+        return mobile + desktop;
     }
-    function mount(){const r=document.getElementById('bottom-nav-root');if(r)r.innerHTML=render();bindEvents();}
-    function bindEvents(){
-        document.getElementById('fab-create-btn')?.addEventListener('click',()=>{if(!ICCSupabase.getUser()){AuthModal.open();return;}CreatePostModal.open();});
-        document.getElementById('desktop-fab-btn')?.addEventListener('click',()=>{if(!ICCSupabase.getUser()){AuthModal.open();return;}CreatePostModal.open();});
+
+    function mount() {
+        const r = document.getElementById('bottom-nav-root');
+        if (r) r.innerHTML = render();
+        bindEvents();
     }
-    async function updateUnreadCount(){unreadMessages=await ICCSupabase.getUnreadCount();mount();}
-    async function updateNotifCount(){unreadNotifs=await ICCSupabase.getUnreadNotifCount();mount();}
-    async function updateAllBadges(){await Promise.all([updateUnreadCount(), updateNotifCount()]);}
-    function setUnread(c){unreadMessages=c;}
-    function setUnreadNotifs(c){unreadNotifs=c;}
-    return {mount,updateUnreadCount,updateNotifCount,updateAllBadges,setUnread,setUnreadNotifs};
+
+    function bindEvents() {
+        document.getElementById('fab-create-btn')?.addEventListener('click', () => {
+            if (!ICCSupabase.getUser()) { AuthModal.open(); return; }
+            CreatePostModal.open();
+        });
+        document.getElementById('desktop-fab-btn')?.addEventListener('click', () => {
+            if (!ICCSupabase.getUser()) { AuthModal.open(); return; }
+            CreatePostModal.open();
+        });
+    }
+
+    async function updateUnreadCount() { unreadMessages = await ICCSupabase.getUnreadCount(); mount(); }
+    async function updateNotifCount() { unreadNotifs = await ICCSupabase.getUnreadNotifCount(); mount(); }
+    async function updateAllBadges() { await Promise.all([updateUnreadCount(), updateNotifCount()]); }
+    function setUnread(c) { unreadMessages = c; }
+    function setUnreadNotifs(c) { unreadNotifs = c; }
+    
+    return { mount, updateUnreadCount, updateNotifCount, updateAllBadges, setUnread, setUnreadNotifs };
 })();
 
 function homeIcon(a){return `<svg class="w-6 h-6" fill="${a?'currentColor':'none'}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="${a?'0':'1.5'}">${a?'<path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>':'<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/>'}</svg>`;}

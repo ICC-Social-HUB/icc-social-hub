@@ -130,14 +130,33 @@ const FeedView = (() => {
     }
 
     function renderSkeletons() {
-        return Array(3).fill(0).map(() => `<div class="post-card mb-4 p-4 space-y-3"><div class="flex gap-3"><div class="skeleton w-9 h-9 rounded-full"></div><div class="space-y-2 flex-1"><div class="skeleton h-3 w-24"></div><div class="skeleton h-2 w-16"></div></div></div><div class="skeleton h-48 w-full rounded-lg"></div><div class="skeleton h-3 w-3/4"></div></div>`).join('');
+        return Array(3).fill(0).map(() => `
+            <div class="glass-card mb-6 overflow-hidden animate-pulse">
+                <div class="flex items-center gap-3 p-4">
+                    <div class="w-11 h-11 rounded-2xl bg-white/5"></div>
+                    <div class="space-y-2 flex-1">
+                        <div class="h-3 w-24 bg-white/5 rounded"></div>
+                        <div class="h-2 w-16 bg-white/5 rounded"></div>
+                    </div>
+                </div>
+                <div class="h-64 w-full bg-white/5"></div>
+                <div class="p-4 space-y-3">
+                    <div class="h-3 w-3/4 bg-white/5 rounded"></div>
+                    <div class="h-3 w-1/2 bg-white/5 rounded"></div>
+                </div>
+            </div>
+        `).join('');
     }
 
     function bindEvents() {
         document.querySelectorAll('.filter-pill').forEach(btn => {
             btn.addEventListener('click', () => {
                 filter = btn.dataset.filter;
-                document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.filter-pill').forEach(b => {
+                    b.classList.remove('active');
+                    b.classList.remove('bg-crimson');
+                    b.classList.remove('text-white');
+                });
                 btn.classList.add('active');
                 renderFeed();
             });

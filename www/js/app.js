@@ -74,7 +74,16 @@
         // 7. Init particles
         initParticles();
 
-        // 8. Bottom Nav is hidden in CSS, no scroll hide needed
+        // 8. Bottom Nav Scroll Hide Logic
+        let lastScrollY = window.scrollY;
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > lastScrollY && window.scrollY > 80) {
+                document.body.classList.add('scroll-down');
+            } else {
+                document.body.classList.remove('scroll-down');
+            }
+            lastScrollY = window.scrollY;
+        }, { passive: true });
 
         console.log('✅ ICC Social Hub ready');
     });

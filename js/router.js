@@ -14,21 +14,29 @@ const Router = (() => {
         const container = document.getElementById('app');
         if (!container) return;
 
+        // Progress Bar Start
+        const progressBar = document.getElementById('route-progress');
+        if (progressBar) {
+            progressBar.style.width = '0%';
+            progressBar.style.opacity = '1';
+            requestAnimationFrame(() => progressBar.style.width = '70%');
+        }
+
         // Clean up previous view
         if (previousView === 'feed') FeedView.unmount?.();
         if (previousView === 'teams') TeamsView.unmount?.();
         if (previousView === 'chat') ChatView.unmount?.();
         if (previousView === 'profile') ProfileView.unmount?.();
 
-        // Transition — keep delay short for snappy mobile feel
+        // Transition
         container.classList.remove('view-enter');
         container.classList.add('view-exit');
 
         setTimeout(() => {
             container.classList.remove('view-exit');
-            container.innerHTML = ''; // Clear immediately to avoid ghosting
+            container.innerHTML = '';
 
-            // Route matching
+            // Route matching... (keep existing logic)
             if (hash === '#dashboard' || hash === '' || hash === '#') {
                 previousView = 'dashboard';
                 DashboardView.mount(container);
@@ -55,7 +63,6 @@ const Router = (() => {
                 ChatView.mount(container, partnerId);
             } else if (hash === '#profile') {
                 previousView = 'profile';
-                // Guard: redirect to onboarding if needed
                 if (ICCSupabase.getUser() && ICCSupabase.needsOnboarding()) {
                     window.location.hash = '#onboarding';
                     return;
@@ -66,10 +73,7 @@ const Router = (() => {
                 if (!ICCSupabase.getUser()) { window.location.hash = '#dashboard'; return; }
                 OnboardingView.mount(container);
             } else if (hash === '#admin') {
-                if (!ICCSupabase.isAdmin()) {
-                    window.location.hash = '#dashboard';
-                    return;
-                }
+                if (!ICCSupabase.isAdmin()) { window.location.hash = '#dashboard'; return; }
                 previousView = 'admin';
                 AdminView.mount(container);
             } else if (hash === '#notifications') {
@@ -89,15 +93,22 @@ const Router = (() => {
                 DashboardView.mount(container);
             }
 
-            // GPU-synced entrance animation
+            // Progress Bar End
+            if (progressBar) {
+                progressBar.style.width = '100%';
+                setTimeout(() => {
+                    progressBar.style.opacity = '0';
+                    setTimeout(() => progressBar.style.width = '0%', 400);
+                }, 200);
+            }
+
             requestAnimationFrame(() => {
                 container.classList.add('view-enter');
             });
 
             Sidebar.mount();
-            // Instant scroll — smooth causes jank during view transitions on mobile
             window.scrollTo(0, 0);
-        }, 80);
+        }, 120); // Slightly longer for smoother feel
     }
 
     return { init };
