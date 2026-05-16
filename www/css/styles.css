@@ -877,47 +877,15 @@ input, select, textarea { font-size: 16px !important; }
     opacity: 0;
 }
 
+/* ---------- Premium Bottom Navigation (REMOVED) ---------- */
+.bottom-nav {
+    display: none !important;
+}
+
 /* --- Desktop Layout (>= 768px) --- */
 @media (min-width: 768px) {
     .desktop-nav {
-        display: flex !important;
-        position: fixed;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 80px;
-        background: rgba(15, 15, 15, 0.8);
-        backdrop-filter: blur(20px);
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
-        z-index: 600;
-        flex-direction: column;
-        align-items: center;
-        padding: 20px 0;
-    }
-
-    .desktop-nav-item {
-        width: 52px;
-        height: 52px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 16px;
-        color: #71717a;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        margin-bottom: 12px;
-    }
-
-    .desktop-nav-item:hover { 
-        background: rgba(255, 255, 255, 0.05); 
-        color: #fff; 
-        transform: translateX(4px);
-    }
-    
-    .desktop-nav-item.active { 
-        color: #fff; 
-        background: #E11D48;
-        box-shadow: 0 8px 16px rgba(225, 29, 72, 0.3);
+        display: none !important;
     }
 
     #app { 
@@ -939,13 +907,8 @@ input, select, textarea { font-size: 16px !important; }
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .bottom-nav {
-        transform: translateX(-50%) translateY(0);
-        transition: transform 0.3s ease;
-    }
-
-    body.scroll-down .bottom-nav {
-        transform: translateX(-50%) translateY(120px);
+    #app {
+        padding-bottom: 20px !important;
     }
 }
 

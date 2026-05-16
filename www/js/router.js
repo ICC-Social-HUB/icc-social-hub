@@ -106,7 +106,7 @@ const Router = (() => {
                 container.classList.add('view-enter');
             });
 
-            // Sidebar.mount();
+            Sidebar.mount();
             window.scrollTo(0, 0);
         }, 120); // Slightly longer for smoother feel
     }

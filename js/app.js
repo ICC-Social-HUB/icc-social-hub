@@ -26,7 +26,7 @@
         // 4. Listen for auth state changes
         ICCSupabase.onAuthStateChange(async (event, session) => {
             console.log('🔑 Auth event:', event);
-            // Sidebar.mount(); // Removed navigation bar
+            Sidebar.mount();
             
             if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                 if (ICCSupabase.needsOnboarding()) {
@@ -65,7 +65,7 @@
         });
 
         // 5. Mount components
-            // Sidebar.mount();
+        Sidebar.mount();
         NotifBell.mount();
 
         // 6.5. Init image viewer
@@ -73,17 +73,6 @@
 
         // 7. Init particles
         initParticles();
-
-        // 8. Bottom Nav Scroll Hide Logic
-        let lastScrollY = window.scrollY;
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > lastScrollY && window.scrollY > 80) {
-                document.body.classList.add('scroll-down');
-            } else {
-                document.body.classList.remove('scroll-down');
-            }
-            lastScrollY = window.scrollY;
-        }, { passive: true });
 
         console.log('✅ ICC Social Hub ready');
     });
