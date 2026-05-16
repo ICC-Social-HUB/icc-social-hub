@@ -796,6 +796,53 @@ input, select, textarea { font-size: 16px !important; }
         margin-left: -16px;
         margin-right: -16px;
     }
+    /* Larger touch targets for action buttons */
+    .like-btn, .comment-toggle {
+        padding: 8px;
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Chat */
+    .chat-bubble { max-width: 85%; font-size: 15px; }
+    .chat-input-bar { padding-bottom: env(safe-area-inset-bottom, 8px); }
+
+    /* Bigger conversation items for fat finger tapping */
+    .conversation-item { padding: 14px 12px; }
+
+    /* Touch-friendly filter pills */
+    .filter-pill { padding: 8px 16px; min-height: 36px; }
+
+    /* Modal slides up from bottom on mobile */
+    .modal-content {
+        animation: slideUpModal 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        max-height: 92dvh;
+    }
+
+    /* Onboarding full-width */
+    .onboarding-step { border-radius: 16px; }
+
+    /* Admin compact */
+    .admin-stat-card { padding: 14px; }
+    .admin-tab { padding: 10px 14px; }
+
+    /* Skill chips more tappable */
+    .skill-chip { padding: 8px 16px; min-height: 38px; display: inline-flex; align-items: center; }
+
+    /* Profile grid full width */
+    .profile-post-grid { gap: 2px; }
+
+    /* Team detail */
+    .specialty-pill { padding: 10px 14px; }
+}
+
+@keyframes slideUpModal {
+    from { opacity: 0; transform: translate3d(0, 100%, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
 /* ---------- Filter Pills ---------- */
 .filter-pill {
     padding: 8px 18px;
@@ -830,7 +877,7 @@ input, select, textarea { font-size: 16px !important; }
     opacity: 0;
 }
 
-/* Desktop sidebar nav for larger screens */
+/* --- Desktop Layout (>= 768px) --- */
 @media (min-width: 768px) {
     .desktop-nav {
         display: flex !important;
@@ -879,7 +926,7 @@ input, select, textarea { font-size: 16px !important; }
     }
 }
 
-/* Touch feedback and mobile optimizations */
+/* --- Mobile Layout (< 768px) --- */
 @media (max-width: 767px) {
     .post-card {
         border-radius: 0;
@@ -894,6 +941,7 @@ input, select, textarea { font-size: 16px !important; }
 
     .bottom-nav {
         transform: translateX(-50%) translateY(0);
+        transition: transform 0.3s ease;
     }
 
     body.scroll-down .bottom-nav {

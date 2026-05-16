@@ -86,8 +86,6 @@ const PostCard = (() => {
             </div>
             <div class="comments-section hidden border-t border-white/5 bg-white/[0.02]" data-comments-for="${post.id}"></div>
         </article>`;
-            <div class="comments-section hidden border-t border-zinc-800/50" data-comments-for="${post.id}"></div>
-        </article>`;
     }
 
     function bindEvents(container) {

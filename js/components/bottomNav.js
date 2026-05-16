@@ -9,6 +9,7 @@ const BottomNav = (() => {
         const tabs = [
             { id:'dashboard', hash:'#dashboard', label:'Home', icon:homeIcon },
             { id:'feed', hash:'#feed', label:'Feed', icon:feedIcon },
+            { id:'teams', hash:'#teams', label:'Teams', icon:teamsIcon },
             { id:'fab', isFab:true },
             { id:'chat', hash:'#chat', label:'Chat', icon:chatIcon, badge:unreadMessages },
             { id:'profile', hash:'#profile', label:'Profile', icon:profileIcon }
