@@ -26,7 +26,7 @@
         // 4. Listen for auth state changes
         ICCSupabase.onAuthStateChange(async (event, session) => {
             console.log('🔑 Auth event:', event);
-            Sidebar.mount();
+            // Sidebar.mount(); // Removed navigation bar
             
             if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                 if (ICCSupabase.needsOnboarding()) {
@@ -65,7 +65,7 @@
         });
 
         // 5. Mount components
-        Sidebar.mount();
+            // Sidebar.mount();
         NotifBell.mount();
 
         // 6.5. Init image viewer
