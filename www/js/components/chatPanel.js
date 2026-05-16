@@ -42,7 +42,7 @@ const ChatPanel = (() => {
         }
         return `
         <div class="flex flex-col h-full">
-            <div class="flex-shrink-0 flex items-center gap-3 p-4 border-b border-zinc-800/50 bg-zinc-900/80 backdrop-blur-sm">
+            <div class="flex items-center gap-3 p-4 border-b border-zinc-800/50 bg-zinc-900/80 backdrop-blur-sm">
                 <button id="chat-back-btn" class="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors md:hidden">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                 </button>
@@ -54,10 +54,10 @@ const ChatPanel = (() => {
                     <p class="text-[11px] text-zinc-500">${partnerProfile.team_id ? getTeamName(partnerProfile.team_id) : 'ICC Member'}</p>
                 </div>
             </div>
-            <div class="flex-1 overflow-y-auto min-h-0 p-4 space-y-2" id="chat-messages">
+            <div class="flex-1 overflow-y-auto p-4 space-y-2" id="chat-messages">
                 ${messageHtml}
             </div>
-            <form class="chat-input-bar p-3 flex gap-2 flex-shrink-0" id="chat-send-form">
+            <form class="chat-input-bar p-3 flex gap-2" id="chat-send-form">
                 <input type="text" id="chat-input" placeholder="Type a message..." class="form-input flex-1 px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600" autocomplete="off">
                 <button type="submit" class="w-10 h-10 bg-red-600 hover:bg-red-500 rounded-xl flex items-center justify-center transition-colors flex-shrink-0">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>

@@ -10,6 +10,7 @@ const AdminView = (() => {
     let editingUserId = null;
     let userSearchQuery = '';
     let userSectionFilter = '';
+    let userTeamFilter = '';
 
     function render() {
         const user = ICCSupabase.getUser();
@@ -172,10 +173,15 @@ const AdminView = (() => {
                     <h3 class="font-heading font-semibold text-sm">User Management</h3>
                     <span class="text-xs text-zinc-500" id="users-count-badge">${displayUsers.length} members</span>
                 </div>
-                <div class="flex items-center gap-2 w-full sm:w-auto">
+                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <select id="admin-user-section-filter" class="bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white px-2 py-2 outline-none focus:border-blue-500">
                         <option value="">All Secs</option>
                         ${['A','B','C','D','E','F','G','H','I','J','K'].map(s => `<option value="${s}" ${userSectionFilter === s ? 'selected' : ''}>Sec ${s}</option>`).join('')}
+                    </select>
+                    <select id="admin-user-team-filter" class="bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white px-2 py-2 outline-none focus:border-blue-500">
+                        <option value="">All Teams</option>
+                        <option value="none" ${userTeamFilter === 'none' ? 'selected' : ''}>No Team</option>
+                        ${CORE_LEADS.map(l => `<option value="${l.id}" ${userTeamFilter === String(l.id) ? 'selected' : ''}>${l.team}</option>`).join('')}
                     </select>
                     <div class="relative flex-1 sm:w-64">
                         <input type="text" id="admin-user-search" placeholder="Search by name, email, or USN..." class="form-input w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white" value="${userSearchQuery}">
@@ -200,7 +206,7 @@ const AdminView = (() => {
                     const teamName = CORE_LEADS.find(l => Number(l.id) === Number(u.team_id))?.team || 'No Team';
                     
                     return `
-                    <div class="glass-card rounded-2xl p-4 transition-all duration-300 ${isEditing ? 'ring-1 ring-blue-500/50 bg-blue-500/5' : ''}" data-user-id="${u.id}" data-section="${(section || '').toUpperCase()}">
+                    <div class="glass-card rounded-2xl p-4 transition-all duration-300 ${isEditing ? 'ring-1 ring-blue-500/50 bg-blue-500/5' : ''}" data-user-id="${u.id}" data-section="${(section || '').toUpperCase()}" data-team-id="${u.team_id || ''}">
                         <div class="flex items-start justify-between gap-4">
                             <div class="flex items-center gap-3 flex-1 min-w-0">
                                 <div class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-bold flex-shrink-0 border border-zinc-700 relative">
@@ -477,20 +483,30 @@ const AdminView = (() => {
 
         // User Search & Filter
         const applyUserFilters = () => {
-            const query = userSearchQuery.toLowerCase();
+            const query = userSearchQuery.trim().toLowerCase();
             const sectionQuery = userSectionFilter;
-            const container = document.getElementById('users-list-container');
-            if (!container) return;
-            const cards = container.querySelectorAll('.glass-card');
+            const teamQuery = userTeamFilter;
+            const listContainer = document.getElementById('users-list-container');
+            if (!listContainer) return;
+            const cards = listContainer.querySelectorAll('.glass-card[data-user-id]');
             let visibleCount = 0;
+            
             cards.forEach(card => {
                 const text = card.textContent.toLowerCase();
-                const cardSection = card.dataset.section || '';
-                
-                const matchesSearch = text.includes(query);
+                const cardSection = card.getAttribute('data-section') || '';
+                const cardTeamId = card.getAttribute('data-team-id') || '';
+
+                const matchesSearch = !query || text.includes(query);
                 const matchesSection = !sectionQuery || cardSection === sectionQuery;
                 
-                if (matchesSearch && matchesSection) {
+                let matchesTeam = true;
+                if (teamQuery === 'none') {
+                    matchesTeam = !cardTeamId || cardTeamId === 'null' || cardTeamId === 'undefined';
+                } else if (teamQuery) {
+                    matchesTeam = String(cardTeamId) === String(teamQuery);
+                }
+
+                if (matchesSearch && matchesSection && matchesTeam) {
                     card.style.display = '';
                     visibleCount++;
                 } else {
@@ -516,8 +532,16 @@ const AdminView = (() => {
                 applyUserFilters();
             });
         }
-        
-        if (userSearchQuery || userSectionFilter) {
+
+        const teamSelect = document.getElementById('admin-user-team-filter');
+        if (teamSelect) {
+            teamSelect.addEventListener('change', e => {
+                userTeamFilter = e.target.value;
+                applyUserFilters();
+            });
+        }
+
+        if (userSearchQuery || userSectionFilter || userTeamFilter) {
             applyUserFilters();
         }
 

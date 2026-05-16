@@ -34,7 +34,7 @@ const AuthModal = (() => {
         if (step === 'forgot-reset') title = 'New Password';
 
         return `
-        <div class="modal-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4" id="auth-overlay">
+        <div class="modal-backdrop fixed inset-0 z-[2000] flex items-center justify-center p-4" id="auth-overlay">
             <div class="modal-content bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
                 <div class="relative p-6 pb-4">
                     <button id="auth-close" class="absolute top-4 right-4 p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">

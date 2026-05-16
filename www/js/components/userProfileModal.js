@@ -53,7 +53,7 @@ const UserProfileModal = (() => {
                     ${profile.bio ? `<p class="text-xs text-zinc-400 mt-2 max-w-xs mx-auto">${escapeHtml(profile.bio)}</p>` : ''}
                     <div class="flex items-center justify-center gap-3 mt-3">
                         ${teamLead ? `<span class="px-3 py-1 bg-zinc-800 border border-zinc-700 rounded-full text-xs text-zinc-300">${teamLead.team}</span>` : ''}
-                        ${profile.role === 'lead' ? `<span class="px-3 py-1 bg-red-600/15 text-red-400 rounded-full text-xs font-semibold uppercase">Lead</span>` : ''}
+                        ${profile.role === 'lead' ? `<span class="px-3 py-1 bg-red-600/15 text-red-400 rounded-full text-xs font-semibold uppercase">${profile.role}</span>` : ''}
                     </div>
                     ${profile.skills && profile.skills.length ? `<div class="flex flex-wrap justify-center gap-1.5 mt-3">${profile.skills.map(s => `<span class="px-2 py-0.5 bg-zinc-800 rounded text-[10px] text-zinc-400">${s}</span>`).join('')}</div>` : ''}
                     ${!isMe ? `<button id="user-msg-btn" class="mt-4 px-6 py-2.5 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all" data-user-id="${profile.id}">Message</button>` : ''}

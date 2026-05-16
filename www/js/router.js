@@ -19,8 +19,6 @@ const Router = (() => {
         if (previousView === 'teams') TeamsView.unmount?.();
         if (previousView === 'chat') ChatView.unmount?.();
         if (previousView === 'profile') ProfileView.unmount?.();
-        if (previousView === 'inventory') InventoryView.unmount?.();
-        if (previousView === 'attendance') AttendanceView.unmount?.();
 
         // Transition — keep delay short for snappy mobile feel
         container.classList.remove('view-enter');
@@ -65,23 +63,30 @@ const Router = (() => {
                 ProfileView.mount(container);
             } else if (hash === '#onboarding') {
                 previousView = 'onboarding';
-                if (!ICCSupabase.getUser()) { window.location.hash = '#feed'; return; }
+                if (!ICCSupabase.getUser()) { window.location.hash = '#dashboard'; return; }
                 OnboardingView.mount(container);
             } else if (hash === '#admin') {
+                if (!ICCSupabase.isAdmin()) {
+                    window.location.hash = '#dashboard';
+                    return;
+                }
                 previousView = 'admin';
                 AdminView.mount(container);
+            } else if (hash === '#notifications') {
+                previousView = 'notifications';
+                NotificationsView.mount(container);
+            } else if (hash === '#download') {
+                previousView = 'download';
+                DownloadView.mount(container);
             } else if (hash === '#inventory') {
                 previousView = 'inventory';
                 InventoryView.mount(container);
             } else if (hash === '#attendance') {
                 previousView = 'attendance';
                 AttendanceView.mount(container);
-            } else if (hash === '#notifications') {
-                previousView = 'notifications';
-                NotificationsView.mount(container);
             } else {
-                previousView = 'feed';
-                FeedView.mount(container);
+                previousView = 'dashboard';
+                DashboardView.mount(container);
             }
 
             // GPU-synced entrance animation

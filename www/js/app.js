@@ -27,7 +27,6 @@
         ICCSupabase.onAuthStateChange(async (event, session) => {
             console.log('🔑 Auth event:', event);
             Sidebar.mount();
-            Sidebar.mount();
             
             if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                 if (ICCSupabase.needsOnboarding()) {
@@ -40,7 +39,7 @@
                         window.dispatchEvent(new Event('hashchange'));
                     }
                 }
-                BottomNav.updateAllBadges();
+                Sidebar.updateUnreadCount();
 
                 if (!subscriptionsStarted) {
                     subscriptionsStarted = true;
@@ -53,12 +52,15 @@
                         Sidebar.updateUnreadCount();
                     });
                     NotifBell.update();
+                    
+                    // Register for Push Notifications on Native
+                    registerPushNotifications();
                 }
             }
 
             if (event === 'SIGNED_OUT') {
                 subscriptionsStarted = false;
-                window.location.hash = '#feed';
+                window.location.hash = '#dashboard';
             }
         });
 
@@ -70,13 +72,50 @@
         ImageViewer.init();
 
         // 7. Init particles
-        // 8. Nav is sidebar drawer only, no scroll logic
         initParticles();
+
+        // 8. Bottom Nav is hidden in CSS, no scroll hide needed
 
         console.log('✅ ICC Social Hub ready');
     });
 
 
+
+    async function registerPushNotifications() {
+        if (!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.PushNotifications) {
+            console.warn("Push plugin not found! Running in browser or sync missing.");
+            return;
+        }
+
+        const PushNotifications = window.Capacitor.Plugins.PushNotifications;
+
+        let permStatus = await PushNotifications.checkPermissions();
+        if (permStatus.receive === 'prompt') {
+            permStatus = await PushNotifications.requestPermissions();
+        }
+
+        if (permStatus.receive !== 'granted') {
+            console.warn("Push permission denied by user.");
+            return;
+        }
+
+        await PushNotifications.register();
+
+        PushNotifications.addListener('registration', (token) => {
+            console.log('✅ Push registration success, token generated.');
+            if (ICCSupabase.getUser()) {
+                ICCSupabase.updateProfile({ fcm_token: token.value });
+            }
+        });
+
+        PushNotifications.addListener('registrationError', (error) => {
+            console.error('Error registering push:', error);
+        });
+
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+            console.log('Push received:', notification);
+        });
+    }
 
     function initParticles() {
         const bg = document.getElementById('particles-bg');

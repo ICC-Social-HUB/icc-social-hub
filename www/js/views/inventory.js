@@ -328,7 +328,6 @@ const InventoryView = (() => {
                                 req.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
                                 'bg-red-500/10 text-red-500 border-red-500/20';
                             
-                            const leads = (typeof CORE_LEADS !== 'undefined' ? CORE_LEADS : (typeof CORE_LEADS_STATIC !== 'undefined' ? CORE_LEADS_STATIC : []));
                             const isLead = req.profiles?.role === 'lead';
                             
                             return `
@@ -354,8 +353,8 @@ const InventoryView = (() => {
                                                     ` : `
                                                         <span class="text-[11px] font-medium text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">USN: ${req.profiles?.usn || 'N/A'}</span>
                                                         <span class="text-[11px] font-medium text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">Sec: ${req.profiles?.section || 'N/A'}</span>
-                                                        <span class="text-[11px] font-medium text-emerald-400/80 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10">${req.profiles?.phone || 'No Phone'}</span>
                                                     `}
+                                                    <span class="text-[11px] font-medium text-emerald-400/80 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10">${req.profiles?.phone || 'No Phone'}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -487,9 +486,12 @@ const InventoryView = (() => {
 
         // Fetch current user's profile details
         const profile = ICCSupabase.getProfile();
+        const usn = profile?.usn || '';
+        const section = profile?.section || '';
+        const phone = profile?.phone || '';
+        const missingFields = !usn || !section || !phone;
 
         const root = document.getElementById('modal-root');
-        if (!root) return;
         root.innerHTML = `
             <div class="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
                 <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="InventoryView.closeModal()"></div>
@@ -568,7 +570,6 @@ const InventoryView = (() => {
     function openAddModal() {
         if (!ICCSupabase.isAdmin()) return;
         const root = document.getElementById('modal-root');
-        if (!root) return;
         root.innerHTML = `
             <div class="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in overflow-y-auto">
                 <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" onclick="InventoryView.closeModal()"></div>
@@ -684,7 +685,10 @@ const InventoryView = (() => {
     }
 
     async function updateStatus(requestId, status) {
-        if (!ICCSupabase.isAdmin()) return;
+        if (!ICCSupabase.isAdmin()) {
+            Toast.show('Admin permissions required', 'error');
+            return;
+        }
         const { error } = await ICCSupabase.updateInventoryRequestStatus(requestId, status);
         if (error) Toast.show(error.message, 'error');
         else {
@@ -718,7 +722,10 @@ const InventoryView = (() => {
     }
 
     async function deleteItem(itemId) {
-        if (!ICCSupabase.isAdmin()) return;
+        if (!ICCSupabase.isAdmin()) {
+            Toast.show('Admin permissions required', 'error');
+            return;
+        }
         if (!confirm('Are you sure you want to remove this item? This action cannot be undone.')) return;
         const { error } = await ICCSupabase.deleteInventoryItem(itemId);
         if (error) Toast.show(error.message, 'error');
@@ -750,7 +757,13 @@ const InventoryView = (() => {
                 <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="InventoryView.closeModal()"></div>
                 <div class="relative w-full max-w-lg bg-zinc-900 border-t sm:border border-zinc-800 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl animate-slide-up">
                     <div class="p-6">
-                        <h3 class="text-xl font-bold font-heading mb-6">Edit Component</h3>
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xl font-bold font-heading">Edit Component</h3>
+                            <button onclick="InventoryView.closeModal()" class="text-zinc-500 hover:text-white transition-colors">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+
                         <form onsubmit="InventoryView.submitEditItem(event, '${itemId}')" class="grid grid-cols-2 gap-4">
                             <div class="col-span-2">
                                 <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-1 ml-1 tracking-wider">Item Name</label>
@@ -792,6 +805,7 @@ const InventoryView = (() => {
             </div>
         `;
     }
+
 
     async function submitEditItem(e, itemId) {
         e.preventDefault();

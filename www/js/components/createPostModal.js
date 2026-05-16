@@ -66,6 +66,27 @@ const CreatePostModal = (() => {
                         </div>`}
                     </div>
 
+                    <!-- Community Request Toggle -->
+                    <div class="mb-4 p-3 bg-zinc-950/50 border border-zinc-800 rounded-xl">
+                        <label class="flex items-center justify-between cursor-pointer">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                <span class="text-xs font-semibold text-zinc-300">Community Request</span>
+                            </div>
+                            <input type="checkbox" id="post-is-request" class="sr-only peer">
+                            <div class="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-500 after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600 peer-checked:after:bg-white relative"></div>
+                        </label>
+                        <div id="request-options" class="hidden mt-3 space-y-2 animate-slide-down">
+                            <label class="block text-[10px] uppercase font-bold text-zinc-500">Request Category</label>
+                            <select id="post-request-type" class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-white">
+                                <option value="Component Request">Component Request</option>
+                                <option value="Technical Help">Technical Help</option>
+                                <option value="Resource Ask">Resource Ask</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- Team Tag -->
                     <div>
                         <label class="block text-xs font-medium text-zinc-400 mb-1.5">Team Tag <span class="text-zinc-600">(optional)</span></label>
@@ -88,6 +109,14 @@ const CreatePostModal = (() => {
     function bindEvents() {
         document.getElementById('create-post-close')?.addEventListener('click', close);
         document.getElementById('create-post-overlay')?.addEventListener('click', e => { if (e.target.id === 'create-post-overlay') close(); });
+
+        // Request toggle logic
+        const requestToggle = document.getElementById('post-is-request');
+        const requestOptions = document.getElementById('request-options');
+        requestToggle?.addEventListener('change', () => {
+            if (requestToggle.checked) requestOptions.classList.remove('hidden');
+            else requestOptions.classList.add('hidden');
+        });
 
         // File upload
         const fileInput = document.getElementById('post-image-file');
@@ -144,7 +173,16 @@ const CreatePostModal = (() => {
             imageUrl = url;
         }
 
-        const fields = { caption: caption || null, image_url: imageUrl };
+        const fields = { 
+            caption: caption || null, 
+            image_url: imageUrl,
+            is_request: document.getElementById('post-is-request')?.checked || false
+        };
+        
+        if (fields.is_request) {
+            fields.request_type = document.getElementById('post-request-type')?.value;
+        }
+
         const teamTag = document.getElementById('post-team-tag')?.value;
         if (teamTag) fields.team_tag = parseInt(teamTag);
 
