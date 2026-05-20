@@ -147,7 +147,7 @@ const ICCSupabase = (() => {
                 }
             } catch (err) {
                 console.error('❌ Master login error:', err);
-                return { error: { message: 'System error during master login', details: err } };
+                return { error: { message: err.message || 'System error during master login', details: err } };
             }
         }
 
