@@ -27,14 +27,15 @@ const Router = (() => {
         if (previousView === 'teams') TeamsView.unmount?.();
         if (previousView === 'chat') ChatView.unmount?.();
         if (previousView === 'profile') ProfileView.unmount?.();
+        if (previousView === 'events') EventsView.unmount?.();
+        if (previousView === 'eventDetail') EventDetailView.unmount?.();
 
         // Transition
         container.classList.remove('view-enter');
         container.classList.add('view-exit');
 
-        setTimeout(() => {
-            container.classList.remove('view-exit');
-            container.innerHTML = '';
+        container.classList.remove('view-exit');
+        container.innerHTML = '';
 
             // Route matching... (keep existing logic)
             if (hash === '#dashboard' || hash === '' || hash === '#') {
@@ -88,6 +89,13 @@ const Router = (() => {
             } else if (hash === '#attendance') {
                 previousView = 'attendance';
                 AttendanceView.mount(container);
+            } else if (hash === '#events') {
+                previousView = 'events';
+                EventsView.mount(container);
+            } else if (hash.startsWith('#event/')) {
+                previousView = 'eventDetail';
+                const eventId = hash.split('/')[1];
+                EventDetailView.mount(container, eventId);
             } else {
                 previousView = 'dashboard';
                 DashboardView.mount(container);
@@ -102,13 +110,12 @@ const Router = (() => {
                 }, 200);
             }
 
-            requestAnimationFrame(() => {
-                container.classList.add('view-enter');
-            });
+        requestAnimationFrame(() => {
+            container.classList.add('view-enter');
+        });
 
-            Sidebar.mount();
-            window.scrollTo(0, 0);
-        }, 120); // Slightly longer for smoother feel
+        Sidebar.mount();
+        window.scrollTo(0, 0);
     }
 
     return { init };

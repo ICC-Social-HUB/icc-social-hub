@@ -1632,6 +1632,54 @@ const ICCSupabase = (() => {
         return data || [];
     }
 
+    // ==================== EVENTS (ISOLATED) ====================
+    async function fetchEvents() {
+        if (!client) return [];
+        const { data, error } = await client.from('events')
+            .select('*')
+            .order('event_date', { ascending: true });
+        if (error) console.error('fetchEvents error:', error);
+        return data || [];
+    }
+
+    async function fetchEventById(id) {
+        if (!client) return null;
+        const { data, error } = await client.from('events')
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (error) console.error('fetchEventById error:', error);
+        return data;
+    }
+
+    async function createEvent(eventData) {
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
+        const { data, error } = await client.from('events').insert(eventData).select().single();
+        return { data, error };
+    }
+
+    async function updateEvent(id, eventData) {
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
+        eventData.updated_at = new Date().toISOString();
+        const { data, error } = await client.from('events').update(eventData).eq('id', id).select().single();
+        return { data, error };
+    }
+
+    async function deleteEvent(id) {
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
+        const { data: event } = await client.from('events').select('banner_url, gallery_urls').eq('id', id).single();
+        if (event) {
+            if (event.banner_url) await deleteImage('events', event.banner_url);
+            if (event.gallery_urls && event.gallery_urls.length > 0) {
+                for (const url of event.gallery_urls) {
+                    await deleteImage('events', url);
+                }
+            }
+        }
+        const { error } = await client.from('events').delete().eq('id', id);
+        return { error };
+    }
+
     function subscribeToInventory(callback) {
         return subscribeChannel('inventory-sync', 'inventory', '*', callback);
     }
@@ -1680,6 +1728,7 @@ const ICCSupabase = (() => {
         fetchInventory, createInventoryItem, updateInventoryItem, deleteInventoryItem,
         requestInventoryItem, fetchInventoryRequests, fetchMyInventoryRequests, updateInventoryRequestStatus,
         fetchTeamAttendance, submitAttendance, fetchUserAttendanceHistory, fetchAllAttendanceData,
+        fetchEvents, fetchEventById, createEvent, updateEvent, deleteEvent,
         subscribeToInventory, subscribeToInventoryRequests,
         subscribeToFeed, subscribeToMessages, subscribeToConversation,
         subscribeToTeam, subscribeToAllLeads, subscribeToBroadcasts, subscribeToNotifications,

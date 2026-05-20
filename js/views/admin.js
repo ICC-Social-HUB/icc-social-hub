@@ -6,8 +6,10 @@ const AdminView = (() => {
     let pendingLeads = [];
     let allPosts = [];
     let allUsers = [];
+    let allEvents = [];
     let editingLead = null;
     let editingUserId = null;
+    let editingEvent = null;
     let userSearchQuery = '';
     let userSectionFilter = '';
     let userTeamFilter = '';
@@ -30,7 +32,7 @@ const AdminView = (() => {
                     </div>
                 </div>
                 <div class="flex gap-1 overflow-x-auto mb-4 pb-1 border-b border-zinc-800/50">
-                    ${['broadcast', 'leads', 'users', 'moderate'].map(t => `<button class="admin-tab ${activeTab === t ? 'active' : ''}" data-tab="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</button>`).join('')}
+                    ${['broadcast', 'leads', 'users', 'moderate', 'events'].map(t => `<button class="admin-tab ${activeTab === t ? 'active' : ''}" data-tab="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</button>`).join('')}
                 </div>
                 <div id="admin-content">${renderTab()}</div>
 
@@ -53,6 +55,7 @@ const AdminView = (() => {
             case 'leads': return renderLeads();
             case 'users': return renderUsers();
             case 'moderate': return renderModerate();
+            case 'events': return renderEvents();
             default: return '';
         }
     }
@@ -160,6 +163,83 @@ const AdminView = (() => {
                     <button class="admin-delete-post px-3 py-1.5 bg-red-900/30 hover:bg-red-900/60 text-red-400 rounded-lg text-[11px] font-medium transition-colors" data-post-id="${p.id}">Delete</button>
                 </div>`;
         }).join('')}
+        </div>`;
+    }
+
+    function renderEvents() {
+        if (editingEvent) {
+            return `
+            <div class="glass-card rounded-xl p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-heading font-semibold text-lg">${editingEvent.id ? 'Edit Event' : 'Create Event'}</h3>
+                    <button id="cancel-edit-event" class="text-zinc-500 hover:text-white transition-colors">Cancel</button>
+                </div>
+                <form id="event-edit-form" class="space-y-4">
+                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Title</label><input type="text" id="event-title" value="${editingEvent.title || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-xs font-medium text-zinc-400 mb-1">Date/Time</label><input type="datetime-local" id="event-date" value="${editingEvent.event_date ? editingEvent.event_date.slice(0, 16) : ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-1">Status</label>
+                            <select id="event-status" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white">
+                                <option value="upcoming" ${editingEvent.status === 'upcoming' ? 'selected' : ''}>Upcoming</option>
+                                <option value="past" ${editingEvent.status === 'past' ? 'selected' : ''}>Past</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Banner Image URL</label><input type="url" id="event-banner" value="${editingEvent.banner_url || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Gallery Image URLs (comma-separated)</label><input type="text" id="event-gallery" value="${(editingEvent.gallery_urls || []).join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Description (Rich Text/HTML supported)</label><textarea id="event-desc" rows="5" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none" required>${editingEvent.description || ''}</textarea></div>
+                    
+                    <div class="border-t border-zinc-800/50 pt-4 mt-4">
+                        <label class="block text-xs font-medium text-zinc-400 mb-2">Dynamic Action Buttons</label>
+                        <div id="action-buttons-container" class="space-y-2 mb-2">
+                            ${(editingEvent.action_buttons || []).map((btn, i) => `
+                            <div class="flex items-center gap-2 action-button-row">
+                                <input type="text" placeholder="Label (e.g. Register Now)" value="${btn.label}" class="form-input flex-1 px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white" required>
+                                <input type="url" placeholder="Target URL" value="${btn.url}" class="form-input flex-[2] px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white" required>
+                                <button type="button" class="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg remove-action-btn"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                            </div>`).join('')}
+                        </div>
+                        <button type="button" id="add-action-btn" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors">+ Add Button</button>
+                    </div>
+
+                    <button type="submit" class="w-full py-2.5 bg-crimson hover:bg-red-600 rounded-xl text-sm font-semibold transition-all mt-4">Save Event</button>
+                </form>
+            </div>`;
+        }
+
+        return `
+        <div class="glass-card rounded-xl overflow-hidden">
+            <div class="flex items-center justify-between p-4 border-b border-zinc-800/50">
+                <h3 class="font-heading font-semibold text-sm">Events Management</h3>
+                <button id="add-event-btn" class="px-3 py-1.5 bg-crimson hover:bg-red-600 rounded-lg text-xs font-medium transition-colors">+ Create Event</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead><tr class="border-b border-zinc-800">
+                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">Event</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">Date</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase">Status</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase text-right">Actions</th>
+                    </tr></thead>
+                    <tbody>
+                    ${allEvents.length === 0 ? '<tr><td colspan="4" class="px-4 py-8 text-center text-zinc-500 text-xs">No events found</td></tr>' : 
+                    allEvents.map(e => {
+                        const date = new Date(e.event_date).toLocaleDateString();
+                        return `
+                        <tr class="border-b border-zinc-800/30 hover:bg-zinc-800/20 transition-colors">
+                            <td class="px-4 py-3"><span class="text-sm font-medium line-clamp-1">${e.title}</span></td>
+                            <td class="px-4 py-3 text-zinc-500 text-xs whitespace-nowrap">${date}</td>
+                            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider ${e.status === 'upcoming' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-400'}">${e.status}</span></td>
+                            <td class="px-4 py-3 text-right whitespace-nowrap">
+                                <button class="edit-event-btn text-xs text-blue-400 hover:text-blue-300 transition-colors mr-3" data-id="${e.id}">Edit</button>
+                                <button class="delete-event-btn text-xs text-red-500 hover:text-red-400 transition-colors" data-id="${e.id}">Delete</button>
+                            </td>
+                        </tr>`;
+                    }).join('')}
+                    </tbody>
+                </table>
+            </div>
         </div>`;
     }
 
@@ -302,6 +382,7 @@ const AdminView = (() => {
         pendingLeads = await ICCSupabase.getPendingLeads();
         allPosts = await ICCSupabase.getAllPosts();
         allUsers = await ICCSupabase.getAllProfiles();
+        allEvents = await ICCSupabase.fetchEvents();
         container.innerHTML = render();
         bindEvents(container);
     }
@@ -632,6 +713,102 @@ const AdminView = (() => {
                 await loadLeads(); // refresh global data from DB
                 allUsers = await ICCSupabase.getAllProfiles(); // Refresh users too
                 editingLead = null;
+                container.innerHTML = render(); bindEvents(container);
+            }
+        });
+
+        // Events CRUD
+        document.getElementById('add-event-btn')?.addEventListener('click', () => {
+            editingEvent = { action_buttons: [] }; 
+            container.innerHTML = render(); bindEvents(container);
+        });
+
+        document.getElementById('cancel-edit-event')?.addEventListener('click', () => {
+            editingEvent = null; 
+            container.innerHTML = render(); bindEvents(container);
+        });
+
+        document.getElementById('add-action-btn')?.addEventListener('click', () => {
+            const containerEl = document.getElementById('action-buttons-container');
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2 action-button-row';
+            row.innerHTML = `
+                <input type="text" placeholder="Label (e.g. Register Now)" class="form-input flex-1 px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white" required>
+                <input type="url" placeholder="Target URL" class="form-input flex-[2] px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white" required>
+                <button type="button" class="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg remove-action-btn"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            `;
+            containerEl.appendChild(row);
+        });
+
+        container.addEventListener('click', (e) => {
+            if (e.target.closest('.remove-action-btn')) {
+                e.target.closest('.action-button-row').remove();
+            }
+        });
+
+        container.querySelectorAll('.edit-event-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                editingEvent = allEvents.find(ev => ev.id === btn.dataset.id) || null;
+                if (editingEvent) { container.innerHTML = render(); bindEvents(container); }
+            });
+        });
+
+        container.querySelectorAll('.delete-event-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) return;
+                const { error } = await ICCSupabase.deleteEvent(btn.dataset.id);
+                if (error) Toast.error('Failed to delete event: ' + error.message);
+                else {
+                    Toast.success('Event deleted');
+                    allEvents = await ICCSupabase.fetchEvents();
+                    container.innerHTML = render(); bindEvents(container);
+                }
+            });
+        });
+
+        document.getElementById('event-edit-form')?.addEventListener('submit', async e => {
+            e.preventDefault();
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true; submitBtn.textContent = 'Saving...';
+
+            // Gather action buttons
+            const actionButtons = [];
+            document.querySelectorAll('.action-button-row').forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                if (inputs[0].value && inputs[1].value) {
+                    actionButtons.push({ label: inputs[0].value.trim(), url: inputs[1].value.trim() });
+                }
+            });
+
+            const galleryStr = document.getElementById('event-gallery').value;
+            const galleryUrls = galleryStr.split(',').map(s => s.trim()).filter(Boolean);
+
+            const fields = {
+                title: document.getElementById('event-title').value.trim(),
+                event_date: new Date(document.getElementById('event-date').value).toISOString(),
+                status: document.getElementById('event-status').value,
+                description: document.getElementById('event-desc').value.trim(),
+                banner_url: document.getElementById('event-banner').value.trim() || null,
+                gallery_urls: galleryUrls,
+                action_buttons: actionButtons
+            };
+
+            let error;
+            if (editingEvent.id) {
+                const res = await ICCSupabase.updateEvent(editingEvent.id, fields);
+                error = res.error;
+            } else {
+                const res = await ICCSupabase.createEvent(fields);
+                error = res.error;
+            }
+
+            if (error) {
+                Toast.error('Failed to save event: ' + error.message);
+                submitBtn.disabled = false; submitBtn.textContent = 'Save Event';
+            } else {
+                Toast.success('Event saved successfully');
+                allEvents = await ICCSupabase.fetchEvents();
+                editingEvent = null;
                 container.innerHTML = render(); bindEvents(container);
             }
         });

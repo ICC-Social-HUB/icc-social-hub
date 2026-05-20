@@ -123,26 +123,30 @@ const DashboardView = (() => {
     }
 
     async function mount(container) {
-        container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
+        // Optimistic fast render
+        const profile = ICCSupabase.getProfile();
+        data.profile = profile;
+        if (profile?.team_id) {
+            data.team = typeof CORE_LEADS !== 'undefined' ? CORE_LEADS.find(l => l.id === parseInt(profile.team_id)) : null;
+        }
+        
+        container.innerHTML = render();
+        bindEvents();
         
         try {
-            const profile = ICCSupabase.getProfile();
+            // Fetch live data in background to prevent loading screen hang
             const [posts, unread, stats] = await Promise.all([
-                ICCSupabase.fetchPosts(0, 10),
+                ICCSupabase.fetchPosts(0, 3), // Reduced limit for faster fetch
                 ICCSupabase.getUnreadCount(),
                 fetchCommunityStats()
             ]);
 
-            data.profile = profile;
             data.announcement = posts.find(p => p.is_announcement) || posts[0];
             data.unreadCount = unread;
             data.requestCount = posts.filter(p => p.is_request && p.status !== 'resolved').length;
             data.stats = stats;
 
-            if (profile?.team_id) {
-                data.team = CORE_LEADS.find(l => l.id === parseInt(profile.team_id));
-            }
-
+            // Re-render with live data
             container.innerHTML = render();
             bindEvents();
         } catch (err) {
