@@ -45,7 +45,8 @@ body {
 }
 
 #toast-root {
-    top: calc(1rem + env(safe-area-inset-top, 0px)) !important;
+    top: calc(5rem + env(safe-area-inset-top, 0px)) !important;
+    z-index: 600 !important;
 }
 
 /* Prevent zoom on input focus (iOS) */
