@@ -64,8 +64,8 @@ const EventDetailView = (() => {
             <div class="max-w-3xl mx-auto px-4 pt-6">
                 <!-- Banner Image -->
                 ${currentEvent.banner_url ? `
-                <div class="w-full max-w-md mx-auto aspect-[4/5] rounded-2xl md:rounded-3xl overflow-hidden bg-zinc-900 border border-zinc-800/50 shadow-2xl mb-8 animate-fade-in cursor-pointer" onclick="ImageViewer.open('${currentEvent.banner_url}')">
-                    <img src="${currentEvent.banner_url}" class="w-full h-full object-cover" alt="${currentEvent.title}">
+                <div class="w-full max-w-lg mx-auto h-72 md:h-96 rounded-2xl md:rounded-3xl overflow-hidden bg-zinc-950 border border-zinc-800/50 shadow-2xl mb-8 flex items-center justify-center p-2 animate-fade-in cursor-pointer" onclick="ImageViewer.open('${currentEvent.banner_url}')">
+                    <img src="${currentEvent.banner_url}" class="w-full h-full object-contain" alt="${currentEvent.title}">
                 </div>
                 ` : ''}
 
