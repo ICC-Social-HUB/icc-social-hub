@@ -1,6 +1,9 @@
 -- ==========================================
 -- EVENTS SYSTEM SCHEMA (ISOLATED)
+-- RUN THIS IN SUPABASE SQL EDITOR
 -- ==========================================
+
+-- 1. Create the table
 CREATE TABLE IF NOT EXISTS public.events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
@@ -9,20 +12,23 @@ CREATE TABLE IF NOT EXISTS public.events (
     status TEXT DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'past')),
     banner_url TEXT,
     gallery_urls TEXT[] DEFAULT '{}',
-    action_buttons JSONB DEFAULT '[]'::jsonb, -- Array of { label: string, url: string }
+    action_buttons JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Enable RLS
+-- 2. Enable RLS
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 
--- Policy: Completely Public Read Access
+-- 3. Drop existing policies (so you can run this script multiple times safely)
+DROP POLICY IF EXISTS "Events are viewable by everyone" ON public.events;
+DROP POLICY IF EXISTS "Only admins can manage events" ON public.events;
+
+-- 4. Create Policies
 CREATE POLICY "Events are viewable by everyone"
     ON public.events FOR SELECT
     USING (true);
 
--- Policy: Only Admins can insert/update/delete
 CREATE POLICY "Only admins can manage events"
     ON public.events FOR ALL
     USING (
@@ -32,10 +38,15 @@ CREATE POLICY "Only admins can manage events"
         )
     );
 
--- Storage Setup
+-- 5. Storage setup (Create 'events' bucket)
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('events', 'events', true)
 ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Event images are publicly accessible" ON storage.objects;
+DROP POLICY IF EXISTS "Admins can upload event images" ON storage.objects;
+DROP POLICY IF EXISTS "Admins can manage event images" ON storage.objects;
+DROP POLICY IF EXISTS "Admins can delete event images" ON storage.objects;
 
 CREATE POLICY "Event images are publicly accessible"
     ON storage.objects FOR SELECT
@@ -71,5 +82,3 @@ CREATE POLICY "Admins can delete event images"
         )
     );
 
--- Enable Realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE public.events;

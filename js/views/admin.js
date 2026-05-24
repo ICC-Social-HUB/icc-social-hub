@@ -186,8 +186,18 @@ const AdminView = (() => {
                             </select>
                         </div>
                     </div>
-                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Banner Image URL</label><input type="url" id="event-banner" value="${editingEvent.banner_url || ''}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
-                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Gallery Image URLs (comma-separated)</label><input type="text" id="event-gallery" value="${(editingEvent.gallery_urls || []).join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                    <div>
+                        <label class="block text-xs font-medium text-zinc-400 mb-1">Banner Image</label>
+                        ${editingEvent.banner_url ? `<div class="mb-2"><img src="${editingEvent.banner_url}" class="h-20 rounded object-cover border border-zinc-800"></div>` : ''}
+                        <input type="file" id="event-banner-file" accept="image/*" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white">
+                        <p class="text-[10px] text-zinc-500 mt-1">Leave empty to keep current banner.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-zinc-400 mb-1">Gallery Images</label>
+                        ${(editingEvent.gallery_urls && editingEvent.gallery_urls.length > 0) ? `<div class="mb-2 flex gap-2 overflow-x-auto">${editingEvent.gallery_urls.map(url => `<img src="${url}" class="h-16 rounded object-cover border border-zinc-800">`).join('')}</div>` : ''}
+                        <input type="file" id="event-gallery-files" accept="image/*" multiple class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white">
+                        <p class="text-[10px] text-zinc-500 mt-1">Selecting new images will replace the existing gallery.</p>
+                    </div>
                     <div><label class="block text-xs font-medium text-zinc-400 mb-1">Description (Rich Text/HTML supported)</label><textarea id="event-desc" rows="5" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none" required>${editingEvent.description || ''}</textarea></div>
                     
                     <div class="border-t border-zinc-800/50 pt-4 mt-4">
@@ -780,16 +790,44 @@ const AdminView = (() => {
                 }
             });
 
-            const galleryStr = document.getElementById('event-gallery').value;
-            const galleryUrls = galleryStr.split(',').map(s => s.trim()).filter(Boolean);
+            const bannerFile = document.getElementById('event-banner-file').files[0];
+            const galleryFiles = document.getElementById('event-gallery-files').files;
+
+            let banner_url = editingEvent.banner_url || null;
+            if (bannerFile) {
+                Toast.info('Uploading banner image...');
+                const { url, error: uploadError } = await ICCSupabase.uploadImage('events', bannerFile);
+                if (uploadError) {
+                    Toast.error('Banner upload failed: ' + uploadError.message);
+                    submitBtn.disabled = false; submitBtn.textContent = 'Save Event';
+                    return;
+                }
+                banner_url = url;
+            }
+
+            let gallery_urls = editingEvent.gallery_urls || [];
+            if (galleryFiles && galleryFiles.length > 0) {
+                Toast.info('Uploading gallery images...');
+                const newGalleryUrls = [];
+                for (let i = 0; i < galleryFiles.length; i++) {
+                    const { url, error: uploadError } = await ICCSupabase.uploadImage('events', galleryFiles[i]);
+                    if (uploadError) {
+                        Toast.error('Gallery image upload failed: ' + uploadError.message);
+                        submitBtn.disabled = false; submitBtn.textContent = 'Save Event';
+                        return;
+                    }
+                    newGalleryUrls.push(url);
+                }
+                gallery_urls = newGalleryUrls;
+            }
 
             const fields = {
                 title: document.getElementById('event-title').value.trim(),
                 event_date: new Date(document.getElementById('event-date').value).toISOString(),
                 status: document.getElementById('event-status').value,
                 description: document.getElementById('event-desc').value.trim(),
-                banner_url: document.getElementById('event-banner').value.trim() || null,
-                gallery_urls: galleryUrls,
+                banner_url: banner_url,
+                gallery_urls: gallery_urls,
                 action_buttons: actionButtons
             };
 
