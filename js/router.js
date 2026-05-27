@@ -35,8 +35,23 @@ const Router = (() => {
         container.classList.add('view-exit');
 
         container.classList.remove('view-exit');
-        container.innerHTML = '';
+        const isAuthenticated = !!ICCSupabase.getUser();
+        const isPublicRoute = hash === '#feed' || hash.startsWith('#post/') || hash === '#events' || hash.startsWith('#event/');
 
+        if (!isAuthenticated && !isPublicRoute) {
+            previousView = 'auth-required';
+            container.innerHTML = `
+                <div class="empty-state min-h-screen flex flex-col items-center justify-center">
+                    <div class="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mb-4 border border-zinc-800">
+                        <svg class="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    </div>
+                    <h3 class="font-heading font-bold text-xl text-white mb-2">Sign In Required</h3>
+                    <p class="text-sm text-zinc-400 mb-6 text-center max-w-sm">Please sign in to access this section of the ICC Social Hub.</p>
+                    <button onclick="AuthModal.open()" class="px-8 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-bold text-white transition-all shadow-lg shadow-red-600/20">Sign In</button>
+                </div>
+            `;
+            setTimeout(() => AuthModal.open(), 100); // Auto-open login modal to simulate showing "login page"
+        } else {
             // Route matching... (keep existing logic)
             if (hash === '#dashboard' || hash === '' || hash === '#') {
                 previousView = 'dashboard';
@@ -100,6 +115,7 @@ const Router = (() => {
                 previousView = 'dashboard';
                 DashboardView.mount(container);
             }
+        }
 
             // Progress Bar End
             if (progressBar) {

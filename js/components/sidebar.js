@@ -96,10 +96,17 @@ const Sidebar = (() => {
 
             <!-- Footer -->
             <div class="p-4 border-t border-zinc-800">
-                <button onclick="ICCSupabase.signOut()" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-zinc-500 hover:text-red-500 hover:bg-red-500/10 transition-all">
-                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-                    <span class="font-medium text-sm">Sign Out</span>
-                </button>
+                ${ICCSupabase.getUser() ? `
+                    <button onclick="ICCSupabase.signOut()" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-zinc-500 hover:text-red-500 hover:bg-red-500/10 transition-all">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                        <span class="font-medium text-sm">Sign Out</span>
+                    </button>
+                ` : `
+                    <button onclick="AuthModal.open(); Sidebar.close()" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+                        <span class="font-medium text-sm">Sign In</span>
+                    </button>
+                `}
             </div>
         </aside>
         `;
