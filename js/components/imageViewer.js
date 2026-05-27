@@ -10,9 +10,19 @@ const ImageViewer = (() => {
     let startY = 0;
     let lastDist = 0;
     let currentImg = null;
+    let urlsArray = [];
+    let currentIndex = 0;
 
-    function open(imageUrl) {
-        if (!imageUrl) return;
+    function open(urlOrUrls, startIndex = 0) {
+        if (!urlOrUrls || (Array.isArray(urlOrUrls) && urlOrUrls.length === 0)) return;
+        
+        if (Array.isArray(urlOrUrls)) {
+            urlsArray = urlOrUrls;
+            currentIndex = startIndex;
+        } else {
+            urlsArray = [urlOrUrls];
+            currentIndex = 0;
+        }
         
         // Reset state
         scale = 1;
@@ -25,7 +35,7 @@ const ImageViewer = (() => {
         
         viewer.innerHTML = `
             <div id="image-viewer-container" class="w-full h-full flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing">
-                <img id="viewer-img" src="${imageUrl}" class="max-w-[95%] max-h-[95%] object-contain transition-transform duration-200 ease-out select-none" style="transform: scale(1) translate(0px, 0px);">
+                <img id="viewer-img" src="${urlsArray[currentIndex]}" class="max-w-[95%] max-h-[95%] object-contain transition-transform duration-200 ease-out select-none" style="transform: scale(1) translate(0px, 0px);">
             </div>
             
             <div class="absolute top-4 right-4 flex gap-2 z-[510]">
@@ -36,6 +46,15 @@ const ImageViewer = (() => {
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
+
+            ${urlsArray.length > 1 ? `
+            <button id="viewer-prev" class="absolute left-4 top-1/2 -translate-y-1/2 z-[510] p-3 bg-black/50 hover:bg-black/80 text-white rounded-full transition-colors">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <button id="viewer-next" class="absolute right-4 top-1/2 -translate-y-1/2 z-[510] p-3 bg-black/50 hover:bg-black/80 text-white rounded-full transition-colors">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </button>
+            ` : ''}
 
             <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 px-4 py-2 bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 z-[510]">
                 <button id="viewer-zoom-out" class="p-2 text-white/70 hover:text-white transition-colors">
@@ -58,6 +77,7 @@ const ImageViewer = (() => {
     // Move these to module level so we can remove them
     let _handleMove = null;
     let _handleEnd = null;
+    let _handleKeyDown = null;
 
     function bindViewerEvents(viewer) {
         const container = document.getElementById('image-viewer-container');
@@ -98,6 +118,29 @@ const ImageViewer = (() => {
 
         document.getElementById('viewer-zoom-in').addEventListener('click', () => adjustZoom(0.25));
         document.getElementById('viewer-zoom-out').addEventListener('click', () => adjustZoom(-0.25));
+
+        const navigateImage = (direction) => {
+            if (urlsArray.length <= 1) return;
+            currentIndex += direction;
+            if (currentIndex < 0) currentIndex = urlsArray.length - 1;
+            if (currentIndex >= urlsArray.length) currentIndex = 0;
+            
+            img.src = urlsArray[currentIndex];
+            scale = 1; translateX = 0; translateY = 0;
+            updateTransform();
+        };
+
+        const prevBtn = document.getElementById('viewer-prev');
+        const nextBtn = document.getElementById('viewer-next');
+        if (prevBtn) prevBtn.addEventListener('click', () => navigateImage(-1));
+        if (nextBtn) nextBtn.addEventListener('click', () => navigateImage(1));
+
+        _handleKeyDown = (e) => {
+            if (e.key === 'Escape') close();
+            if (e.key === 'ArrowLeft') navigateImage(-1);
+            if (e.key === 'ArrowRight') navigateImage(1);
+        };
+        window.addEventListener('keydown', _handleKeyDown);
 
         container.addEventListener('wheel', (e) => {
             e.preventDefault();
@@ -158,6 +201,7 @@ const ImageViewer = (() => {
         if (viewer) {
             window.removeEventListener('mousemove', _handleMove);
             window.removeEventListener('mouseup', _handleEnd);
+            window.removeEventListener('keydown', _handleKeyDown);
             
             viewer.style.opacity = '0';
             viewer.style.transition = 'opacity 0.2s ease-out';
