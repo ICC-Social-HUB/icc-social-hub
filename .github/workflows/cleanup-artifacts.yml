@@ -1,0 +1,66 @@
+name: Cleanup Old Artifacts
+
+on:
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Delete Old Artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let page = 1;
+            let artifactsToDelete = [];
+            let latestArtifactId = null;
+            
+            console.log("Fetching artifacts...");
+            
+            while (true) {
+              const response = await github.rest.actions.listArtifactsForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100,
+                page: page
+              });
+              
+              if (response.data.artifacts.length === 0) {
+                break;
+              }
+              
+              let currentArtifacts = response.data.artifacts;
+              
+              // On the first page, sort to find the newest one
+              if (page === 1) {
+                currentArtifacts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                if (currentArtifacts.length > 0) {
+                  latestArtifactId = currentArtifacts[0].id;
+                }
+              }
+              
+              for (const artifact of currentArtifacts) {
+                if (artifact.id !== latestArtifactId) {
+                  artifactsToDelete.push(artifact);
+                }
+              }
+              
+              page++;
+            }
+            
+            console.log(`Found ${artifactsToDelete.length + (latestArtifactId ? 1 : 0)} total artifacts. Keeping the latest and deleting the remaining ${artifactsToDelete.length}...`);
+            
+            for (const artifact of artifactsToDelete) {
+              try {
+                await github.rest.actions.deleteArtifact({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  artifact_id: artifact.id,
+                });
+                console.log(`Deleted artifact ${artifact.id} (${artifact.name})`);
+              } catch (error) {
+                console.error(`Failed to delete artifact ${artifact.id}: ${error.message}`);
+              }
+            }
