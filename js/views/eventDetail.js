@@ -36,25 +36,14 @@ const EventDetailView = (() => {
             const urlsJson = JSON.stringify(currentEvent.gallery_urls).replace(/"/g, '&quot;');
             galleryHtml = `
             <div class="mt-12 animate-fade-in" style="animation-delay: 0.3s">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-heading font-bold text-lg">Event Gallery</h3>
-                    <div class="flex gap-2">
-                        <button onclick="document.getElementById('event-gallery-scroll').scrollBy({left: -300, behavior: 'smooth'})" class="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 text-white transition-colors" title="Previous">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-                        </button>
-                        <button onclick="document.getElementById('event-gallery-scroll').scrollBy({left: 300, behavior: 'smooth'})" class="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 text-white transition-colors" title="Next">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                        </button>
-                    </div>
-                </div>
-                <div id="event-gallery-scroll" class="flex overflow-x-auto gap-3 snap-x snap-mandatory no-scrollbar pb-2" style="scrollbar-width: none; -ms-overflow-style: none;">
+                <h3 class="font-heading font-bold text-lg mb-4">Event Gallery</h3>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                     ${currentEvent.gallery_urls.map((url, index) => `
-                        <div class="snap-start shrink-0 w-64 md:w-80 aspect-video rounded-xl overflow-hidden bg-zinc-800 cursor-pointer group" onclick="ImageViewer.open(JSON.parse('${urlsJson}'), ${index})">
+                        <div class="aspect-square rounded-xl overflow-hidden bg-zinc-800 cursor-pointer group" onclick="ImageViewer.open(JSON.parse('${urlsJson}'), ${index})">
                             <img src="${url}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Gallery image">
                         </div>
                     `).join('')}
                 </div>
-                <style>#event-gallery-scroll::-webkit-scrollbar { display: none; }</style>
             </div>`;
         }
 
