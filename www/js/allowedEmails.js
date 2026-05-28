@@ -15,6 +15,7 @@ const _ALLOWED_EMAIL_LIST = [
     //  ADMIN ──
     "iccsocialhub@gmail.com",
     "sushmitha@inunity.in",
+    "abhishek.p@inunity.in",
 
     // Test Account --
     "contact.designix@gmail.com",
