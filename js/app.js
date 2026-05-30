@@ -10,15 +10,21 @@
         // 1. Initialize Supabase
         ICCSupabase.init();
 
-        // 4. Initialize Router immediately so UI shows up (skeletons/loading states)
-        Router.init();
-
-        // 5. Check existing session and load data (background-ish)
+        // 2. Check existing session
         try {
             await ICCSupabase.getSession();
+        } catch (err) {
+            console.error('⚠️ Session error:', err);
+        }
+
+        // 3. Initialize Router AFTER session is known to avoid "auth-required" flash
+        Router.init();
+
+        // 4. Load remaining data
+        try {
             await loadLeads();
         } catch (err) {
-            console.error('⚠️ Initialization error:', err);
+            console.error('⚠️ Leads error:', err);
         }
 
         let subscriptionsStarted = false;
