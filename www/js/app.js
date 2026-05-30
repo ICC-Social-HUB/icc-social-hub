@@ -28,6 +28,10 @@
             console.log('🔑 Auth event:', event);
             Sidebar.mount();
             
+            if (session) {
+                AuthModal.close();
+            }
+            
             if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                 if (ICCSupabase.needsOnboarding()) {
                     window.location.hash = '#onboarding';

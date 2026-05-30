@@ -50,7 +50,9 @@ const Router = (() => {
                     <button onclick="AuthModal.open()" class="px-8 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-bold text-white transition-all shadow-lg shadow-red-600/20">Sign In</button>
                 </div>
             `;
-            setTimeout(() => AuthModal.open(), 100); // Auto-open login modal to simulate showing "login page"
+            setTimeout(() => {
+                if (!ICCSupabase.getUser()) AuthModal.open();
+            }, 100); // Auto-open login modal to simulate showing "login page"
         } else {
             // Route matching... (keep existing logic)
             if (hash === '#dashboard' || hash === '' || hash === '#') {
