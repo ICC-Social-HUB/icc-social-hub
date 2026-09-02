@@ -321,58 +321,16 @@ const TeamsView = (() => {
     }
 
     async function mount(container, teamId) {
-        if (teamId) {
-            currentTeamId = parseInt(teamId);
-            container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
-            const lead = CORE_LEADS.find(l => l.id === currentTeamId);
-            if (!lead) { container.innerHTML = '<div class="empty-state"><p class="text-zinc-500">Team not found</p></div>'; return; }
-            teamMembers = await ICCSupabase.getTeamMembers(currentTeamId);
-            const profile = ICCSupabase.getProfile();
-            if ((profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) || ICCSupabase.isAdmin()) {
-                pendingMembers = await ICCSupabase.getPendingMembers(currentTeamId);
-            }
-            container.innerHTML = renderDetail(lead);
-            bindDetailEvents(lead);
-            ICCSupabase.subscribeToTeam(currentTeamId, async (payload) => {
-                // If the change is in core_leads, re-fetch all leads and re-render
-                if (payload && payload.table === 'core_leads') {
-                    await loadLeads();
-                    const updatedLead = CORE_LEADS.find(l => l.id === currentTeamId);
-                    if (updatedLead) {
-                        const detailSection = document.getElementById('team-detail-section');
-                        if (detailSection) {
-                            // Instead of full re-render (which breaks modal/scroll), just update the detail view
-                            // But for simplicity, we can do a full mount or just update the container
-                            container.innerHTML = renderDetail(updatedLead);
-                            bindDetailEvents(updatedLead);
-                        }
-                    }
-                    return;
-                }
-
+        try {
+            if (teamId) {
+                currentTeamId = parseInt(teamId);
+                container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
+                const lead = CORE_LEADS.find(l => l.id === currentTeamId);
+                if (!lead) { container.innerHTML = '<div class="empty-state"><p class="text-zinc-500">Team not found</p></div>'; return; }
                 teamMembers = await ICCSupabase.getTeamMembers(currentTeamId);
-                const roster = document.getElementById('team-roster');
-                const count = document.getElementById('team-member-count');
-                // ... (rest of existing logic for members)
-                if (roster) {
-                    const isLeadOrAdmin = (profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) || ICCSupabase.isAdmin();
-                    roster.innerHTML = teamMembers.length === 0 ? '<p class="text-xs text-zinc-600 text-center py-4">No members yet — be first!</p>'
-                        : teamMembers.map((m, i) => `
-                                <div class="roster-item flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i * 0.04}s">
-                                    <div class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity open-user-profile" data-id="${m.id}" title="View Profile">
-                                        <div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name || m.username || '?').charAt(0).toUpperCase()}</div>
-                                        <p class="text-xs font-medium truncate">${m.full_name || m.username || 'Anonymous'}${m.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</p>
-                                    </div>
-                                    ${(isLeadOrAdmin && m.id !== profile?.id) ? `<button class="remove-member-btn px-1.5 py-1 bg-red-900/30 text-red-400 hover:bg-red-900/60 rounded text-[10px] font-medium transition-colors" data-id="${m.id}">Remove</button>` : ''}
-                                </div>
-                                `).join('');
-                }
-                if (count) count.textContent = teamMembers.length;
-
+                const profile = ICCSupabase.getProfile();
                 if ((profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) || ICCSupabase.isAdmin()) {
                     pendingMembers = await ICCSupabase.getPendingMembers(currentTeamId);
-                    const pendingContainer = document.getElementById('pending-requests-container');
-                    if (pendingContainer) {
                         const leadForPending = CORE_LEADS.find(l => l.id === currentTeamId) || lead;
                         pendingContainer.innerHTML = `
                             <h3 class="font-heading font-semibold text-sm mb-3">Pending Requests (${pendingMembers.length})</h3>

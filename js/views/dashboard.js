@@ -151,7 +151,7 @@ const DashboardView = (() => {
             bindEvents();
         } catch (err) {
             console.error('Dashboard mount error:', err);
-            container.innerHTML = '<div class="p-8 text-center text-zinc-500">Failed to load dashboard. <button onclick="location.reload()" class="underline">Retry</button></div>';
+            ErrorHandler.renderErrorState(container, 'Failed to Load Dashboard', err.message || 'Please check your connection and try again.', () => mount(container));
         }
     }
 

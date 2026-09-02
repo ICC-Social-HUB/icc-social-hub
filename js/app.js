@@ -7,8 +7,9 @@
     document.addEventListener('DOMContentLoaded', async () => {
         console.log('🚀 ICC Social Hub initializing...');
 
-        // 1. Initialize Supabase
+        // 1. Initialize Supabase & Global Error Handling
         ICCSupabase.init();
+        if (typeof ErrorHandler !== 'undefined') ErrorHandler.init();
 
         // 2. Check existing session
         try {
