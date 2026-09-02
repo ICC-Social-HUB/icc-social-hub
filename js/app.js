@@ -28,6 +28,8 @@
         }
 
         let subscriptionsStarted = false;
+        let isInitialRouteHandled = false;
+        let currentUserId = null;
 
         // 4. Listen for auth state changes
         ICCSupabase.onAuthStateChange(async (event, session) => {
@@ -38,17 +40,19 @@
                 AuthModal.close();
             }
             
+            const newUserId = session?.user?.id || null;
+            
             if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                 if (ICCSupabase.needsOnboarding()) {
                     window.location.hash = '#onboarding';
-                } else {
-                    // Don't re-dispatch hashchange if we're already inside a chat thread
-                    // — it causes a race condition that wipes rendered messages
+                } else if (!isInitialRouteHandled || (newUserId && currentUserId && newUserId !== currentUserId)) {
+                    isInitialRouteHandled = true;
                     const currentHash = window.location.hash;
                     if (!currentHash.startsWith('#chat/')) {
                         window.dispatchEvent(new Event('hashchange'));
                     }
                 }
+                currentUserId = newUserId;
                 Sidebar.updateUnreadCount();
 
                 if (!subscriptionsStarted) {
