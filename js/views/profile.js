@@ -4,7 +4,6 @@
 const ProfileView = (() => {
     let userPosts = [];
     let editing = false;
-    let pendingFields = null;
 
     function render() {
         const user = ICCSupabase.getUser();
@@ -90,9 +89,6 @@ const ProfileView = (() => {
                     </a>
                 </div>
             </div>
-
-            <!-- Profile OTP Modal -->
-            <div id="profile-otp-modal-container"></div>
         </section>`;
     }
 
@@ -174,35 +170,6 @@ const ProfileView = (() => {
         </div>`;
     }
 
-    function renderOTPVerificationModal(email) {
-        return `
-        <div class="modal-backdrop fixed inset-0 z-[2500] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" id="profile-otp-overlay">
-            <div class="modal-content bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-slide-up">
-                <div class="text-center mb-5">
-                    <div class="w-12 h-12 bg-red-950/60 border border-red-800/50 rounded-2xl flex items-center justify-center mx-auto mb-3 text-red-500">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                    </div>
-                    <h3 class="font-heading font-bold text-lg text-white">Verify Profile Update</h3>
-                    <p class="text-xs text-zinc-400 mt-1">We sent a 6-digit verification code to</p>
-                    <p class="text-xs font-semibold text-zinc-200 font-mono mt-0.5">${escapeHtml(email)}</p>
-                </div>
-
-                <form id="profile-otp-form" class="space-y-4">
-                    <div class="flex justify-center gap-2" id="profile-otp-inputs">
-                        ${[0,1,2,3,4,5].map(i => `<input type="text" maxlength="1" class="profile-otp-input w-10 h-12 bg-zinc-950 border border-zinc-800 rounded-xl text-center text-lg font-bold text-white focus:border-red-500 focus:outline-none transition-colors" data-idx="${i}" inputmode="numeric" autocomplete="one-time-code">`).join('')}
-                    </div>
-                    <div id="profile-otp-error" class="hidden px-3 py-2 bg-red-950/50 border border-red-800/60 rounded-lg text-xs text-red-400 text-center"></div>
-                    <button type="submit" id="profile-otp-submit" class="w-full py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 text-white">
-                        Verify & Save
-                    </button>
-                    <button type="button" id="profile-otp-cancel" class="w-full py-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors text-center">
-                        Cancel
-                    </button>
-                </form>
-            </div>
-        </div>`;
-    }
-
     function renderSignedOut() {
         return `<div class="empty-state min-h-screen"><div class="empty-state-icon"><svg class="w-7 h-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg></div><h3 class="font-heading font-semibold text-lg mb-1">Your Profile</h3><p class="text-sm text-zinc-500 mb-4">Sign in to see your profile</p><button onclick="AuthModal.open()" class="px-6 py-2.5 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all">Sign In</button></div>`;
     }
@@ -212,7 +179,6 @@ const ProfileView = (() => {
 
     async function mount(container) {
         editing = false;
-        pendingFields = null;
         _avatarFile = null;
         _removeAvatar = false;
         container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
@@ -284,20 +250,13 @@ const ProfileView = (() => {
             }
         });
 
-        // Profile Form Submit -> Triggers OTP Verification
+        // Direct Profile Form Submit (No OTP required for updating details)
         document.getElementById('profile-edit-form')?.addEventListener('submit', async e => {
             e.preventDefault();
-            const user = ICCSupabase.getUser();
-            const userEmail = user?.email || ICCSupabase.getProfile()?.email;
-            if (!user || !userEmail) {
-                Toast.error('User email not found for OTP verification.');
-                return;
-            }
-
             const saveBtn = document.getElementById('edit-save-btn');
-            if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<div class="spinner spinner-sm mx-auto"></div> Sending Code...'; }
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<div class="spinner spinner-sm mx-auto"></div> Saving...'; }
 
-            pendingFields = {
+            const fields = {
                 full_name: document.getElementById('edit-name').value.trim(),
                 phone: document.getElementById('edit-phone').value.trim() || null,
                 linkedin: document.getElementById('edit-linkedin').value.trim() || null,
@@ -314,106 +273,29 @@ const ProfileView = (() => {
                     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save Changes'; }
                     return;
                 }
-                pendingFields.avatar_url = url;
+                fields.avatar_url = url;
             } else if (_removeAvatar) {
-                pendingFields.avatar_url = null;
+                fields.avatar_url = null;
                 const oldAvatar = ICCSupabase.getProfile()?.avatar_url;
                 if (oldAvatar) await ICCSupabase.deleteImage('avatars', oldAvatar);
             }
 
-            // Send OTP code to user's registered email
-            const { error: otpSendErr } = await ICCSupabase.sendOTP(userEmail);
-            if (otpSendErr) {
-                Toast.error('Failed to send OTP code: ' + otpSendErr.message);
-                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save Changes'; }
-                return;
-            }
-
-            Toast.success('Verification OTP code sent to ' + userEmail);
-            openOTPModal(user.id, userEmail, container);
-        });
-    }
-
-    function openOTPModal(userId, userEmail, mainContainer) {
-        const otpContainer = document.getElementById('profile-otp-modal-container');
-        if (!otpContainer) return;
-
-        otpContainer.innerHTML = renderOTPVerificationModal(userEmail);
-
-        const inputs = Array.from(document.querySelectorAll('.profile-otp-input'));
-        if (inputs.length > 0) inputs[0].focus();
-
-        inputs.forEach((input, idx) => {
-            input.addEventListener('input', e => {
-                if (e.target.value.length === 1 && idx < inputs.length - 1) {
-                    inputs[idx + 1].focus();
-                }
-            });
-            input.addEventListener('keydown', e => {
-                if (e.key === 'Backspace' && !e.target.value && idx > 0) {
-                    inputs[idx - 1].focus();
-                }
-            });
-            input.addEventListener('paste', e => {
-                const paste = (e.clipboardData || window.clipboardData).getData('text').trim();
-                if (/^\d{6}$/.test(paste)) {
-                    paste.split('').forEach((char, i) => {
-                        if (inputs[i]) inputs[i].value = char;
-                    });
-                    inputs[5].focus();
-                }
-            });
-        });
-
-        document.getElementById('profile-otp-cancel')?.addEventListener('click', () => {
-            otpContainer.innerHTML = '';
-            const saveBtn = document.getElementById('edit-save-btn');
-            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save Changes'; }
-        });
-
-        document.getElementById('profile-otp-form')?.addEventListener('submit', async e => {
-            e.preventDefault();
-            const submitBtn = document.getElementById('profile-otp-submit');
-            const errorDiv = document.getElementById('profile-otp-error');
-            if (errorDiv) { errorDiv.classList.add('hidden'); errorDiv.textContent = ''; }
-
-            const code = inputs.map(i => i.value.trim()).join('');
-            if (code.length !== 6) {
-                if (errorDiv) { errorDiv.textContent = 'Please enter the complete 6-digit code'; errorDiv.classList.remove('hidden'); }
-                return;
-            }
-
-            if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<div class="spinner spinner-sm mx-auto"></div> Verifying...'; }
-
-            const { success, error: verifyErr } = await ICCSupabase.verifyOTPOnly(userId, code);
-            if (!success || verifyErr) {
-                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Verify & Save'; }
-                if (errorDiv) {
-                    errorDiv.textContent = verifyErr?.message || 'Invalid or expired OTP code';
-                    errorDiv.classList.remove('hidden');
-                }
-                return;
-            }
-
-            // OTP Verified! Save profile updates
-            const { error: saveErr } = await ICCSupabase.updateProfile(pendingFields);
+            const { error: saveErr } = await ICCSupabase.updateProfile(fields);
             if (saveErr) {
                 Toast.error('Profile update failed: ' + saveErr.message);
-                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Verify & Save'; }
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save Changes'; }
             } else {
                 Toast.success('Profile updated successfully!');
                 editing = false;
-                pendingFields = null;
                 _avatarFile = null;
                 _removeAvatar = false;
-                otpContainer.innerHTML = '';
-                mainContainer.innerHTML = render();
-                bindEvents(mainContainer);
+                container.innerHTML = render();
+                bindEvents(container);
                 BottomNav.mount();
             }
         });
     }
 
-    function unmount() { editing = false; userPosts = []; pendingFields = null; }
+    function unmount() { editing = false; userPosts = []; }
     return { mount, unmount };
 })();
