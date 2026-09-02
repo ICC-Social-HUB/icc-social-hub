@@ -113,6 +113,27 @@ const ICCSupabase = (() => {
         }
     }
 
+    // Verify OTP code only (e.g. profile updates) without modifying auth session
+    async function verifyOTPOnly(userId, token) {
+        if (!client) return { error: { message: 'Supabase not configured' } };
+        try {
+            const res = await fetch((ICC_CONFIG.API_BASE_URL || '') + '/api/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, token })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                return { success: true, error: null };
+            } else {
+                return { success: false, error: { message: data.error || 'Invalid or expired OTP code' } };
+            }
+        } catch (err) {
+            console.error('❌ verifyOTPOnly error:', err);
+            return { success: false, error: { message: err.message || 'Verification network error' } };
+        }
+    }
+
     // Email/Password: login
     async function signInWithPassword(email, password) {
         if (!client) return { error: { message: 'Supabase not configured' } };
@@ -1708,7 +1729,7 @@ const ICCSupabase = (() => {
     }
 
     return {
-        init, signInWithGoogle, sendOTP, verifyOTP, signOut, getSession, onAuthStateChange,
+        init, signInWithGoogle, sendOTP, verifyOTP, verifyOTPOnly, signOut, getSession, onAuthStateChange,
         fetchProfile, updateProfile, fetchUserById, fetchProfileByEmail, searchUsers, checkUsernameAvailable,
         fetchPosts, fetchPostById, fetchPostsByTeam, fetchPostsByUser, createPost, updatePostStatus, deletePost,
         toggleLike, hasLiked, fetchUserLikes,
