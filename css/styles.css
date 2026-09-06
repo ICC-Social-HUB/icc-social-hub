@@ -1234,3 +1234,135 @@ input, select, textarea { font-size: 16px !important; }
     touch-action: pan-y !important;
     pointer-events: auto !important;
 }
+
+/* ---------- App Splash & Loading System ---------- */
+#app-splash-screen.splash-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(1.03);
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.icc-pulse-glow {
+    animation: iccPulseGlow 3s infinite ease-in-out;
+}
+
+@keyframes iccPulseGlow {
+    0%, 100% {
+        box-shadow: 0 0 35px rgba(225, 29, 72, 0.4), 0 0 10px rgba(225, 29, 72, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 65px rgba(225, 29, 72, 0.75), 0 0 25px rgba(251, 113, 133, 0.5);
+    }
+}
+
+/* Orbital Spinner */
+.icc-orbital-spinner {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icc-orbital-spinner .spinner-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid transparent;
+}
+
+.icc-orbital-spinner .ring-1 {
+    border-top-color: #E11D48;
+    border-right-color: rgba(225, 29, 72, 0.3);
+    animation: iccOrbitClockwise 1.1s linear infinite;
+}
+
+.icc-orbital-spinner .ring-2 {
+    inset: 6px;
+    border-bottom-color: #FB7185;
+    border-left-color: rgba(251, 113, 133, 0.25);
+    animation: iccOrbitCounter 0.85s linear infinite;
+}
+
+.icc-orbital-spinner .spinner-core {
+    width: 10px;
+    height: 10px;
+    background: #E11D48;
+    border-radius: 50%;
+    box-shadow: 0 0 16px #E11D48;
+    animation: iccCorePulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes iccOrbitClockwise {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes iccOrbitCounter {
+    from { transform: rotate(360deg); }
+    to { transform: rotate(0deg); }
+}
+
+@keyframes iccCorePulse {
+    from { transform: scale(0.7); opacity: 0.5; }
+    to { transform: scale(1.3); opacity: 1; }
+}
+
+/* ---------- Skeleton Loader System & Shimmer ---------- */
+.skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+}
+
+.skeleton-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.06) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    animation: shimmerWave 1.6s infinite ease-in-out;
+}
+
+@keyframes shimmerWave {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.skeleton-box {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+}
+
+.skeleton-text {
+    height: 14px;
+    background-color: rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.skeleton-pill {
+    height: 28px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 9999px;
+}
+
+/* Glowing Loader Container for Views */
+.view-loader-overlay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-h-screen: 60vh;
+    padding: 3rem 1rem;
+}
+

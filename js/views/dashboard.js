@@ -11,6 +11,72 @@ const DashboardView = (() => {
         stats: { members: 0, teams: 0 }
     };
 
+    function renderSkeletons() {
+        return `
+        <section class="min-h-screen pt-4 pb-20 px-4 animate-fade-in" id="dashboard-skeleton">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-4 px-1">
+                    <div class="icc-orbital-spinner" style="width:24px;height:24px;">
+                        <div class="spinner-ring ring-1"></div>
+                        <div class="spinner-ring ring-2"></div>
+                    </div>
+                    <span class="text-xs font-mono text-rose-400/90 tracking-wider animate-pulse">Syncing Dashboard...</span>
+                </div>
+
+                <div class="bento-grid">
+                    <!-- Welcome Tile Skeleton -->
+                    <div class="bento-tile tile-welcome skeleton-shimmer">
+                        <div class="flex items-center justify-between gap-4">
+                            <div class="w-full">
+                                <div class="skeleton-text w-1/2 h-6 mb-3"></div>
+                                <div class="skeleton-text w-1/3 h-4"></div>
+                            </div>
+                            <div class="w-14 h-14 rounded-2xl skeleton-box shrink-0"></div>
+                        </div>
+                    </div>
+
+                    <!-- Team Progress Skeleton -->
+                    <div class="bento-tile tile-progress skeleton-shimmer">
+                        <div class="skeleton-text w-1/3 h-3 mb-4"></div>
+                        <div class="skeleton-text w-2/3 h-5 mb-2"></div>
+                        <div class="skeleton-text w-1/2 h-3 mb-6"></div>
+                        <div class="w-full h-2 rounded-full skeleton-box mt-auto"></div>
+                    </div>
+
+                    <!-- Announcement Skeleton -->
+                    <div class="bento-tile tile-announcement skeleton-shimmer">
+                        <div class="skeleton-text w-1/3 h-3 mb-4"></div>
+                        <div class="skeleton-text w-3/4 h-5 mb-2"></div>
+                        <div class="skeleton-text w-1/2 h-3 mb-4"></div>
+                        <div class="flex gap-2">
+                            <div class="w-5 h-5 rounded-full skeleton-box"></div>
+                            <div class="w-5 h-5 rounded-full skeleton-box"></div>
+                            <div class="w-5 h-5 rounded-full skeleton-box"></div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Skeleton -->
+                    <div class="bento-tile tile-help skeleton-shimmer">
+                        <div class="skeleton-text w-1/2 h-3 mb-3"></div>
+                        <div class="skeleton-text w-1/3 h-7"></div>
+                    </div>
+
+                    <!-- Messages Skeleton -->
+                    <div class="bento-tile tile-messages skeleton-shimmer">
+                        <div class="skeleton-text w-1/2 h-3 mb-3"></div>
+                        <div class="skeleton-text w-1/3 h-7"></div>
+                    </div>
+
+                    <!-- Action Skeleton -->
+                    <div class="bento-tile tile-action skeleton-shimmer flex flex-col items-center justify-center">
+                        <div class="w-8 h-8 rounded-full skeleton-box mb-2"></div>
+                        <div class="skeleton-text w-16 h-3"></div>
+                    </div>
+                </div>
+            </div>
+        </section>`;
+    }
+
     function render() {
         const { profile, team, announcement, unreadCount, requestCount, stats } = data;
         const firstName = profile?.full_name ? profile.full_name.split(' ')[0] : 'Innovator';
@@ -25,7 +91,7 @@ const DashboardView = (() => {
         }
 
         return `
-        <section class="min-h-screen pt-4 pb-20 px-4" id="dashboard-section">
+        <section class="min-h-screen pt-4 pb-20 px-4 animate-fade-in" id="dashboard-section">
             <div class="max-w-4xl mx-auto">
                 <div class="bento-grid">
                     
@@ -123,20 +189,19 @@ const DashboardView = (() => {
     }
 
     async function mount(container) {
-        // Optimistic fast render
+        // Show animated loading skeleton first
+        container.innerHTML = renderSkeletons();
+        
         const profile = ICCSupabase.getProfile();
         data.profile = profile;
         if (profile?.team_id) {
             data.team = typeof CORE_LEADS !== 'undefined' ? CORE_LEADS.find(l => l.id === parseInt(profile.team_id)) : null;
         }
         
-        container.innerHTML = render();
-        bindEvents();
-        
         try {
-            // Fetch live data in background to prevent loading screen hang
+            // Fetch live data
             const [posts, unread, stats] = await Promise.all([
-                ICCSupabase.fetchPosts(0, 3), // Reduced limit for faster fetch
+                ICCSupabase.fetchPosts(0, 3),
                 ICCSupabase.getUnreadCount(),
                 fetchCommunityStats()
             ]);
@@ -156,7 +221,6 @@ const DashboardView = (() => {
     }
 
     async function fetchCommunityStats() {
-        // Mocking for now, could be a real Supabase count
         return { members: 124, teams: 18 };
     }
 
