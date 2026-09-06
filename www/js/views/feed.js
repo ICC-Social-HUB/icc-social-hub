@@ -73,20 +73,30 @@ const FeedView = (() => {
     }
 
     async function loadPosts() {
-        loadingMore = true;
-        const newPosts = await ICCSupabase.fetchPosts(page, ICC_CONFIG.POSTS_PER_PAGE);
-        if (newPosts.length < ICC_CONFIG.POSTS_PER_PAGE) hasMore = false;
-        
-        // Filter out duplicates (if we prepended a target post)
-        const existingIds = new Set(posts.map(p => p.id));
-        const uniqueNew = newPosts.filter(p => !existingIds.has(p.id));
-        
-        posts = [...posts, ...uniqueNew];
-        if (ICCSupabase.getUser() && posts.length) {
-            userLikes = await ICCSupabase.fetchUserLikes(posts.map(p => p.id));
+        try {
+            loadingMore = true;
+            const newPosts = await ICCSupabase.fetchPosts(page, ICC_CONFIG.POSTS_PER_PAGE);
+            if (!newPosts || !Array.isArray(newPosts)) throw new Error('Could not fetch posts from server.');
+            if (newPosts.length < ICC_CONFIG.POSTS_PER_PAGE) hasMore = false;
+            
+            // Filter out duplicates (if we prepended a target post)
+            const existingIds = new Set(posts.map(p => p.id));
+            const uniqueNew = newPosts.filter(p => !existingIds.has(p.id));
+            
+            posts = [...posts, ...uniqueNew];
+            if (ICCSupabase.getUser() && posts.length) {
+                userLikes = await ICCSupabase.fetchUserLikes(posts.map(p => p.id));
+            }
+            loadingMore = false;
+            renderFeed();
+        } catch (err) {
+            loadingMore = false;
+            console.error('Feed load error:', err);
+            const postsEl = document.getElementById('feed-posts');
+            if (postsEl) {
+                ErrorHandler.renderErrorState(postsEl, 'Unable to Load Feed', err.message || 'Please check your connection and try again.', () => loadPosts());
+            }
         }
-        loadingMore = false;
-        renderFeed();
     }
 
     function renderFeed() {

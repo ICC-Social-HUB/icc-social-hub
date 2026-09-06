@@ -52,6 +52,11 @@
         html {
             font-size: 17px; /* Increase base reference size */
         }
+
+        a, a:hover, a:focus, a:active, a:visited, a * {
+            text-decoration: none;
+            -webkit-text-decoration-line: none;
+        }
     </style>
 
     <!-- Custom Styles -->
@@ -61,6 +66,38 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-obsidian text-white font-body min-h-[100dvh] antialiased overflow-x-hidden">
+    <!-- App Initial Splash Loading Screen -->
+    <div id="app-splash-screen" class="fixed inset-0 z-[9999] bg-[#030303] flex flex-col items-center justify-center transition-all duration-500">
+        <div class="relative flex flex-col items-center max-w-xs text-center px-4">
+            <!-- Glowing Brand Aura -->
+            <div class="absolute -inset-8 bg-rose-600/20 rounded-full blur-3xl animate-pulse pointer-events-none"></div>
+
+            <!-- Glowing Logo -->
+            <div class="relative w-20 h-20 bg-gradient-to-br from-rose-600 via-rose-500 to-rose-900 rounded-2xl flex items-center justify-center font-heading font-bold text-2xl text-white shadow-[0_0_50px_rgba(225,29,72,0.6)] border border-rose-400/30 mb-6 icc-pulse-glow">
+                ICC
+            </div>
+
+            <!-- App Title & Tagline -->
+            <h1 class="font-heading font-bold text-2xl text-white tracking-tight mb-1">ICC Social Hub</h1>
+            <p class="text-xs text-zinc-400 font-medium tracking-wide mb-8">Innovators Creators Club</p>
+
+            <!-- Animated Orbital Spinner -->
+            <div class="icc-orbital-spinner mb-6">
+                <div class="spinner-ring ring-1"></div>
+                <div class="spinner-ring ring-2"></div>
+                <div class="spinner-core"></div>
+            </div>
+
+            <!-- Status Text -->
+            <p id="app-splash-status" class="text-xs text-rose-400/90 font-mono tracking-wider animate-pulse">Initializing Hub...</p>
+
+            <!-- Loading Progress Bar -->
+            <div class="w-48 h-1 bg-zinc-900 rounded-full overflow-hidden border border-white/5 mt-4">
+                <div id="app-splash-bar" class="h-full bg-gradient-to-r from-rose-600 to-rose-400 transition-all duration-300 ease-out" style="width: 15%;"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Route Progress Bar -->
     <div id="route-progress"></div>
 
@@ -98,6 +135,7 @@
     <script src="js/data.js?v=2"></script>
     <script src="js/supabase.js?v=2"></script>
     <script src="js/components/toast.js?v=2"></script>
+    <script src="js/components/errorHandler.js?v=2"></script>
     <script src="js/components/sidebar.js?v=2"></script>
     <script src="js/components/imageViewer.js?v=2"></script>
     <script src="js/components/notifBell.js?v=2"></script>
@@ -121,6 +159,8 @@
     <script src="js/views/attendance.js?v=2"></script>
     <script src="js/views/notifications.js?v=2"></script>
     <script src="js/views/download.js?v=2"></script>
+    <script src="js/views/events.js?v=2"></script>
+    <script src="js/views/eventDetail.js?v=2"></script>
     <script src="js/router.js?v=2"></script>
     <script src="js/app.js?v=2"></script>
 </body>

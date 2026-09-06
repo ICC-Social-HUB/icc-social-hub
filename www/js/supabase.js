@@ -113,6 +113,27 @@ const ICCSupabase = (() => {
         }
     }
 
+    // Verify OTP code only (e.g. profile updates) without modifying auth session
+    async function verifyOTPOnly(userId, token) {
+        if (!client) return { error: { message: 'Supabase not configured' } };
+        try {
+            const res = await fetch((ICC_CONFIG.API_BASE_URL || '') + '/api/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, token })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                return { success: true, error: null };
+            } else {
+                return { success: false, error: { message: data.error || 'Invalid or expired OTP code' } };
+            }
+        } catch (err) {
+            console.error('❌ verifyOTPOnly error:', err);
+            return { success: false, error: { message: err.message || 'Verification network error' } };
+        }
+    }
+
     // Email/Password: login
     async function signInWithPassword(email, password) {
         if (!client) return { error: { message: 'Supabase not configured' } };
@@ -147,7 +168,7 @@ const ICCSupabase = (() => {
                 }
             } catch (err) {
                 console.error('❌ Master login error:', err);
-                return { error: { message: 'System error during master login', details: err } };
+                return { error: { message: err.message || 'System error during master login', details: err } };
             }
         }
 
@@ -1632,6 +1653,54 @@ const ICCSupabase = (() => {
         return data || [];
     }
 
+    // ==================== EVENTS (ISOLATED) ====================
+    async function fetchEvents() {
+        if (!client) return [];
+        const { data, error } = await client.from('events')
+            .select('*')
+            .order('event_date', { ascending: true });
+        if (error) console.error('fetchEvents error:', error);
+        return data || [];
+    }
+
+    async function fetchEventById(id) {
+        if (!client) return null;
+        const { data, error } = await client.from('events')
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (error) console.error('fetchEventById error:', error);
+        return data;
+    }
+
+    async function createEvent(eventData) {
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
+        const { data, error } = await client.from('events').insert(eventData).select().single();
+        return { data, error };
+    }
+
+    async function updateEvent(id, eventData) {
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
+        eventData.updated_at = new Date().toISOString();
+        const { data, error } = await client.from('events').update(eventData).eq('id', id).select().single();
+        return { data, error };
+    }
+
+    async function deleteEvent(id) {
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
+        const { data: event } = await client.from('events').select('banner_url, gallery_urls').eq('id', id).single();
+        if (event) {
+            if (event.banner_url) await deleteImage('events', event.banner_url);
+            if (event.gallery_urls && event.gallery_urls.length > 0) {
+                for (const url of event.gallery_urls) {
+                    await deleteImage('events', url);
+                }
+            }
+        }
+        const { error } = await client.from('events').delete().eq('id', id);
+        return { error };
+    }
+
     function subscribeToInventory(callback) {
         return subscribeChannel('inventory-sync', 'inventory', '*', callback);
     }
@@ -1660,7 +1729,7 @@ const ICCSupabase = (() => {
     }
 
     return {
-        init, signInWithGoogle, sendOTP, verifyOTP, signOut, getSession, onAuthStateChange,
+        init, signInWithGoogle, sendOTP, verifyOTP, verifyOTPOnly, signOut, getSession, onAuthStateChange,
         fetchProfile, updateProfile, fetchUserById, fetchProfileByEmail, searchUsers, checkUsernameAvailable,
         fetchPosts, fetchPostById, fetchPostsByTeam, fetchPostsByUser, createPost, updatePostStatus, deletePost,
         toggleLike, hasLiked, fetchUserLikes,
@@ -1680,6 +1749,7 @@ const ICCSupabase = (() => {
         fetchInventory, createInventoryItem, updateInventoryItem, deleteInventoryItem,
         requestInventoryItem, fetchInventoryRequests, fetchMyInventoryRequests, updateInventoryRequestStatus,
         fetchTeamAttendance, submitAttendance, fetchUserAttendanceHistory, fetchAllAttendanceData,
+        fetchEvents, fetchEventById, createEvent, updateEvent, deleteEvent,
         subscribeToInventory, subscribeToInventoryRequests,
         subscribeToFeed, subscribeToMessages, subscribeToConversation,
         subscribeToTeam, subscribeToAllLeads, subscribeToBroadcasts, subscribeToNotifications,

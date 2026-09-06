@@ -16,6 +16,25 @@
     outline-color: #E11D48;
 }
 
+/* Global Reset for Link Underlines on Mobile & WebView */
+a, a:hover, a:focus, a:active, a:visited,
+button,
+[role="button"] {
+    text-decoration: none;
+    text-decoration-line: none;
+    -webkit-text-decoration-line: none;
+}
+
+a *, button * {
+    text-decoration: none;
+    text-decoration-line: none;
+    -webkit-text-decoration-line: none;
+}
+
+.underline { text-decoration: underline !important; }
+.no-underline { text-decoration: none !important; }
+.hover\:underline:hover { text-decoration: underline !important; }
+
 html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
