@@ -16,24 +16,27 @@
     outline-color: #E11D48;
 }
 
-/* Global Reset for Link Underlines on Mobile & WebView */
-a, a:hover, a:focus, a:active, a:visited,
-button,
-[role="button"] {
-    text-decoration: none;
-    text-decoration-line: none;
-    -webkit-text-decoration-line: none;
+/* Universal Bulletproof Link Reset for WebKit / WebView / Mobile */
+a,
+a:link,
+a:visited,
+a:hover,
+a:active,
+a:focus,
+:-webkit-any-link,
+a *,
+a *::before,
+a *::after,
+:-webkit-any-link * {
+    text-decoration: none !important;
+    text-decoration-line: none !important;
+    -webkit-text-decoration: none !important;
+    -webkit-text-decoration-line: none !important;
 }
 
-a *, button * {
-    text-decoration: none;
-    text-decoration-line: none;
-    -webkit-text-decoration-line: none;
-}
-
-.underline { text-decoration: underline !important; }
-.no-underline { text-decoration: none !important; }
-.hover\:underline:hover { text-decoration: underline !important; }
+.underline, .underline * { text-decoration: underline !important; }
+.no-underline, .no-underline * { text-decoration: none !important; }
+.hover\:underline:hover, .hover\:underline:hover * { text-decoration: underline !important; }
 
 html {
     scroll-behavior: smooth;

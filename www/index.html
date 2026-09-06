@@ -53,9 +53,11 @@
             font-size: 17px; /* Increase base reference size */
         }
 
-        a, a:hover, a:focus, a:active, a:visited, a * {
-            text-decoration: none;
-            -webkit-text-decoration-line: none;
+        a, a:link, a:visited, a:hover, a:focus, a:active, :-webkit-any-link, a *, :-webkit-any-link * {
+            text-decoration: none !important;
+            text-decoration-line: none !important;
+            -webkit-text-decoration: none !important;
+            -webkit-text-decoration-line: none !important;
         }
     </style>
 
