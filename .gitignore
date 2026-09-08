@@ -4,3 +4,5 @@ Thumbs.db
 .env.local
 scratch/
 wipe_notification.js
+*.apk
+assets/*.apk

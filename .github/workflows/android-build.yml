@@ -1,7 +1,15 @@
 name: Build Android APK
 
 on:
-  workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -46,23 +54,25 @@ jobs:
       - name: Build Debug APK
         run: cd android && ./gradlew assembleDebug
 
-      - name: Prepare APK for Website
+      - name: Prepare APK Output
         run: |
           mkdir -p assets
           cp android/app/build/outputs/apk/debug/app-debug.apk assets/icc-social-hub.apk
-
-      - name: Commit and Push APK
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add assets/icc-social-hub.apk
-          git commit -m "chore: update latest apk [skip ci]" || echo "No changes to commit"
-          git push origin main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: assets/icc-social-hub.apk
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "ICC Social Hub Latest APK Build"
+          body: "Latest compiled Android APK build for ICC Social Hub."
+          draft: false
+          prerelease: false
+          files: assets/icc-social-hub.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
