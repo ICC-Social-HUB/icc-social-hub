@@ -63,8 +63,9 @@ const AppLoader = (() => {
         }
         AppLoader.updateSplash('Initializing Views...', 75);
 
-        // 3. Initialize Router AFTER session is known to avoid "auth-required" flash
+        // 3. Initialize Router & Android Hardware/WebView Navigation
         Router.init();
+        if (typeof AndroidNavigation !== 'undefined') AndroidNavigation.init();
 
         // 4. Load remaining data
         try {
