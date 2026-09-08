@@ -18,10 +18,12 @@ const AuthModal = (() => {
         errorMsg = '';
         mount(); 
         document.body.style.overflow = 'hidden';
+        if (typeof AndroidNavigation !== 'undefined') AndroidNavigation.pushModalState();
     }
     function close() {
         isOpen = false; errorMsg = ''; loading = false;
         mount(); document.body.style.overflow = '';
+        if (typeof AndroidNavigation !== 'undefined') AndroidNavigation.onModalClose();
     }
 
     function render() {

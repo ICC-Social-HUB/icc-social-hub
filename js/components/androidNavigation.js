@@ -4,6 +4,7 @@
    ============================================ */
 const AndroidNavigation = (() => {
     let lastBackPressTime = 0;
+    let isClosingModalViaPopstate = false;
 
     function hasOpenModal() {
         // 1. Sidebar Drawer
@@ -35,6 +36,7 @@ const AndroidNavigation = (() => {
 
     function closeActiveModal() {
         let closed = false;
+        isClosingModalViaPopstate = true;
 
         // 1. Image Viewer
         const imageViewer = document.getElementById('image-viewer-overlay');
@@ -72,7 +74,20 @@ const AndroidNavigation = (() => {
             closed = true;
         }
 
+        setTimeout(() => { isClosingModalViaPopstate = false; }, 100);
         return closed;
+    }
+
+    function pushModalState() {
+        if (!history.state || !history.state.modalOpen) {
+            history.pushState({ modalOpen: true }, '', window.location.href);
+        }
+    }
+
+    function onModalClose() {
+        if (!isClosingModalViaPopstate && history.state && history.state.modalOpen) {
+            history.back();
+        }
     }
 
     function handleBackAction() {
@@ -137,6 +152,8 @@ const AndroidNavigation = (() => {
         init,
         handleBackAction,
         hasOpenModal,
-        closeActiveModal
+        closeActiveModal,
+        pushModalState,
+        onModalClose
     };
 })();

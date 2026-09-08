@@ -29,6 +29,8 @@ const ImageViewer = (() => {
         translateX = 0;
         translateY = 0;
 
+        if (typeof AndroidNavigation !== 'undefined') AndroidNavigation.pushModalState();
+
         const viewer = document.createElement('div');
         viewer.id = 'image-viewer-overlay';
         viewer.className = 'fixed inset-0 z-[500] flex items-center justify-center bg-black/95 animate-fade-in touch-none';
@@ -199,6 +201,7 @@ const ImageViewer = (() => {
     function close() {
         const viewer = document.getElementById('image-viewer-overlay');
         if (viewer) {
+            if (typeof AndroidNavigation !== 'undefined') AndroidNavigation.onModalClose();
             window.removeEventListener('mousemove', _handleMove);
             window.removeEventListener('mouseup', _handleEnd);
             window.removeEventListener('keydown', _handleKeyDown);
