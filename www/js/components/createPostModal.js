@@ -8,10 +8,7 @@ const CreatePostModal = (() => {
     let selectedFile = null;
     let previewUrl = '';
 
-    function open() {
-        isOpen = true; loading = false; selectedFile = null; previewUrl = ''; mount(); document.body.style.overflow = 'hidden';
-        if (typeof AndroidNavigation !== 'undefined') AndroidNavigation.pushModalState();
-    }
+    function open() { isOpen = true; loading = false; selectedFile = null; previewUrl = ''; mount(); document.body.style.overflow = 'hidden'; }
     function close() {
         isOpen = false;
         selectedFile = null;
@@ -19,7 +16,6 @@ const CreatePostModal = (() => {
         const root = document.getElementById('modal-root');
         if (root) root.innerHTML = '';
         document.body.style.overflow = '';
-        if (typeof AndroidNavigation !== 'undefined') AndroidNavigation.onModalClose();
     }
 
     function render() {

@@ -1,10 +1,9 @@
 /* ============================================
-   ICC Social Hub — Android & WebView Navigation Controller
-   Handles Android hardware back button, gesture navigation & SPA history
+   ICC Social Hub — Android Navigation Controller
+   Handles Android hardware back button & modal closing cleanly
    ============================================ */
 const AndroidNavigation = (() => {
     let lastBackPressTime = 0;
-    let isClosingModalViaPopstate = false;
 
     function hasOpenModal() {
         // 1. Sidebar Drawer
@@ -19,15 +18,9 @@ const AndroidNavigation = (() => {
             return true;
         }
 
-        // 3. Global modal-root or active modal popups
+        // 3. Global modal-root contents
         const modalRoot = document.getElementById('modal-root');
         if (modalRoot && modalRoot.children.length > 0 && modalRoot.innerHTML.trim() !== '') {
-            return true;
-        }
-
-        // 4. Any generic visible modal backdrop
-        const backdrop = document.querySelector('.modal-backdrop, [id$="-modal-backdrop"]');
-        if (backdrop && window.getComputedStyle(backdrop).display !== 'none') {
             return true;
         }
 
@@ -35,9 +28,6 @@ const AndroidNavigation = (() => {
     }
 
     function closeActiveModal() {
-        let closed = false;
-        isClosingModalViaPopstate = true;
-
         // 1. Image Viewer
         const imageViewer = document.getElementById('image-viewer-overlay');
         if (imageViewer && !imageViewer.classList.contains('hidden')) {
@@ -46,58 +36,42 @@ const AndroidNavigation = (() => {
             } else {
                 imageViewer.classList.add('hidden');
             }
-            closed = true;
+            return true;
         }
 
         // 2. Sidebar Drawer
         const sidebarDrawer = document.getElementById('sidebar-drawer');
-        if (!closed && sidebarDrawer && !sidebarDrawer.classList.contains('-translate-x-full')) {
+        if (sidebarDrawer && !sidebarDrawer.classList.contains('-translate-x-full')) {
             if (typeof Sidebar !== 'undefined' && Sidebar.close) {
                 Sidebar.close();
             }
-            closed = true;
+            return true;
         }
 
-        // 3. Components in modal-root / specific modal singletons
-        if (!closed) {
+        // 3. Components in modal-root
+        const modalRoot = document.getElementById('modal-root');
+        if (modalRoot && modalRoot.children.length > 0 && modalRoot.innerHTML.trim() !== '') {
             if (typeof AuthModal !== 'undefined' && AuthModal.close) AuthModal.close();
             if (typeof CreatePostModal !== 'undefined' && CreatePostModal.close) CreatePostModal.close();
             if (typeof TeamChatModal !== 'undefined' && TeamChatModal.close) TeamChatModal.close();
             if (typeof UserProfileModal !== 'undefined' && UserProfileModal.close) UserProfileModal.close();
             if (typeof JoinTeamModal !== 'undefined' && JoinTeamModal.close) JoinTeamModal.close();
             if (typeof ChatPanel !== 'undefined' && ChatPanel.close) ChatPanel.close();
-
-            const modalRoot = document.getElementById('modal-root');
-            if (modalRoot) {
-                modalRoot.innerHTML = '';
-            }
-            closed = true;
+            modalRoot.innerHTML = '';
+            return true;
         }
 
-        setTimeout(() => { isClosingModalViaPopstate = false; }, 100);
-        return closed;
-    }
-
-    function pushModalState() {
-        if (!history.state || !history.state.modalOpen) {
-            history.pushState({ modalOpen: true }, '', window.location.href);
-        }
-    }
-
-    function onModalClose() {
-        if (!isClosingModalViaPopstate && history.state && history.state.modalOpen) {
-            history.back();
-        }
+        return false;
     }
 
     function handleBackAction() {
-        // Step 1: Close active modal/drawer if open
+        // Step 1: If any modal/drawer is open, close it!
         if (hasOpenModal()) {
             closeActiveModal();
             return;
         }
 
-        // Step 2: Handle Page Back Navigation
+        // Step 2: If on sub-page (e.g. #teams, #profile, #chat), go back in hash history!
         const currentHash = window.location.hash || '#dashboard';
         const isHome = currentHash === '#dashboard' || currentHash === '' || currentHash === '#';
 
@@ -110,13 +84,7 @@ const AndroidNavigation = (() => {
             return;
         }
 
-        // Step 3: Handle Home view with history stack
-        if (window.history.length > 1 && document.referrer && document.referrer.includes(window.location.host)) {
-            window.history.back();
-            return;
-        }
-
-        // Step 4: Double press back to exit app on home screen
+        // Step 3: On Home screen, require double back press to exit app
         const now = Date.now();
         if (now - lastBackPressTime < 2000) {
             if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
@@ -131,29 +99,20 @@ const AndroidNavigation = (() => {
     }
 
     function init() {
-        console.log('📱 Initializing Android & WebView Dynamic Navigation...');
+        console.log('📱 Initializing Android Native Navigation Controller...');
 
-        // 1. Intercept Capacitor Native Hardware Back Button (Android)
+        // Listen for Capacitor Native Hardware Back Button (Android)
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
             window.Capacitor.Plugins.App.addListener('backButton', () => {
                 handleBackAction();
             });
         }
-
-        // 2. Intercept Browser / WebView back gesture & popstate events
-        window.addEventListener('popstate', (e) => {
-            if (hasOpenModal()) {
-                closeActiveModal();
-            }
-        });
     }
 
     return {
         init,
         handleBackAction,
         hasOpenModal,
-        closeActiveModal,
-        pushModalState,
-        onModalClose
+        closeActiveModal
     };
 })();

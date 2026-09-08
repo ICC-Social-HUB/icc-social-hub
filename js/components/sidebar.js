@@ -161,14 +161,12 @@ const Sidebar = (() => {
         isOpen = true;
         mount();
         document.body.style.overflow = 'hidden';
-        if (typeof AndroidNavigation !== 'undefined') AndroidNavigation.pushModalState();
     }
 
     function close() {
         isOpen = false;
         mount();
         document.body.style.overflow = '';
-        if (typeof AndroidNavigation !== 'undefined') AndroidNavigation.onModalClose();
     }
 
     return { mount, open, close, updateUnreadCount };
