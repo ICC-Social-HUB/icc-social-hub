@@ -96,19 +96,20 @@ img {
 
 #toast-root {
     position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
     bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
     top: auto !important;
-    right: auto !important;
     z-index: 10000 !important;
     display: flex !important;
     flex-direction: column-reverse !important;
     align-items: center !important;
+    justify-content: center !important;
     gap: 8px !important;
     pointer-events: none !important;
-    width: max-content !important;
-    max-width: min(90vw, 420px) !important;
+    width: 100% !important;
+    padding: 0 16px !important;
+    box-sizing: border-box !important;
 }
 
 @media (min-width: 768px) {
@@ -739,27 +740,30 @@ input, select, textarea { font-size: 16px !important; }
 /* ---------- Minimalist Bottom Center Toast ---------- */
 .toast {
     pointer-events: auto;
+    margin: 0 auto !important;
     padding: 9px 16px;
     border-radius: 9999px;
     font-size: 13.5px;
     font-weight: 500;
     line-height: 1.4;
     letter-spacing: -0.01em;
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 9px;
-    background: rgba(18, 18, 22, 0.92);
+    background: rgba(18, 18, 22, 0.94);
     backdrop-filter: blur(16px) saturate(180%);
     -webkit-backdrop-filter: blur(16px) saturate(180%);
     box-shadow: 
         0 10px 30px -4px rgba(0, 0, 0, 0.5),
         0 4px 12px -2px rgba(0, 0, 0, 0.3),
         inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     animation: toastSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    max-width: 100%;
+    max-width: min(100%, 420px);
     word-break: break-word;
     color: #f4f4f5;
+    text-align: center;
     transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.4, 0, 1, 1);
 }
 
