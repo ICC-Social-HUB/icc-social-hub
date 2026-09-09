@@ -3,10 +3,14 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
+    tags:
+      - 'v*'
     branches:
       - main
-    paths-ignore:
-      - '**.md'
+    paths:
+      - 'package.json'
+      - 'android/app/build.gradle'
+      - 'capacitor.config.json'
 
 permissions:
   contents: write
