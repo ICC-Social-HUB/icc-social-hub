@@ -96,19 +96,25 @@ img {
 
 #toast-root {
     position: fixed !important;
-    top: 50% !important;
+    bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
     left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    bottom: auto !important;
+    transform: translateX(-50%) !important;
+    top: auto !important;
     right: auto !important;
     z-index: 10000 !important;
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: column-reverse !important;
     align-items: center !important;
-    gap: 10px !important;
+    gap: 8px !important;
     pointer-events: none !important;
     width: max-content !important;
     max-width: min(90vw, 420px) !important;
+}
+
+@media (min-width: 768px) {
+    #toast-root {
+        bottom: calc(32px + env(safe-area-inset-bottom, 0px)) !important;
+    }
 }
 
 /* Prevent zoom on input focus (iOS) */
@@ -730,52 +736,52 @@ input, select, textarea { font-size: 16px !important; }
     border-width: 2px;
 }
 
-/* ---------- Toast ---------- */
+/* ---------- Minimalist Bottom Center Toast ---------- */
 .toast {
     pointer-events: auto;
-    padding: 12px 22px;
+    padding: 9px 16px;
     border-radius: 9999px;
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.45;
+    font-size: 13.5px;
+    font-weight: 500;
+    line-height: 1.4;
     letter-spacing: -0.01em;
     display: flex;
     align-items: center;
-    gap: 12px;
-    background: rgba(12, 12, 16, 0.96);
-    backdrop-filter: blur(20px) saturate(200%);
-    -webkit-backdrop-filter: blur(20px) saturate(200%);
+    gap: 9px;
+    background: rgba(18, 18, 22, 0.92);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
     box-shadow: 
-        0 20px 40px -8px rgba(0, 0, 0, 0.7),
-        0 4px 16px -2px rgba(0, 0, 0, 0.5),
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    animation: toastPopIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.18) forwards;
+        0 10px 30px -4px rgba(0, 0, 0, 0.5),
+        0 4px 12px -2px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    animation: toastSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     max-width: 100%;
     word-break: break-word;
-    color: #ffffff;
+    color: #f4f4f5;
     transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.4, 0, 1, 1);
 }
 
 .toast-dismissing {
     opacity: 0 !important;
-    transform: scale(0.92) translateY(-6px) !important;
+    transform: translateY(8px) scale(0.95) !important;
 }
 
-@keyframes toastPopIn {
+@keyframes toastSlideUp {
     0% {
         opacity: 0;
-        transform: scale(0.86) translateY(12px);
+        transform: translateY(14px) scale(0.95);
     }
     100% {
         opacity: 1;
-        transform: scale(1) translateY(0);
+        transform: translateY(0) scale(1);
     }
 }
 
 .toast-icon-wrapper {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -784,34 +790,34 @@ input, select, textarea { font-size: 16px !important; }
 }
 
 .toast-success {
-    border-color: rgba(16, 185, 129, 0.4);
-    background: linear-gradient(180deg, rgba(16, 26, 22, 0.97), rgba(10, 18, 14, 0.98));
+    border-color: rgba(16, 185, 129, 0.3);
+    background: linear-gradient(180deg, rgba(18, 22, 20, 0.94), rgba(14, 18, 16, 0.96));
 }
 .toast-success .toast-icon-wrapper {
-    background: rgba(16, 185, 129, 0.2);
+    background: rgba(16, 185, 129, 0.18);
     color: #34d399;
 }
 
 .toast-error {
-    border-color: rgba(244, 63, 94, 0.4);
-    background: linear-gradient(180deg, rgba(28, 18, 20, 0.97), rgba(18, 12, 14, 0.98));
+    border-color: rgba(244, 63, 94, 0.3);
+    background: linear-gradient(180deg, rgba(24, 18, 20, 0.94), rgba(18, 14, 16, 0.96));
 }
 .toast-error .toast-icon-wrapper {
-    background: rgba(244, 63, 94, 0.2);
+    background: rgba(244, 63, 94, 0.18);
     color: #fb7185;
 }
 
 .toast-info {
-    border-color: rgba(59, 130, 246, 0.4);
-    background: linear-gradient(180deg, rgba(18, 24, 32, 0.97), rgba(12, 16, 24, 0.98));
+    border-color: rgba(59, 130, 246, 0.3);
+    background: linear-gradient(180deg, rgba(18, 20, 26, 0.94), rgba(14, 16, 22, 0.96));
 }
 .toast-info .toast-icon-wrapper {
-    background: rgba(59, 130, 246, 0.2);
+    background: rgba(59, 130, 246, 0.18);
     color: #60a5fa;
 }
 
 .toast-msg {
-    color: #ffffff;
+    color: #f4f4f5;
     font-weight: 500;
 }
 
