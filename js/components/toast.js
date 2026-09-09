@@ -1,5 +1,5 @@
 /* ============================================
-   ICC Social Hub — Toast Notification System
+   ICC Social Hub — Modern Minimalist Toast System
    ============================================ */
 
 const Toast = (() => {
@@ -8,27 +8,40 @@ const Toast = (() => {
         if (!root) return;
 
         const icons = {
-            success: '<svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
-            error: '<svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
-            info: '<svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+            success: `<div class="toast-icon-wrapper toast-icon-success">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                </svg>
+            </div>`,
+            error: `<div class="toast-icon-wrapper toast-icon-error">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </div>`,
+            info: `<div class="toast-icon-wrapper toast-icon-info">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>`
         };
 
         const el = document.createElement('div');
         el.className = `toast toast-${type}`;
-        el.innerHTML = `${icons[type] || icons.info}<span>${message}</span>`;
+        el.setAttribute('role', 'alert');
+        el.innerHTML = `${icons[type] || icons.info}<span class="toast-msg">${message}</span>`;
         root.appendChild(el);
 
         setTimeout(() => {
-            el.style.opacity = '0';
-            el.style.transform = 'translateX(20px)';
-            el.style.transition = 'all 0.3s ease';
-            setTimeout(() => el.remove(), 300);
+            el.classList.add('toast-dismissing');
+            setTimeout(() => {
+                if (el.parentNode) el.remove();
+            }, 250);
         }, duration);
     }
 
-    function success(msg) { show(msg, 'success'); }
-    function error(msg) { show(msg, 'error'); }
-    function info(msg) { show(msg, 'info'); }
+    function success(msg, duration) { show(msg, 'success', duration); }
+    function error(msg, duration) { show(msg, 'error', duration); }
+    function info(msg, duration) { show(msg, 'info', duration); }
 
     return { show, success, error, info };
 })();
