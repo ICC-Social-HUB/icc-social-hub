@@ -32,7 +32,7 @@ const DownloadView = (() => {
                         </p>
 
                         <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-                            <a href="https://github.com/Saravanan-space/icc-social-hub/releases/latest/download/icc-social-hub.apk" target="_blank" rel="noopener noreferrer" download class="group relative flex items-center justify-center gap-3 px-8 py-4 bg-crimson hover:bg-rose-600 text-white rounded-2xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-crimson/20">
+                            <a id="apk-download-btn" href="https://github.com/Saravanan-space/icc-social-hub/releases/latest/download/icc-social-hub.apk" target="_blank" rel="noopener noreferrer" download class="group relative flex items-center justify-center gap-3 px-8 py-4 bg-crimson hover:bg-rose-600 text-white rounded-2xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-crimson/20">
                                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.523 15.3414C17.3014 15.3414 17.1127 15.1528 17.1127 14.9312V11.2335C17.1127 11.0118 16.9241 10.8232 16.7025 10.8232H15.0664V5.70138C15.0664 5.47974 14.8778 5.29114 14.6562 5.29114H9.33333C9.11169 5.29114 8.92309 5.47974 8.92309 5.70138V10.8232H7.28704C7.06541 10.8232 6.8768 11.0118 6.8768 11.2335V14.9312C6.8768 15.1528 6.6882 15.3414 6.46657 15.3414C6.24493 15.3414 6.05633 15.1528 6.05633 14.9312V11.2335C6.05633 10.5552 6.60867 10.0029 7.28704 10.0029H8.10261V5.70138C8.10261 5.02301 8.65495 4.47067 9.33333 4.47067H14.6562C15.3345 4.47067 15.8869 5.02301 15.8869 5.70138V10.0029H16.7025C17.3809 10.0029 17.9332 10.5552 17.9332 11.2335V14.9312C17.9332 15.1528 17.7446 15.3414 17.523 15.3414Z"/><path d="M11.9947 19.5293C11.7731 19.5293 11.5845 19.3407 11.5845 19.1191V8.97672C11.5845 8.75508 11.7731 8.56648 11.9947 8.56648C12.2164 8.56648 12.405 8.75508 12.405 8.97672V19.1191C12.405 19.3407 12.2164 19.5293 11.9947 19.5293Z"/><path d="M12 20.3499L7.90261 16.2525C7.74636 16.0963 7.74636 15.8428 7.90261 15.6866C8.05886 15.5303 8.31238 15.5303 8.46863 15.6866L12 19.2179L15.5314 15.6866C15.6876 15.5303 15.9411 15.5303 16.0974 15.6866C16.2536 15.8428 16.2536 16.0963 16.0974 16.2525L12 20.3499Z"/></svg>
                                 <span>Download APK</span>
                                 <div class="absolute inset-0 rounded-2xl border-2 border-white/20 scale-105 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all"></div>
@@ -46,7 +46,7 @@ const DownloadView = (() => {
                             </div>
                             <div class="flex items-center gap-2 text-zinc-500">
                                 <svg class="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                <span class="text-xs font-medium">v1.2.4 (Latest)</span>
+                                <span id="apk-version-badge" class="text-xs font-medium">Latest Build</span>
                             </div>
                         </div>
                     </div>
@@ -130,8 +130,35 @@ const DownloadView = (() => {
         `;
     }
 
-    function mount(container) {
+    async function mount(container) {
         container.innerHTML = render();
+
+        const downloadBtn = container.querySelector('#apk-download-btn');
+        const versionBadge = container.querySelector('#apk-version-badge');
+
+        if (downloadBtn) {
+            // Append cache buster to ensure the user always gets the freshest build
+            const cacheBuster = `?v=${Date.now()}`;
+            downloadBtn.href = `https://github.com/Saravanan-space/icc-social-hub/releases/latest/download/icc-social-hub.apk${cacheBuster}`;
+        }
+
+        try {
+            const res = await fetch('https://api.github.com/repos/Saravanan-space/icc-social-hub/releases/latest');
+            if (res.ok) {
+                const data = await res.json();
+                if (versionBadge && data.published_at) {
+                    const pubDate = new Date(data.published_at);
+                    const formattedDate = pubDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    versionBadge.textContent = `Updated ${formattedDate}`;
+                }
+                const apkAsset = data.assets && data.assets.find(a => a.name.endsWith('.apk'));
+                if (apkAsset && downloadBtn) {
+                    downloadBtn.href = `${apkAsset.browser_download_url}?v=${Date.now()}`;
+                }
+            }
+        } catch (err) {
+            console.warn('Could not fetch latest GitHub release details:', err);
+        }
     }
 
     return { mount };
