@@ -554,31 +554,108 @@ const InventoryView = (() => {
         `;
     }
 
-    async function submitRequest(e, itemId) {
+    function submitRequest(e, itemId) {
         e.preventDefault();
-        const quantity = parseInt(document.getElementById('req-quantity').value);
-        const projectName = document.getElementById('req-project').value;
-        const teamName = document.getElementById('req-team').value;
-        
-        const btn = e.target.querySelector('button');
-        btn.disabled = true;
-        btn.innerHTML = `<div class="spinner mx-auto"></div>`;
+        const item = inventory.find(i => String(i.id) === String(itemId));
+        if (!item) return;
+
+        const quantity = parseInt(document.getElementById('req-quantity')?.value || '1');
+        const projectName = (document.getElementById('req-project')?.value || '').trim();
+        const teamName = document.getElementById('req-team')?.value || '';
+
+        const root = document.getElementById('modal-root');
+        if (!root) return;
+
+        const escapedProject = projectName.replace(/'/g, "\\'");
+        const escapedTeam = teamName.replace(/'/g, "\\'");
+
+        root.innerHTML = `
+            <div class="fixed inset-0 z-[2000] flex items-center justify-center p-4 animate-fade-in">
+                <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="InventoryView.closeModal()"></div>
+                <div id="borrow-confirm-box" class="relative w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl animate-slide-up text-center">
+                    <div class="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                    </div>
+                    
+                    <h3 class="text-xl font-bold font-heading mb-2 text-white">Confirm Borrow Request</h3>
+                    <p class="text-xs text-zinc-400 mb-4 leading-relaxed">
+                        Are you sure you want to borrow <span class="text-white font-bold">${quantity} unit${quantity > 1 ? 's' : ''}</span> of <span class="text-white font-bold">${item.name}</span>?
+                    </p>
+
+                    <div class="p-3 bg-zinc-950 rounded-xl border border-zinc-800 text-left text-xs space-y-1 mb-6">
+                        <div class="text-zinc-500">Project: <span class="text-zinc-300 font-semibold">${projectName || 'N/A'}</span></div>
+                        ${teamName ? `<div class="text-zinc-500">Team: <span class="text-crimson font-semibold">${teamName}</span></div>` : ''}
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <button onclick="InventoryView.openRequestModal('${itemId}')" class="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-xl text-xs font-bold transition-all">
+                            No, Edit
+                        </button>
+                        <button onclick="InventoryView.confirmBorrowRequest('${itemId}', ${quantity}, '${escapedProject}', '${escapedTeam}')" id="btn-confirm-borrow-submit" class="flex-1 py-3 bg-crimson hover:bg-crimson-dark text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-crimson/20 flex items-center justify-center gap-2">
+                            Yes, Place Request
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    async function confirmBorrowRequest(itemId, quantity, projectName, teamName) {
+        const box = document.getElementById('borrow-confirm-box');
+        const btn = document.getElementById('btn-confirm-borrow-submit');
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<div class="spinner mx-auto border-white"></div>`;
+        }
+
+        const item = inventory.find(i => String(i.id) === String(itemId));
+        const itemName = item?.name || 'component';
 
         const { error } = await ICCSupabase.requestInventoryItem(itemId, quantity, projectName, teamName);
-        
+
         if (error) {
             Toast.show(error.message, 'error');
-            btn.disabled = false;
-            btn.innerText = 'Confirm Request';
-        } else {
-            Toast.show('Borrow request submitted! Please visit the lab for collection.', 'success');
-            closeModal();
-            currentTab = 'my-requests';
-            refreshData().then(() => {
-                const container = document.getElementById('app');
-                if (container) render(container);
-            });
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = 'Yes, Place Request';
+            }
+            return;
         }
+
+        // Show success state IN THE SAME MODAL BOX
+        if (box) {
+            box.innerHTML = `
+                <div class="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+                
+                <h3 class="text-xl font-bold font-heading mb-2 text-white">Borrow Request Submitted</h3>
+                <p class="text-xs text-zinc-400 mb-6 leading-relaxed">
+                    Your request to borrow <span class="text-white font-semibold">${itemName}</span> has been submitted successfully! Please visit the lab for collection.
+                </p>
+
+                <button onclick="InventoryView.closeModal(); InventoryView.setTab('my-requests');" class="w-full py-3 bg-crimson hover:bg-crimson-dark text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-crimson/20">
+                    Done
+                </button>
+            `;
+        } else {
+            Toast.show('Borrow request submitted!', 'success');
+            closeModal();
+            setTab('my-requests');
+        }
+
+        // Refresh inventory data in background
+        refreshData().then(() => {
+            const container = document.getElementById('app');
+            if (container && window.location.hash === '#inventory') {
+                render(container);
+            }
+        });
     }
 
     // Admin CRUD Helpers
@@ -1069,7 +1146,7 @@ const InventoryView = (() => {
 
     // Explicitly attach to window for global access (especially for onclick handlers)
     window.InventoryView = { 
-        mount, setTab, openRequestModal, closeModal, submitRequest, 
+        mount, setTab, openRequestModal, closeModal, submitRequest, confirmBorrowRequest,
         openAddModal, submitAddItem, updateStatus, deleteItem,
         openEditModal, submitEditItem, handleSearch, clearSearch,
         cancelMyRequest, openCancelConfirmModal, confirmCancelMyRequest,
