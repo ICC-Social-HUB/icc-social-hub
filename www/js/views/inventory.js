@@ -233,6 +233,15 @@ const InventoryView = (() => {
         `;
     }
 
+    function formatDateTime(dateStr) {
+        if (!dateStr) return null;
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return null;
+        const date = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+        const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        return `${date} at ${time}`;
+    }
+
     function renderMyRequests() {
         const activeRequests = myRequests.filter(r => r.status !== 'cancelled');
         if (activeRequests.length === 0) {
@@ -260,14 +269,18 @@ const InventoryView = (() => {
                     return `
                         <div class="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center border border-zinc-700 overflow-hidden">
+                                <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center border border-zinc-700 overflow-hidden shrink-0">
                                     ${req.inventory?.image_url ? `<img src="${req.inventory.image_url}" class="w-full h-full object-cover">` : `<svg class="w-6 h-6 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`}
                                 </div>
                                 <div>
-                                    <h4 class="font-bold text-sm">${req.inventory?.name || 'Deleted Item'}</h4>
+                                    <h4 class="font-bold text-sm text-white">${req.inventory?.name || 'Deleted Item'}</h4>
                                     <p class="text-[10px] text-zinc-500">${req.quantity} Unit(s) • Project: ${req.project_name || 'N/A'}</p>
                                     ${req.team_name ? `<p class="text-[10px] text-crimson font-bold uppercase tracking-tight">${req.team_name}</p>` : ''}
-                                    <p class="text-[10px] text-zinc-600 mt-1">${new Date(req.requested_at).toLocaleDateString()} • ${new Date(req.requested_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                    <div class="space-y-0.5 mt-1 text-[10px]">
+                                        <div class="text-zinc-500"><strong class="text-zinc-400">Requested:</strong> ${formatDateTime(req.requested_at) || 'N/A'}</div>
+                                        ${req.collected_at ? `<div class="text-blue-400"><strong class="font-semibold">Borrowed:</strong> ${formatDateTime(req.collected_at)}</div>` : ''}
+                                        ${req.returned_at ? `<div class="text-emerald-400"><strong class="font-semibold">Returned:</strong> ${formatDateTime(req.returned_at)}</div>` : ''}
+                                    </div>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between sm:justify-end gap-3">
@@ -373,8 +386,8 @@ const InventoryView = (() => {
                                             </div>
                                         </div>
 
-                                        <!-- Item Info -->
-                                        <div class="flex-1 p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/80">
+                                        <!-- Item Info & Timestamps -->
+                                        <div class="flex-1 p-3.5 bg-zinc-950/50 rounded-xl border border-zinc-800/80 flex flex-col justify-between gap-3">
                                             <div class="flex items-center gap-3">
                                                 <div class="w-10 h-10 bg-zinc-900 rounded-lg border border-zinc-800 overflow-hidden shrink-0">
                                                     ${req.inventory?.image_url ? `<img src="${req.inventory.image_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center"><svg class="w-5 h-5 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></div>`}
@@ -384,6 +397,35 @@ const InventoryView = (() => {
                                                     <div class="text-[10px] text-zinc-500">Qty: ${req.quantity} • ${req.project_name || 'Personal Use'}</div>
                                                     ${req.team_name ? `<div class="text-[10px] text-crimson font-black uppercase tracking-tighter">${req.team_name}</div>` : ''}
                                                 </div>
+                                            </div>
+
+                                            <!-- Date & Time Log -->
+                                            <div class="pt-2 border-t border-zinc-800/60 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px]">
+                                                <div class="flex items-center gap-1.5 text-zinc-400">
+                                                    <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                    <span><strong class="text-zinc-300 font-semibold">Requested:</strong> ${formatDateTime(req.requested_at) || 'N/A'}</span>
+                                                </div>
+
+                                                ${req.collected_at ? `
+                                                    <div class="flex items-center gap-1.5 text-blue-400">
+                                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                        <span><strong class="font-semibold">Borrowed:</strong> ${formatDateTime(req.collected_at)}</span>
+                                                    </div>
+                                                ` : ''}
+
+                                                ${req.returned_at ? `
+                                                    <div class="flex items-center gap-1.5 text-emerald-400">
+                                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                        <span><strong class="font-semibold">Returned:</strong> ${formatDateTime(req.returned_at)}</span>
+                                                    </div>
+                                                ` : ''}
+
+                                                ${req.status === 'cancelled' ? `
+                                                    <div class="flex items-center gap-1.5 text-red-400">
+                                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                        <span><strong class="font-semibold">Cancelled:</strong> ${formatDateTime(req.updated_at)}</span>
+                                                    </div>
+                                                ` : ''}
                                             </div>
                                         </div>
 
