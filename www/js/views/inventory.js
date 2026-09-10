@@ -386,9 +386,9 @@ const InventoryView = (() => {
                                             </div>
                                         </div>
 
-                                        <!-- Item Info & Timestamps -->
-                                        <div class="flex-1 p-3.5 bg-zinc-950/50 rounded-xl border border-zinc-800/80 flex flex-col justify-between gap-3">
-                                            <div class="flex items-center gap-3">
+                                        <!-- Item Info -->
+                                        <div class="flex-1 p-3.5 bg-zinc-950/50 rounded-xl border border-zinc-800/80 flex items-center justify-between gap-3">
+                                            <div class="flex items-center gap-3 min-w-0">
                                                 <div class="w-10 h-10 bg-zinc-900 rounded-lg border border-zinc-800 overflow-hidden shrink-0">
                                                     ${req.inventory?.image_url ? `<img src="${req.inventory.image_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center"><svg class="w-5 h-5 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></div>`}
                                                 </div>
@@ -399,34 +399,17 @@ const InventoryView = (() => {
                                                 </div>
                                             </div>
 
-                                            <!-- Date & Time Log -->
-                                            <div class="pt-2 border-t border-zinc-800/60 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px]">
-                                                <div class="flex items-center gap-1.5 text-zinc-400">
-                                                    <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                    <span><strong class="text-zinc-300 font-semibold">Requested:</strong> ${formatDateTime(req.requested_at) || 'N/A'}</span>
-                                                </div>
-
-                                                ${req.collected_at ? `
-                                                    <div class="flex items-center gap-1.5 text-blue-400">
-                                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                                        <span><strong class="font-semibold">Borrowed:</strong> ${formatDateTime(req.collected_at)}</span>
-                                                    </div>
-                                                ` : ''}
-
-                                                ${req.returned_at ? `
-                                                    <div class="flex items-center gap-1.5 text-emerald-400">
-                                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                        <span><strong class="font-semibold">Returned:</strong> ${formatDateTime(req.returned_at)}</span>
-                                                    </div>
-                                                ` : ''}
-
-                                                ${req.status === 'cancelled' ? `
-                                                    <div class="flex items-center gap-1.5 text-red-400">
-                                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                                        <span><strong class="font-semibold">Cancelled:</strong> ${formatDateTime(req.updated_at)}</span>
-                                                    </div>
-                                                ` : ''}
-                                            </div>
+                                            <!-- Dropdown Arrow Toggle Button -->
+                                            <button 
+                                                onclick="InventoryView.toggleCardTimeline('${req.id}')" 
+                                                class="px-3 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-xl text-[10px] font-bold text-zinc-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 shrink-0 shadow-sm"
+                                                title="View Borrow & Return Dates"
+                                            >
+                                                <span>Dates</span>
+                                                <svg id="arrow-${req.id}" class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-300 transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                </svg>
+                                            </button>
                                         </div>
 
                                         <!-- Status & Actions -->
@@ -442,6 +425,70 @@ const InventoryView = (() => {
                                                 ${req.status === 'taken' ? `
                                                     <button onclick="InventoryView.updateStatus('${req.id}', 'completed')" class="h-9 px-4 bg-emerald-600 text-white rounded-lg text-[10px] font-bold hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-600/10">Mark Returned</button>
                                                 ` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Collapsible Visual Stepper Timeline -->
+                                    <div id="timeline-${req.id}" class="hidden mt-4 pt-4 border-t border-zinc-800/80 animate-fade-in">
+                                        <div class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                            <svg class="w-3.5 h-3.5 text-crimson" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                            <span>Borrow & Return Visual Timeline Log</span>
+                                        </div>
+
+                                        <div class="p-4 bg-zinc-950/80 border border-zinc-800/80 rounded-2xl">
+                                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                
+                                                <!-- Step 1: Requested -->
+                                                <div class="flex items-start gap-3 p-3 bg-zinc-900/60 rounded-xl border border-zinc-800/80">
+                                                    <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold text-xs shrink-0">
+                                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                    </div>
+                                                    <div class="min-w-0">
+                                                        <div class="text-[11px] font-bold text-zinc-200">1. Order Placed</div>
+                                                        <div class="text-[10px] text-amber-400/90 font-medium mt-0.5">${formatDateTime(req.requested_at) || 'N/A'}</div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Step 2: Borrowed / Taken -->
+                                                <div class="flex items-start gap-3 p-3 bg-zinc-900/60 rounded-xl border border-zinc-800/80">
+                                                    <div class="w-9 h-9 rounded-lg ${req.collected_at ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400' : req.status === 'pending' ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400 animate-pulse' : 'bg-zinc-900 border border-zinc-800 text-zinc-600'} flex items-center justify-center font-bold text-xs shrink-0">
+                                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                                                    </div>
+                                                    <div class="min-w-0">
+                                                        <div class="text-[11px] font-bold ${req.collected_at ? 'text-zinc-200' : req.status === 'pending' ? 'text-amber-400' : 'text-zinc-500'}">2. Item Borrowed</div>
+                                                        <div class="text-[10px] ${req.collected_at ? 'text-blue-400/90' : 'text-zinc-500'} font-medium mt-0.5">
+                                                            ${req.collected_at ? formatDateTime(req.collected_at) : (req.status === 'pending' ? 'Awaiting Collection' : 'Not Borrowed')}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Step 3: Returned OR Cancelled -->
+                                                ${req.status === 'cancelled' ? `
+                                                    <div class="flex items-start gap-3 p-3 bg-red-500/5 rounded-xl border border-red-500/20">
+                                                        <div class="w-9 h-9 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-center font-bold text-xs shrink-0">
+                                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                        </div>
+                                                        <div class="min-w-0">
+                                                            <div class="text-[11px] font-bold text-red-400">3. Request Cancelled</div>
+                                                            <div class="text-[10px] text-red-300/80 font-medium mt-0.5">${formatDateTime(req.updated_at)}</div>
+                                                        </div>
+                                                    </div>
+                                                ` : `
+                                                    <div class="flex items-start gap-3 p-3 bg-zinc-900/60 rounded-xl border border-zinc-800/80">
+                                                        <div class="w-9 h-9 rounded-lg ${req.returned_at ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : req.status === 'taken' ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400 animate-pulse' : 'bg-zinc-900 border border-zinc-800 text-zinc-600'} flex items-center justify-center font-bold text-xs shrink-0">
+                                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                        </div>
+                                                        <div class="min-w-0">
+                                                            <div class="text-[11px] font-bold ${req.returned_at ? 'text-emerald-400' : req.status === 'taken' ? 'text-blue-400' : 'text-zinc-500'}">3. Item Returned</div>
+                                                            <div class="text-[10px] ${req.returned_at ? 'text-emerald-400/90' : req.status === 'taken' ? 'text-blue-400' : 'text-zinc-500'} font-medium mt-0.5">
+                                                                ${req.returned_at ? formatDateTime(req.returned_at) : (req.status === 'taken' ? 'Currently Out (In Use)' : 'Pending Return')}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                `}
 
                                             </div>
                                         </div>
@@ -1186,13 +1233,28 @@ const InventoryView = (() => {
         });
     }
 
+    function toggleCardTimeline(reqId) {
+        const el = document.getElementById(`timeline-${reqId}`);
+        const arrow = document.getElementById(`arrow-${reqId}`);
+        if (el) {
+            const isHidden = el.classList.contains('hidden');
+            if (isHidden) {
+                el.classList.remove('hidden');
+                if (arrow) arrow.classList.add('rotate-180');
+            } else {
+                el.classList.add('hidden');
+                if (arrow) arrow.classList.remove('rotate-180');
+            }
+        }
+    }
+
     // Explicitly attach to window for global access (especially for onclick handlers)
     window.InventoryView = { 
         mount, setTab, openRequestModal, closeModal, submitRequest, confirmBorrowRequest,
         openAddModal, submitAddItem, updateStatus, deleteItem,
         openEditModal, submitEditItem, handleSearch, clearSearch,
         cancelMyRequest, openCancelConfirmModal, confirmCancelMyRequest,
-        refreshAndRender, setManagementFilter
+        refreshAndRender, setManagementFilter, toggleCardTimeline
     };
 
     return window.InventoryView;
