@@ -175,7 +175,9 @@ const InventoryView = (() => {
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                ${filteredInventory.length > 0 ? filteredInventory.map(item => `
+                ${filteredInventory.length > 0 ? filteredInventory.map(item => {
+                    const userPendingReq = myRequests.find(r => String(r.item_id) === String(item.id) && r.status === 'pending');
+                    return `
                     <div class="glass-card rounded-2xl overflow-hidden group border border-zinc-800/50 hover:border-crimson/30 transition-all duration-300 flex flex-col">
                         <div class="aspect-video bg-zinc-900 relative overflow-hidden">
                             ${item.image_url ? `<img src="${item.image_url}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">` : `
@@ -197,17 +199,28 @@ const InventoryView = (() => {
                                     <span class="text-[10px] text-zinc-500 uppercase tracking-tighter">Total Stock</span>
                                     <span class="text-sm font-bold text-zinc-300">${item.total_stock} Units</span>
                                 </div>
-                                <button 
-                                    onclick="InventoryView.openRequestModal('${item.id}')" 
-                                    class="px-5 py-2.5 bg-crimson text-white rounded-xl text-xs font-bold hover:bg-crimson-dark transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-crimson/10"
-                                    ${item.available_stock <= 0 ? 'disabled' : ''}
-                                >
-                                    ${item.available_stock > 0 ? 'Borrow Item' : 'Out of Stock'}
-                                </button>
+                                ${userPendingReq ? `
+                                    <button 
+                                        onclick="InventoryView.openCancelConfirmModal('${userPendingReq.id}')" 
+                                        class="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                        <span>Cancel Request</span>
+                                    </button>
+                                ` : `
+                                    <button 
+                                        onclick="InventoryView.openRequestModal('${item.id}')" 
+                                        class="px-5 py-2.5 bg-crimson text-white rounded-xl text-xs font-bold hover:bg-crimson-dark transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-crimson/10"
+                                        ${item.available_stock <= 0 ? 'disabled' : ''}
+                                    >
+                                        ${item.available_stock > 0 ? 'Borrow Item' : 'Out of Stock'}
+                                    </button>
+                                `}
                             </div>
                         </div>
                     </div>
-                `).join('') : `
+                    `;
+                }).join('') : `
                     <div class="col-span-full py-20 text-center animate-fade-in">
                         <div class="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center mb-4 mx-auto border border-zinc-800">
                             <svg class="w-8 h-8 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -262,8 +275,9 @@ const InventoryView = (() => {
                                     ${req.status}
                                 </span>
                                 ${req.status === 'pending' ? `
-                                    <button onclick="InventoryView.cancelMyRequest('${req.id}')" class="p-2 text-zinc-500 hover:text-red-400 transition-colors" title="Cancel Request">
-                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    <button onclick="InventoryView.openCancelConfirmModal('${req.id}')" class="flex items-center gap-1.5 px-3.5 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-xl text-xs font-bold transition-all shadow-sm" title="Cancel Borrow Request">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                        <span>Cancel Request</span>
                                     </button>
                                 ` : ''}
                             </div>
@@ -559,6 +573,7 @@ const InventoryView = (() => {
         } else {
             Toast.show('Borrow request submitted! Please visit the lab for collection.', 'success');
             closeModal();
+            currentTab = 'my-requests';
             refreshData().then(() => {
                 const container = document.getElementById('app');
                 if (container) render(container);
@@ -697,28 +712,115 @@ const InventoryView = (() => {
         }
     }
 
-    async function cancelMyRequest(requestId) {
-        if (!confirm('Are you sure you want to cancel this borrow request?')) return;
+    function cancelMyRequest(requestId) {
+        openCancelConfirmModal(requestId);
+    }
+
+    function openCancelConfirmModal(requestId) {
+        const req = myRequests.find(r => String(r.id) === String(requestId)) || 
+                    allRequests.find(r => String(r.id) === String(requestId));
+        
+        const itemName = req?.inventory?.name || 'this component';
+        const quantity = req?.quantity || 1;
+
+        const root = document.getElementById('modal-root');
+        if (!root) return;
+
+        root.innerHTML = `
+            <div class="fixed inset-0 z-[2000] flex items-center justify-center p-4 animate-fade-in">
+                <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="InventoryView.closeModal()"></div>
+                <div id="cancel-confirm-box" class="relative w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl animate-slide-up text-center">
+                    <div class="w-14 h-14 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    
+                    <h3 class="text-xl font-bold font-heading mb-2 text-white">Cancel Borrow Request</h3>
+                    <p class="text-xs text-zinc-400 mb-6 leading-relaxed">
+                        Are you sure you want to cancel your borrow request for <span class="text-white font-semibold">${itemName}</span> (${quantity} unit${quantity > 1 ? 's' : ''})?
+                    </p>
+
+                    <div class="flex items-center gap-3">
+                        <button onclick="InventoryView.closeModal()" class="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-xl text-xs font-bold transition-all">
+                            No, Keep Request
+                        </button>
+                        <button onclick="InventoryView.confirmCancelMyRequest('${requestId}')" id="btn-confirm-cancel-req" class="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2">
+                            Yes, Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    async function confirmCancelMyRequest(requestId) {
+        const box = document.getElementById('cancel-confirm-box');
+        const btn = document.getElementById('btn-confirm-cancel-req');
+        
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<div class="spinner mx-auto border-white"></div>`;
+        }
+
+        const req = myRequests.find(r => String(r.id) === String(requestId)) || 
+                    allRequests.find(r => String(r.id) === String(requestId));
+        const itemName = req?.inventory?.name || 'component';
+
         const { error } = await ICCSupabase.updateInventoryRequestStatus(requestId, 'cancelled');
+
         if (error) {
             Toast.show(error.message, 'error');
-        } else {
-            Toast.show('Request cancelled', 'success');
-            // Mark the item as cancelled in-place (avoids string vs number ID mismatch)
-            // renderMyRequests already filters out status === 'cancelled'
-            const match = myRequests.find(r => String(r.id) === String(requestId));
-            if (match) match.status = 'cancelled';
-            // Re-render the content area immediately
-            const contentEl = document.getElementById('inventory-content');
-            if (contentEl) {
-                contentEl.innerHTML = renderTabContent();
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = 'Yes, Cancel';
             }
-            // Background DB refresh to confirm server state
-            refreshData().then(() => {
-                const contentEl = document.getElementById('inventory-content');
-                if (contentEl) contentEl.innerHTML = renderTabContent();
-            });
+            return;
         }
+
+        // Mark item as cancelled in local state immediately
+        if (req) req.status = 'cancelled';
+        const matchMy = myRequests.find(r => String(r.id) === String(requestId));
+        if (matchMy) matchMy.status = 'cancelled';
+
+        // Display "Borrow Request Cancelled" IN THE SAME CONFIRMATION BOX
+        if (box) {
+            box.innerHTML = `
+                <div class="w-14 h-14 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                
+                <h3 class="text-xl font-bold font-heading mb-2 text-white">Borrow Request Cancelled</h3>
+                <p class="text-xs text-zinc-400 mb-6 leading-relaxed">
+                    Your request to borrow <span class="text-white font-semibold">${itemName}</span> has been successfully cancelled.
+                </p>
+
+                <button onclick="InventoryView.closeModal(); InventoryView.refreshAndRender();" class="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-bold transition-all shadow-md">
+                    Done
+                </button>
+            `;
+        } else {
+            Toast.show('Borrow request cancelled', 'success');
+            closeModal();
+            refreshAndRender();
+        }
+
+        // Background sync and render
+        refreshData().then(() => {
+            const container = document.getElementById('app');
+            if (container && window.location.hash === '#inventory') {
+                render(container);
+            }
+        });
+    }
+
+    function refreshAndRender() {
+        refreshData().then(() => {
+            const container = document.getElementById('app');
+            if (container && window.location.hash === '#inventory') render(container);
+        });
     }
 
     async function deleteItem(itemId) {
@@ -970,7 +1072,8 @@ const InventoryView = (() => {
         mount, setTab, openRequestModal, closeModal, submitRequest, 
         openAddModal, submitAddItem, updateStatus, deleteItem,
         openEditModal, submitEditItem, handleSearch, clearSearch,
-        cancelMyRequest, setManagementFilter
+        cancelMyRequest, openCancelConfirmModal, confirmCancelMyRequest,
+        refreshAndRender, setManagementFilter
     };
 
     return window.InventoryView;
