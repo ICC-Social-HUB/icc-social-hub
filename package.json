@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "ICC Innovoapp with Vercel Serverless Functions",
   "scripts": {
+    "dev": "npx -y serve -l 3000 .",
+    "start": "node local-server.js",
     "sync": "(if exist android\\app\\build\\outputs\\apk\\release\\app-release.apk (copy /y android\\app\\build\\outputs\\apk\\release\\app-release.apk assets\\icc-social-hub.apk) else if exist android\\app\\build\\outputs\\apk\\debug\\app-debug.apk (copy /y android\\app\\build\\outputs\\apk\\debug\\app-debug.apk assets\\icc-social-hub.apk)) && if not exist www mkdir www && copy index.html www\\ && xcopy js www\\js\\ /s /e /y && xcopy css www\\css\\ /s /e /y && xcopy assets www\\assets\\ /s /e /y && xcopy images www\\images\\ /s /e /y && copy manifest.json www\\ && npx cap sync"
   },
   "dependencies": {

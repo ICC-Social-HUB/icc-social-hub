@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <title>ICC — The Innovation Social Hub</title>
     <meta name="description" content="Innovators Creators Club — A social platform for innovators. Share ideas, join teams, collaborate, and build the future together.">
-    <meta name="theme-color" content="#030303" media="(prefers-color-scheme: dark)">
-    <meta name="theme-color" content="#030303">
+    <meta name="theme-color" content="#0e1621" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#0e1621">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="images/icon-192x192.png">
 
@@ -25,7 +25,7 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Tailwind CSS v4 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
@@ -33,12 +33,17 @@
     <!-- Tailwind Theme Config -->
     <style type="text/tailwindcss">
         @theme {
-            --font-heading: 'Space Grotesk', sans-serif;
-            --font-body: 'Inter', sans-serif;
-            --color-obsidian: #030303;
-            --color-crimson: #E11D48;
-            --color-crimson-light: #FB7185;
-            --color-crimson-dark: #9F1239;
+            --font-heading: 'Inter', -apple-system, sans-serif;
+            --font-body: 'Inter', -apple-system, sans-serif;
+            --color-obsidian: #0e1621;
+            --color-crimson: #3390ec;
+            --color-crimson-light: #64b5ef;
+            --color-crimson-dark: #2b5278;
+            --color-tg-dark: #0e1621;
+            --color-tg-panel: #17212b;
+            --color-tg-card: #242f3d;
+            --color-tg-border: #1c2a38;
+            --color-tg-blue: #3390ec;
 
             /* Scale up standard font sizes */
             --font-size-xs: 0.875rem;     /* 14px instead of 12px */
@@ -50,7 +55,8 @@
         }
 
         html {
-            font-size: 17px; /* Increase base reference size */
+            font-size: 16px;
+            background-color: #0e1621;
         }
 
         a, a:link, a:visited, a:hover, a:focus, a:active, :-webkit-any-link, a *, :-webkit-any-link * {
@@ -69,19 +75,19 @@
 </head>
 <body class="bg-obsidian text-white font-body min-h-[100dvh] antialiased overflow-x-hidden">
     <!-- App Initial Splash Loading Screen -->
-    <div id="app-splash-screen" class="fixed inset-0 z-[9999] bg-[#030303] flex flex-col items-center justify-center transition-all duration-500">
+    <div id="app-splash-screen" class="fixed inset-0 z-[9999] bg-[#0e1621] flex flex-col items-center justify-center transition-all duration-500">
         <div class="relative flex flex-col items-center max-w-xs text-center px-4">
             <!-- Glowing Brand Aura -->
-            <div class="absolute -inset-8 bg-rose-600/20 rounded-full blur-3xl animate-pulse pointer-events-none"></div>
+            <div class="absolute -inset-8 bg-sky-500/20 rounded-full blur-3xl animate-pulse pointer-events-none"></div>
 
             <!-- Glowing NxGen Logo -->
-            <div class="relative w-24 h-24 bg-gradient-to-br from-rose-600/30 via-zinc-900/90 to-black rounded-2xl flex items-center justify-center shadow-[0_0_50px_rgba(225,29,72,0.6)] border border-rose-400/40 mb-6 icc-pulse-glow p-3 backdrop-blur-xl group">
-                <img src="images/icon-512x512.png" alt="NxGen Logo" class="w-full h-full object-contain filter drop-shadow-[0_0_14px_rgba(225,29,72,0.85)] transition-transform duration-500 group-hover:scale-105" onerror="this.src='assets/icon.png'">
+            <div class="relative w-24 h-24 bg-gradient-to-br from-[#3390ec]/30 via-[#17212b] to-[#0e1621] rounded-2xl flex items-center justify-center shadow-[0_0_50px_rgba(51,144,236,0.4)] border border-[#3390ec]/40 mb-6 icc-pulse-glow p-3 backdrop-blur-xl group">
+                <img src="images/icon-512x512.png" alt="NxGen Logo" class="w-full h-full object-contain filter drop-shadow-[0_0_14px_rgba(51,144,236,0.85)] transition-transform duration-500 group-hover:scale-105" onerror="this.src='assets/icon.png'">
             </div>
 
             <!-- App Title & Tagline -->
             <h1 class="font-heading font-bold text-2xl text-white tracking-tight mb-1">ICC Social Hub</h1>
-            <p class="text-xs text-zinc-400 font-medium tracking-wide mb-8">Innovators Creators Club</p>
+            <p class="text-xs text-[#708499] font-medium tracking-wide mb-8">Innovators Creators Club</p>
 
             <!-- Animated Orbital Spinner -->
             <div class="icc-orbital-spinner mb-6">
@@ -91,11 +97,11 @@
             </div>
 
             <!-- Status Text -->
-            <p id="app-splash-status" class="text-xs text-rose-400/90 font-mono tracking-wider animate-pulse">Initializing Hub...</p>
+            <p id="app-splash-status" class="text-xs text-sky-400/90 font-mono tracking-wider animate-pulse">Initializing Hub...</p>
 
             <!-- Loading Progress Bar -->
-            <div class="w-48 h-1 bg-zinc-900 rounded-full overflow-hidden border border-white/5 mt-4">
-                <div id="app-splash-bar" class="h-full bg-gradient-to-r from-rose-600 to-rose-400 transition-all duration-300 ease-out" style="width: 15%;"></div>
+            <div class="w-48 h-1 bg-[#17212b] rounded-full overflow-hidden border border-white/5 mt-4">
+                <div id="app-splash-bar" class="h-full bg-gradient-to-r from-[#3390ec] to-[#64b5ef] transition-all duration-300 ease-out" style="width: 15%;"></div>
             </div>
         </div>
     </div>
@@ -103,15 +109,12 @@
     <!-- Route Progress Bar -->
     <div id="route-progress"></div>
 
-
-
-
     <!-- Global Sticky Top Bar -->
-    <header class="sticky top-0 z-[500] w-full bg-obsidian/80 backdrop-blur-xl border-b border-zinc-800/50 h-16 flex items-center justify-between px-4">
+    <header class="sticky top-0 z-[500] w-full bg-[#17212b]/95 backdrop-blur-xl border-b border-[#101921] h-16 flex items-center justify-between px-4">
         <div id="sidebar-toggle-root"></div>
-        <a href="#dashboard" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div class="w-8 h-8 bg-gradient-to-br from-crimson to-crimson-dark rounded-lg flex items-center justify-center font-heading font-bold text-[10px]">ICC</div>
-            <span class="font-heading font-bold text-sm tracking-tight">Social Hub</span>
+        <a href="#dashboard" class="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+            <div class="w-8 h-8 bg-[#3390ec] text-white rounded-xl flex items-center justify-center font-heading font-bold text-[11px] shadow-sm">ICC</div>
+            <span class="font-heading font-semibold text-base tracking-tight text-white">Social Hub</span>
         </a>
         <div id="notif-bell-root"></div>
     </header>
@@ -120,13 +123,13 @@
     <div id="modal-root"></div>
 
     <!-- Main App View Container -->
-    <main id="app" class="relative pb-32"></main>
+    <main id="app" class="relative pb-6"></main>
 
     <!-- Bottom Navigation Mount -->
     <div id="bottom-nav-root"></div>
 
     <!-- Toast Notifications -->
-    <div id="toast-root" class="fixed bottom-24 inset-x-0 mx-auto z-[10000] flex flex-col-reverse items-center justify-center pointer-events-none w-full px-4"></div>
+    <div id="toast-root" class="fixed bottom-8 inset-x-0 mx-auto z-[10000] flex flex-col-reverse items-center justify-center pointer-events-none w-full px-4"></div>
 
     <!-- Floating Particles Background -->
     <div id="particles-bg" class="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true"></div>
