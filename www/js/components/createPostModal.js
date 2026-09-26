@@ -16,52 +16,50 @@ const CreatePostModal = (() => {
         const root = document.getElementById('modal-root');
         if (root) root.innerHTML = '';
         document.body.style.overflow = '';
-    }
-
-    function render() {
+    }    function render() {
         if (!isOpen) return '';
         const profile = ICCSupabase.getProfile();
         return `
-        <div class="modal-backdrop fixed inset-0 z-[100] flex items-end sm:items-center justify-center" id="create-post-overlay">
-            <div class="modal-content bg-zinc-900 border border-zinc-800 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[92dvh] overflow-y-auto">
-                <div class="flex items-center justify-between p-4 border-b border-zinc-800">
-                    <button id="create-post-close" class="text-sm text-zinc-500 hover:text-white transition-colors">Cancel</button>
-                    <h3 class="font-heading font-bold text-sm">New Post</h3>
-                    <button id="create-post-submit" class="px-4 py-1.5 bg-red-600 hover:bg-red-500 rounded-lg text-xs font-semibold transition-all disabled:opacity-50" ${loading ? 'disabled' : ''}>
+        <div class="modal-backdrop fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-[#0e1621]/80 backdrop-blur-md" id="create-post-overlay">
+            <div class="modal-content bg-[#17212b] border border-[#242f3d] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[92dvh] overflow-y-auto">
+                <div class="flex items-center justify-between p-4 border-b border-[#101921] bg-[#17212b]">
+                    <button id="create-post-close" class="text-sm text-[#708499] hover:text-white transition-colors">Cancel</button>
+                    <h3 class="font-heading font-semibold text-sm text-white">New Post</h3>
+                    <button id="create-post-submit" class="px-4 py-1.5 bg-[#3390ec] hover:bg-[#2b7cce] text-white rounded-lg text-xs font-semibold transition-all disabled:opacity-50 shadow-sm" ${loading ? 'disabled' : ''}>
                         ${loading ? '<div class="spinner spinner-sm"></div>' : 'Post'}
                     </button>
                 </div>
-                <div class="p-4">
+                <div class="p-4 bg-[#17212b]">
                     <div class="flex gap-3 mb-4">
-                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center text-xs font-bold flex-shrink-0 overflow-hidden">
+                        <div class="w-9 h-9 rounded-full bg-[#3390ec] flex items-center justify-center text-xs font-bold flex-shrink-0 overflow-hidden text-white shadow-sm">
                             ${profile?.avatar_url ? `<img src="${profile.avatar_url}" class="w-full h-full object-cover">` : (profile?.full_name || 'U').charAt(0).toUpperCase()}
                         </div>
                         <div class="flex-1">
-                            <p class="text-sm font-semibold">${profile?.username || profile?.full_name || 'You'}</p>
-                            <p class="text-[11px] text-zinc-500">Posting to ICC</p>
+                            <p class="text-sm font-semibold text-white">${profile?.username || profile?.full_name || 'You'}</p>
+                            <p class="text-[11px] text-[#708499]">Posting to ICC</p>
                         </div>
                     </div>
-                    <textarea id="post-caption" rows="3" placeholder="Share your idea, project, or thought..." class="w-full bg-transparent text-sm text-white placeholder-zinc-600 resize-none focus:outline-none mb-4" maxlength="1000"></textarea>
+                    <textarea id="post-caption" rows="3" placeholder="Share your idea, project, or thought..." class="w-full bg-[#242f3d] border border-[#2b394a] rounded-xl p-3 text-sm text-white placeholder-[#708499] focus:outline-none focus:border-[#3390ec] resize-none mb-4" maxlength="1000"></textarea>
 
                     <!-- Image Upload -->
                     <div class="mb-4">
                         ${previewUrl ? `
-                        <div class="relative rounded-xl overflow-hidden border border-zinc-800 mb-3">
+                        <div class="relative rounded-xl overflow-hidden border border-[#2b394a] mb-3">
                             <img src="${previewUrl}" class="w-full max-h-64 object-cover">
                             <button id="remove-image" class="absolute top-2 right-2 w-8 h-8 bg-black/70 hover:bg-black rounded-full flex items-center justify-center text-white transition-colors">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                             </button>
                         </div>` : `
-                        <div class="border-2 border-dashed border-zinc-800 rounded-xl p-6 text-center cursor-pointer hover:border-zinc-600 transition-colors" id="upload-drop-zone">
+                        <div class="border-2 border-dashed border-[#2b394a] bg-[#242f3d]/50 rounded-xl p-6 text-center cursor-pointer hover:border-[#3390ec] transition-colors" id="upload-drop-zone">
                             <input type="file" id="post-image-file" accept="image/*" class="hidden">
                             <div class="flex flex-col items-center gap-2">
-                                <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center">
-                                    <svg class="w-6 h-6 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <div class="w-11 h-11 bg-[#242f3d] rounded-xl flex items-center justify-center border border-[#2b394a]">
+                                    <svg class="w-5 h-5 text-[#3390ec]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z"/>
                                     </svg>
                                 </div>
-                                <p class="text-sm font-medium text-zinc-400">Tap to add a photo</p>
-                                <p class="text-[11px] text-zinc-600">JPG, PNG, GIF — Max 5MB</p>
+                                <p class="text-sm font-medium text-white">Tap to add a photo</p>
+                                <p class="text-[11px] text-[#708499]">JPG, PNG, GIF — Max 5MB</p>
                             </div>
                         </div>`}
                     </div>

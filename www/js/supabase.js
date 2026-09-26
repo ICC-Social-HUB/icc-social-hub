@@ -1112,6 +1112,214 @@ const ICCSupabase = (() => {
         return { error };
     }
 
+    // ==================== SUPER ADMIN APPROVAL WORKFLOW ====================
+
+    function isSuperAdmin() {
+        if (!currentProfile && !currentUser) return false;
+        const role = (currentProfile?.role || '').toLowerCase().trim();
+        return role === 'super_admin' || role === 'superadmin';
+    }
+
+    async function requestUserUpdate(userId, proposedFields, originalData = {}) {
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
+
+        // If a user with the Super Admin role makes the update directly, apply immediately without approval
+        if (isSuperAdmin()) {
+            const res = await adminUpdateUser(userId, proposedFields);
+            return { direct: true, ...res };
+        }
+
+        // For regular admins: create a pending edit request for Super Admins
+        try {
+            const requesterName = currentProfile?.full_name || currentProfile?.username || currentUser?.email || 'Admin';
+            const requesterEmail = currentUser?.email || currentProfile?.email || '';
+
+            let targetUser = null;
+            try {
+                targetUser = await fetchUserById(userId);
+            } catch (e) {
+                console.warn('Could not fetch target user info:', e);
+            }
+
+            const targetName = targetUser?.full_name || targetUser?.username || 'User';
+            const targetEmail = targetUser?.email || '';
+
+            const requestPayload = {
+                requester_id: currentUser.id,
+                requester_name: requesterName,
+                requester_email: requesterEmail,
+                target_user_id: userId,
+                target_user_name: targetName,
+                target_user_email: targetEmail,
+                proposed_changes: proposedFields,
+                original_data: originalData || {},
+                status: 'pending',
+                created_at: new Date().toISOString()
+            };
+
+            const { data, error } = await client.from('user_edit_requests').insert(requestPayload).select().single();
+            if (error) {
+                console.error('Error creating user_edit_requests:', error);
+                return { error };
+            }
+
+            // High-priority notifications to all users with Super Admin category
+            try {
+                const { data: superAdmins } = await client.from('profiles')
+                    .select('id')
+                    .or('role.eq.super_admin,role.eq.superadmin');
+                if (superAdmins && superAdmins.length > 0) {
+                    for (const sa of superAdmins) {
+                        await createNotification({
+                            userId: sa.id,
+                            type: 'system',
+                            actorId: currentUser.id,
+                            body: `🛡️ Security Approval: Admin ${requesterName} requested to edit details of "${targetName}". Please review and approve in Command Center.`
+                        });
+                    }
+                }
+            } catch (nErr) {
+                console.warn('Notification to super admins error:', nErr);
+            }
+
+            return { data, requested: true };
+        } catch (err) {
+            console.error('requestUserUpdate failed:', err);
+            return { error: err };
+        }
+    }
+
+    async function fetchUserEditRequests(status = null) {
+        if (!client || !isAdmin()) return [];
+        try {
+            let query = client.from('user_edit_requests').select('*').order('created_at', { ascending: false });
+            if (status) query = query.eq('status', status);
+            const { data, error } = await query;
+            if (error) {
+                console.warn('fetchUserEditRequests warning:', error.message);
+                return [];
+            }
+            return data || [];
+        } catch (err) {
+            console.error('fetchUserEditRequests error:', err);
+            return [];
+        }
+    }
+
+    async function approveUserEditRequest(requestId) {
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
+        if (!isSuperAdmin()) {
+            return { error: { message: 'Access Denied: Only users with the Super Admin role can approve user detail changes.' } };
+        }
+
+        try {
+            const { data: req, error: fetchErr } = await client.from('user_edit_requests')
+                .select('*').eq('id', requestId).single();
+            if (fetchErr || !req) return { error: fetchErr || { message: 'Request not found' } };
+            if (req.status !== 'pending') return { error: { message: `Request is already ${req.status}` } };
+
+            // 1. Apply changes to the profile
+            const { error: updateErr } = await adminUpdateUser(req.target_user_id, req.proposed_changes);
+            if (updateErr) {
+                return { error: { message: 'Failed to update user profile: ' + updateErr.message } };
+            }
+
+            // 2. Mark as approved
+            const { data: updatedReq, error: reqUpdateErr } = await client.from('user_edit_requests')
+                .update({
+                    status: 'approved',
+                    reviewed_by: currentUser.id,
+                    reviewed_at: new Date().toISOString()
+                })
+                .eq('id', requestId)
+                .select().single();
+
+            if (reqUpdateErr) console.warn('Could not update request status:', reqUpdateErr);
+
+            // 3. Notify requester Admin
+            if (req.requester_id) {
+                await createNotification({
+                    userId: req.requester_id,
+                    type: 'system',
+                    actorId: currentUser.id,
+                    body: `✅ Super Admin Approval: Your requested changes for ${req.target_user_name || 'user'} were APPROVED by a Super Admin.`
+                });
+            }
+
+            // 4. Notify target user if they exist
+            if (req.target_user_id) {
+                await createNotification({
+                    userId: req.target_user_id,
+                    type: 'system',
+                    actorId: currentUser.id,
+                    body: `ℹ️ Your profile details have been updated and approved by Administration.`
+                });
+            }
+
+            return { data: updatedReq, success: true };
+        } catch (err) {
+            console.error('approveUserEditRequest error:', err);
+            return { error: err };
+        }
+    }
+
+    async function rejectUserEditRequest(requestId, reason = '') {
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
+        if (!isSuperAdmin()) {
+            return { error: { message: 'Access Denied: Only users with the Super Admin role can reject user profile edits.' } };
+        }
+
+        try {
+            const { data: req, error: fetchErr } = await client.from('user_edit_requests')
+                .select('*').eq('id', requestId).single();
+            if (fetchErr || !req) return { error: fetchErr || { message: 'Request not found' } };
+
+            const { data: updatedReq, error: updateErr } = await client.from('user_edit_requests')
+                .update({
+                    status: 'rejected',
+                    reviewed_by: currentUser.id,
+                    reviewed_at: new Date().toISOString()
+                })
+                .eq('id', requestId)
+                .select().single();
+
+            if (updateErr) return { error: updateErr };
+
+            // Notify requester Admin
+            if (req.requester_id) {
+                const reasonSuffix = reason ? ` (Reason: ${reason})` : '';
+                await createNotification({
+                    userId: req.requester_id,
+                    type: 'system',
+                    actorId: currentUser.id,
+                    body: `❌ Super Admin Rejection: Your requested changes for ${req.target_user_name || 'user'} were REJECTED by a Super Admin.${reasonSuffix}`
+                });
+            }
+
+            return { data: updatedReq, success: true };
+        } catch (err) {
+            console.error('rejectUserEditRequest error:', err);
+            return { error: err };
+        }
+    }
+
+    async function cancelUserEditRequest(requestId) {
+        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
+        try {
+            const { error } = await client.from('user_edit_requests')
+                .delete()
+                .eq('id', requestId)
+                .eq('requester_id', currentUser.id);
+            return { error };
+        } catch (err) {
+            return { error: err };
+        }
+    }
+
+    function subscribeToUserEditRequests(callback) {
+        return subscribeChannel('user-edits-sync', 'user_edit_requests', '*', callback);
+    }
+
     async function getAllProfiles() {
         if (!client || !isAdmin()) return [];
         // Fetch profiles and any associated team memberships to guarantee accurate admin rendering
@@ -1717,7 +1925,8 @@ const ICCSupabase = (() => {
     function getClient() { return client; }
 
     function isAdmin() {
-        return currentProfile?.role === 'admin';
+        const role = (currentProfile?.role || '').toLowerCase().trim();
+        return role === 'admin' || role === 'super_admin' || role === 'superadmin';
     }
 
     function isLead() {
@@ -1750,10 +1959,12 @@ const ICCSupabase = (() => {
         requestInventoryItem, fetchInventoryRequests, fetchMyInventoryRequests, updateInventoryRequestStatus,
         fetchTeamAttendance, submitAttendance, fetchUserAttendanceHistory, fetchAllAttendanceData,
         fetchEvents, fetchEventById, createEvent, updateEvent, deleteEvent,
+        requestUserUpdate, fetchUserEditRequests, approveUserEditRequest, rejectUserEditRequest, cancelUserEditRequest,
+        subscribeToUserEditRequests,
         subscribeToInventory, subscribeToInventoryRequests,
         subscribeToFeed, subscribeToMessages, subscribeToConversation,
         subscribeToTeam, subscribeToAllLeads, subscribeToBroadcasts, subscribeToNotifications,
         unsubscribeChannel, cleanupAllChannels,
-        getUser, getProfile, isConfigured, getClient, isAdmin, isLead, needsOnboarding
+        getUser, getProfile, isConfigured, getClient, isAdmin, isLead, isSuperAdmin, needsOnboarding
     };
 })();

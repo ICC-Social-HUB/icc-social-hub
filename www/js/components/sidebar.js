@@ -8,7 +8,7 @@ const Sidebar = (() => {
     function render() {
         return `
         <!-- Sidebar Toggle Button (Inside Sticky Header) -->
-        <button id="sidebar-toggle-btn" class="w-10 h-10 flex items-center justify-center bg-zinc-900/50 hover:bg-zinc-800 rounded-xl transition-all text-zinc-400 hover:text-white group active:scale-95 border border-zinc-800/50">
+        <button id="sidebar-toggle-btn" class="w-10 h-10 flex items-center justify-center bg-[#242f3d] hover:bg-[#2b394a] rounded-xl transition-all text-[#708499] hover:text-white group active:scale-95 border border-[#2b394a]">
             <div class="flex flex-col gap-1.5 items-center justify-center">
                 <span class="w-5 h-0.5 bg-current rounded-full transition-all"></span>
                 <span class="w-5 h-0.5 bg-current rounded-full transition-all"></span>
@@ -40,33 +40,33 @@ const Sidebar = (() => {
 
         return `
         <!-- Sidebar Backdrop -->
-        <div id="sidebar-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}" onclick="Sidebar.close()"></div>
+        <div id="sidebar-backdrop" class="fixed inset-0 bg-[#0e1621]/80 backdrop-blur-md z-[2000] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}" onclick="Sidebar.close()"></div>
 
         <!-- Sidebar Drawer -->
-        <aside id="sidebar-drawer" class="fixed top-0 left-0 bottom-0 w-[280px] bg-obsidian border-r border-zinc-800 z-[2100] transition-transform duration-300 ease-out shadow-2xl ${isOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col">
+        <aside id="sidebar-drawer" class="fixed top-0 left-0 bottom-0 w-[280px] bg-[#17212b] border-r border-[#101921] z-[2100] transition-transform duration-300 ease-out shadow-2xl ${isOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col">
             <!-- Header -->
-            <div class="p-6 border-b border-zinc-800 flex items-center justify-between">
+            <div class="p-5 border-b border-[#101921] flex items-center justify-between bg-[#17212b]">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-crimson to-crimson-dark rounded-xl flex items-center justify-center font-heading font-bold text-sm">ICC</div>
-                    <span class="font-heading font-bold text-lg tracking-tight">Social Hub</span>
+                    <div class="w-10 h-10 bg-[#3390ec] text-white rounded-xl flex items-center justify-center font-heading font-bold text-sm shadow-sm">ICC</div>
+                    <span class="font-heading font-semibold text-lg tracking-tight text-white">Social Hub</span>
                 </div>
-                <button onclick="Sidebar.close()" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-400">
+                <button onclick="Sidebar.close()" class="p-2 hover:bg-[#242f3d] rounded-lg transition-colors text-[#708499]">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
-            <!-- Profile Section -->
-            <div class="px-6 py-4">
-                <a href="#profile" onclick="Sidebar.close()" class="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800/50 hover:bg-zinc-800/80 hover:border-zinc-700 transition-all cursor-pointer block group">
+            <!-- Profile Section (Telegram Drawer Header Style) -->
+            <div class="px-4 py-4 bg-[#17212b]">
+                <a href="#profile" onclick="Sidebar.close()" class="p-3 bg-[#242f3d] rounded-xl border border-[#2b394a] hover:bg-[#2b394a] transition-all cursor-pointer block group">
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden border border-zinc-700 group-hover:border-zinc-600 transition-colors">
-                            ${profile?.avatar_url ? `<img src="${profile.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center font-bold text-lg">${profile?.full_name?.charAt(0) || 'I'}</div>`}
+                        <div class="w-11 h-11 rounded-full bg-[#3390ec] overflow-hidden border border-white/10 flex items-center justify-center font-bold text-white text-base shadow-sm">
+                            ${profile?.avatar_url ? `<img src="${profile.avatar_url}" class="w-full h-full object-cover">` : `${profile?.full_name?.charAt(0) || 'I'}`}
                         </div>
                         <div class="flex-1 min-w-0">
-                            <h4 class="font-bold text-sm truncate group-hover:text-white transition-colors">${profile?.full_name || 'Innovator'}</h4>
-                            <p class="text-xs text-zinc-500 truncate">${profile?.email || 'Student'}</p>
+                            <h4 class="font-bold text-sm text-white truncate">${profile?.full_name || 'Innovator'}</h4>
+                            <p class="text-xs text-[#708499] truncate">${profile?.email || 'Student'}</p>
                         </div>
-                        <div class="text-zinc-600 group-hover:text-zinc-400 transition-colors">
+                        <div class="text-[#708499] group-hover:text-white transition-colors">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                         </div>
                     </div>
@@ -74,36 +74,36 @@ const Sidebar = (() => {
             </div>
 
             <!-- Menu Items -->
-            <nav class="flex-1 px-4 py-2 space-y-1 overflow-y-auto no-scrollbar">
+            <nav class="flex-1 px-3 py-2 space-y-1 overflow-y-auto no-scrollbar">
                 <!-- Create Post Action -->
-                <button id="sidebar-create-post" class="w-full flex items-center gap-4 px-4 py-4 mb-4 bg-crimson text-white rounded-2xl font-bold shadow-lg shadow-crimson/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                <button id="sidebar-create-post" class="w-full flex items-center gap-3 px-4 py-3 mb-3 bg-[#3390ec] text-white rounded-xl font-semibold shadow-md hover:bg-[#2b7cce] active:scale-[0.98] transition-all">
                     <div class="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                     </div>
                     <span>Create New Post</span>
                 </button>
 
                 ${menuItems.map(item => `
-                    <a href="${item.hash}" onclick="Sidebar.close()" class="flex items-center gap-4 px-4 py-3 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900 transition-all group ${window.location.hash.startsWith(item.hash) ? 'bg-crimson/10 text-crimson font-bold' : ''}">
-                        <div class="w-6 h-6 transition-transform group-active:scale-90 relative">
+                    <a href="${item.hash}" onclick="Sidebar.close()" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl transition-all group ${window.location.hash.startsWith(item.hash) ? 'bg-[#2b5278] text-white font-semibold' : 'text-[#708499] hover:text-white hover:bg-[#242f3d]'}" style="margin-bottom: 2px;">
+                        <div class="w-6 h-6 transition-transform group-active:scale-90 relative flex items-center justify-center">
                             ${item.icon}
-                            ${item.badge > 0 ? `<span class="absolute -top-1 -right-1 min-w-[16px] h-4 bg-crimson text-white text-[9px] flex items-center justify-center rounded-full border-2 border-obsidian font-bold px-1">${item.badge > 9 ? '9+' : item.badge}</span>` : ''}
+                            ${item.badge > 0 ? `<span class="absolute -top-1 -right-1 min-w-[16px] h-4 bg-[#3390ec] text-white text-[9px] flex items-center justify-center rounded-full border-2 border-[#17212b] font-bold px-1">${item.badge > 9 ? '9+' : item.badge}</span>` : ''}
                         </div>
-                        <span class="text-sm">${item.label}</span>
+                        <span class="text-sm font-medium">${item.label}</span>
                     </a>
                 `).join('')}
             </nav>
 
             <!-- Footer -->
-            <div class="p-4 border-t border-zinc-800">
+            <div class="p-4 border-t border-[#101921] bg-[#17212b]">
                 ${ICCSupabase.getUser() ? `
-                    <button onclick="ICCSupabase.signOut()" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-zinc-500 hover:text-red-500 hover:bg-red-500/10 transition-all">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    <button onclick="ICCSupabase.signOut()" class="w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-[#708499] hover:text-red-400 hover:bg-red-500/10 transition-all">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                         <span class="font-medium text-sm">Sign Out</span>
                     </button>
                 ` : `
-                    <button onclick="AuthModal.open(); Sidebar.close()" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+                    <button onclick="AuthModal.open(); Sidebar.close()" class="w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-[#708499] hover:text-white hover:bg-[#242f3d] transition-all">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
                         <span class="font-medium text-sm">Sign In</span>
                     </button>
                 `}

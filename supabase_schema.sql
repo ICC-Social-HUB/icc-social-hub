@@ -650,6 +650,74 @@ CREATE POLICY "Team members can send team messages"
 ALTER PUBLICATION supabase_realtime ADD TABLE public.team_messages;
 
 -- ==========================================
+-- 16. USER EDIT REQUESTS (Super Admin Approval)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.user_edit_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    requester_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    requester_name TEXT,
+    requester_email TEXT,
+    target_user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    target_user_name TEXT,
+    target_user_email TEXT,
+    proposed_changes JSONB NOT NULL,
+    original_data JSONB DEFAULT '{}'::jsonb,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    reviewed_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    reviewed_at TIMESTAMPTZ
+);
+
+ALTER TABLE public.user_edit_requests ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can view user edit requests" ON public.user_edit_requests;
+DROP POLICY IF EXISTS "Admins can create user edit requests" ON public.user_edit_requests;
+DROP POLICY IF EXISTS "Admins can update user edit requests" ON public.user_edit_requests;
+DROP POLICY IF EXISTS "Admins can delete user edit requests" ON public.user_edit_requests;
+
+CREATE POLICY "Admins can view user edit requests"
+    ON public.user_edit_requests FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+CREATE POLICY "Admins can create user edit requests"
+    ON public.user_edit_requests FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+CREATE POLICY "Admins can update user edit requests"
+    ON public.user_edit_requests FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+CREATE POLICY "Admins can delete user edit requests"
+    ON public.user_edit_requests FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+CREATE INDEX IF NOT EXISTS idx_user_edit_requests_status ON public.user_edit_requests(status);
+CREATE INDEX IF NOT EXISTS idx_user_edit_requests_target ON public.user_edit_requests(target_user_id);
+CREATE INDEX IF NOT EXISTS idx_user_edit_requests_created ON public.user_edit_requests(created_at DESC);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE public.user_edit_requests;
+
+-- ==========================================
 -- DONE! ✅
 -- ==========================================
 -- Your database is now ready.

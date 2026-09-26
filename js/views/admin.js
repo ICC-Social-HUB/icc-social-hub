@@ -4,6 +4,7 @@
 const AdminView = (() => {
     let activeTab = 'users';
     let pendingLeads = [];
+    let pendingEditRequests = [];
     let allPosts = [];
     let allUsers = [];
     let allEvents = [];
@@ -13,6 +14,126 @@ const AdminView = (() => {
     let userSearchQuery = '';
     let userSectionFilter = '';
     let userTeamFilter = '';
+
+    function escapeHtml(str) {
+        if (!str && str !== 0) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function renderRequestDiff(req) {
+        const changes = req.proposed_changes || {};
+        const orig = req.original_data || {};
+        const diffs = [];
+
+        if (changes.hasOwnProperty('full_name') && changes.full_name !== orig.full_name) {
+            diffs.push({
+                label: 'Full Name',
+                from: orig.full_name || '(Empty)',
+                to: changes.full_name || '(Cleared/Reset)'
+            });
+        }
+        if (changes.hasOwnProperty('username') && changes.username !== orig.username) {
+            diffs.push({
+                label: 'Auth Username',
+                from: orig.username ? `@${orig.username}` : '(Empty)',
+                to: changes.username ? `@${changes.username}` : '(Empty)'
+            });
+        }
+        if (changes.hasOwnProperty('usn') && changes.usn !== orig.usn) {
+            diffs.push({
+                label: 'USN',
+                from: orig.usn || '(Empty)',
+                to: changes.usn || '(Cleared/Reset)'
+            });
+        }
+        if (changes.hasOwnProperty('phone') && changes.phone !== orig.phone) {
+            diffs.push({
+                label: 'Phone Number',
+                from: orig.phone || '(Empty)',
+                to: changes.phone || '(Cleared/Reset)'
+            });
+        }
+        if (changes.hasOwnProperty('team_id') && String(changes.team_id) !== String(orig.team_id)) {
+            diffs.push({
+                label: 'Team Assignment',
+                from: getTeamName(orig.team_id),
+                to: getTeamName(changes.team_id)
+            });
+        }
+
+        if (diffs.length === 0) {
+            return `<div class="text-[11px] text-zinc-400 font-mono bg-zinc-950/70 p-2 rounded-lg mt-2 border border-zinc-800">${escapeHtml(JSON.stringify(changes))}</div>`;
+        }
+
+        return `
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2.5">
+            ${diffs.map(d => `
+                <div class="bg-zinc-950/80 border border-zinc-800/80 rounded-xl p-2.5 text-xs">
+                    <span class="text-[9px] uppercase tracking-wider text-zinc-500 font-semibold block mb-0.5">${d.label}</span>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-zinc-500 line-through text-[11px]">${escapeHtml(d.from)}</span>
+                        <span class="text-zinc-600 text-[10px]">➔</span>
+                        <span class="text-emerald-400 font-semibold text-[11px]">${escapeHtml(d.to)}</span>
+                    </div>
+                </div>
+            `).join('')}
+        </div>`;
+    }
+
+    function renderPendingRequestCard(req, isSuper) {
+        const currentUser = ICCSupabase.getUser();
+        const isMyRequest = currentUser && req.requester_id === currentUser.id;
+
+        return `
+        <div class="glass-card rounded-xl p-4 border border-amber-500/25 bg-amber-500/[0.04] transition-all">
+            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-3 border-b border-zinc-800/60">
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            🛡️ Change Request
+                        </span>
+                        <span class="text-[12px] text-zinc-300 font-medium">
+                            Target: <strong class="text-white">${escapeHtml(req.target_user_name || 'User')}</strong> ${req.target_user_email ? `<span class="text-zinc-500 font-mono text-[11px]">(${escapeHtml(req.target_user_email)})</span>` : ''}
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-zinc-500 mt-1">
+                        Requested by <strong class="text-zinc-300">${escapeHtml(req.requester_name || 'Admin')}</strong> (${escapeHtml(req.requester_email || '—')}) • ${formatTimeAgo(req.created_at)}
+                    </p>
+                </div>
+                
+                ${isSuper ? `
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <button class="approve-edit-req-btn px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition-all shadow-md flex items-center gap-1" data-id="${req.id}">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            Approve & Apply
+                        </button>
+                        <button class="reject-edit-req-btn px-3 py-1.5 bg-red-900/40 hover:bg-red-800 text-red-300 rounded-lg text-xs font-medium transition-all" data-id="${req.id}">
+                            Reject
+                        </button>
+                    </div>
+                ` : `
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-[10px] font-semibold">
+                            ⏳ Awaiting Super Admin Approval
+                        </span>
+                        ${isMyRequest ? `
+                            <button class="cancel-edit-req-btn text-[11px] text-zinc-500 hover:text-red-400 underline transition-colors" data-id="${req.id}">
+                                Cancel
+                            </button>
+                        ` : ''}
+                    </div>
+                `}
+            </div>
+
+            <!-- Changes Diff View -->
+            ${renderRequestDiff(req)}
+        </div>`;
+    }
 
     function render() {
         const user = ICCSupabase.getUser();
@@ -59,8 +180,6 @@ const AdminView = (() => {
             default: return '';
         }
     }
-
-
 
     function renderBroadcast() {
         return `
@@ -255,9 +374,67 @@ const AdminView = (() => {
 
     function renderUsers() {
         const displayUsers = allUsers.filter(u => u.role !== 'admin' && u.role !== 'lead');
+        const isSuper = ICCSupabase.isSuperAdmin();
 
         return `
         <div class="space-y-4">
+            <!-- Super Admin Hub / Safety Policy Banner -->
+            ${isSuper ? `
+                <div class="glass-card rounded-2xl p-5 border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-zinc-900 to-zinc-900 shadow-xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center text-lg font-bold shadow-inner">
+                                🛡️
+                            </div>
+                            <div>
+                                <h3 class="font-heading font-bold text-sm text-amber-200">Super Admin Approval Hub</h3>
+                                <p class="text-[11px] text-zinc-400">User modification requests awaiting your authorization</p>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${pendingEditRequests.length > 0 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse' : 'bg-zinc-800 text-zinc-500'}">
+                            ${pendingEditRequests.length} Pending
+                        </span>
+                    </div>
+
+                    ${pendingEditRequests.length === 0 ? `
+                        <div class="p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/60 text-center">
+                            <p class="text-xs text-zinc-400">✅ No pending change requests. All user profile records are up to date.</p>
+                        </div>
+                    ` : `
+                        <div class="space-y-3 mt-3">
+                            ${pendingEditRequests.map(req => renderPendingRequestCard(req, true)).join('')}
+                        </div>
+                    `}
+                </div>
+            ` : `
+                <div class="glass-card rounded-xl p-4 border border-blue-500/20 bg-blue-500/5 flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
+                        🛡️
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="text-xs font-semibold text-blue-300">Safety Policy Active: Super Admin Approval Required</h4>
+                        <p class="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">
+                            For security and data integrity, admins cannot directly modify user details. Any edits you make below will be submitted to a <strong>Super Admin</strong> for review and approval before taking effect.
+                        </p>
+                    </div>
+                </div>
+
+                ${pendingEditRequests.length > 0 ? `
+                    <div class="glass-card rounded-2xl p-4 border border-zinc-800">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-xs font-semibold text-zinc-300 flex items-center gap-2">
+                                <span>Pending Approval Requests</span>
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">${pendingEditRequests.length}</span>
+                            </h4>
+                            <span class="text-[10px] text-zinc-500">Awaiting Super Admin Review</span>
+                        </div>
+                        <div class="space-y-3">
+                            ${pendingEditRequests.map(req => renderPendingRequestCard(req, false)).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            `}
+
             <div class="flex items-center justify-between px-2 flex-wrap gap-3">
                 <div class="flex items-center gap-3">
                     <h3 class="font-heading font-semibold text-sm">User Management</h3>
@@ -291,12 +468,22 @@ const AdminView = (() => {
                     const phone = u.phone || (student ? student.phone : '');
                     const section = student ? student.section : '';
                     
-                    // A user is manually updated if they have db overrides that differ from the empty defaults
                     const isManuallyUpdated = !!(u.usn || u.phone || (u.full_name && u.full_name !== (student ? student.fullName : '')));
                     const teamName = CORE_LEADS.find(l => Number(l.id) === Number(u.team_id))?.team || 'No Team';
+                    const userPendingReq = pendingEditRequests.find(r => r.target_user_id === u.id);
                     
                     return `
                     <div class="glass-card rounded-2xl p-4 transition-all duration-300 ${isEditing ? 'ring-1 ring-blue-500/50 bg-blue-500/5' : ''}" data-user-id="${u.id}" data-section="${(section || '').toUpperCase()}" data-team-id="${u.team_id || ''}">
+                        ${userPendingReq ? `
+                            <div class="mb-3 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-[11px] text-amber-300 flex items-center justify-between">
+                                <span class="flex items-center gap-1.5 font-medium">
+                                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                                    Edit Request Pending Super Admin Approval
+                                </span>
+                                <span class="text-zinc-400 text-[10px]">by ${escapeHtml(userPendingReq.requester_name || 'Admin')}</span>
+                            </div>
+                        ` : ''}
+
                         <div class="flex items-start justify-between gap-4">
                             <div class="flex items-center gap-3 flex-1 min-w-0">
                                 <div class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-bold flex-shrink-0 border border-zinc-700 relative">
@@ -306,13 +493,13 @@ const AdminView = (() => {
                                 ${isEditing ? `
                                     <div class="flex-1 space-y-2 py-1">
                                         <div class="relative">
-                                            <input type="text" class="user-name-input w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-white focus:border-blue-500 outline-none" value="${fullName}" placeholder="Full Name">
+                                            <input type="text" class="user-name-input w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-white focus:border-blue-500 outline-none" value="${escapeHtml(fullName)}" placeholder="Full Name">
                                             <span class="absolute -top-2 left-2 px-1 bg-zinc-900 text-[9px] text-zinc-500 uppercase tracking-wider">Full Name</span>
                                         </div>
                                         <div class="relative">
                                             <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden">
                                                 <span class="pl-3 pr-1 text-[10px] text-zinc-500">@</span>
-                                                <input type="text" class="user-username-input w-full bg-transparent px-0 py-1.5 text-xs text-white focus:outline-none" value="${u.username || ''}" placeholder="Auth Username">
+                                                <input type="text" class="user-username-input w-full bg-transparent px-0 py-1.5 text-xs text-white focus:outline-none" value="${escapeHtml(u.username || '')}" placeholder="Auth Username">
                                             </div>
                                             <span class="absolute -top-2 left-2 px-1 bg-zinc-900 text-[9px] text-zinc-500 uppercase tracking-wider">Auth Username</span>
                                         </div>
@@ -320,17 +507,17 @@ const AdminView = (() => {
                                 ` : `
                                     <div class="flex-1 min-w-0">
                                         <div class="flex flex-wrap items-center gap-2">
-                                            <h4 class="text-sm font-semibold text-white break-words">${fullName || 'Anonymous'}</h4>
+                                            <h4 class="text-sm font-semibold text-white break-words">${escapeHtml(fullName || 'Anonymous')}</h4>
                                             ${isVerified ? `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Excel Verified</span>` : `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20">Unverified</span>`}
                                             ${isManuallyUpdated ? `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">Manually Updated</span>` : ''}
                                         </div>
-                                        <p class="text-[11px] text-zinc-500 truncate">@${u.username || '—'}</p>
+                                        <p class="text-[11px] text-zinc-500 truncate">@${escapeHtml(u.username || '—')}</p>
                                     </div>
                                 `}
                             </div>
                             
                             ${!isEditing ? `
-                                <button class="edit-user-btn p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-all" data-id="${u.id}">
+                                <button class="edit-user-btn p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-all" data-id="${u.id}" title="Edit user details">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                                 </button>
                             ` : ''}
@@ -339,30 +526,30 @@ const AdminView = (() => {
                         <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-zinc-800/50 pt-4">
                             <div class="space-y-1">
                                 <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Email Address (Read Only)</span>
-                                <p class="text-[11px] text-zinc-400 font-mono truncate">${u.email || 'No email'}</p>
+                                <p class="text-[11px] text-zinc-400 font-mono truncate">${escapeHtml(u.email || 'No email')}</p>
                             </div>
                             <div class="space-y-1">
                                 <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">USN</span>
                                 ${isEditing ? `
-                                    <input type="text" class="user-usn-input w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] text-white focus:border-blue-500 outline-none uppercase" value="${usn}" placeholder="1KS...">
+                                    <input type="text" class="user-usn-input w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] text-white focus:border-blue-500 outline-none uppercase" value="${escapeHtml(usn)}" placeholder="1KS...">
                                 ` : `
-                                    <p class="text-[11px] text-zinc-300 font-mono uppercase">${usn || '—'}</p>
+                                    <p class="text-[11px] text-zinc-300 font-mono uppercase">${escapeHtml(usn || '—')}</p>
                                 `}
                             </div>
                             <div class="space-y-1">
                                 <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Phone Number</span>
                                 ${isEditing ? `
-                                    <input type="tel" class="user-phone-input w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] text-white focus:border-blue-500 outline-none" value="${phone}" placeholder="10 digits">
+                                    <input type="tel" class="user-phone-input w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] text-white focus:border-blue-500 outline-none" value="${escapeHtml(phone)}" placeholder="10 digits">
                                 ` : `
-                                    <p class="text-[11px] text-zinc-300 font-mono">${phone || '—'}</p>
+                                    <p class="text-[11px] text-zinc-300 font-mono">${escapeHtml(phone || '—')}</p>
                                 `}
                             </div>
                             <div class="space-y-1">
                                 <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Section & Team</span>
                                 <div class="flex gap-2 items-center">
-                                    <span class="text-[11px] font-bold text-zinc-300 uppercase">${section || '-'}</span>
+                                    <span class="text-[11px] font-bold text-zinc-300 uppercase">${escapeHtml(section || '-')}</span>
                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${u.team_id ? 'bg-blue-500/10 text-blue-400' : 'bg-zinc-800 text-zinc-500'}">
-                                        ${teamName}
+                                        ${escapeHtml(teamName)}
                                     </span>
                                 </div>
                             </div>
@@ -370,14 +557,24 @@ const AdminView = (() => {
 
                         ${isEditing ? `
                             <div class="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-zinc-800/30">
-                                <button class="save-user-btn flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-all" data-id="${u.id}">Save Changes</button>
+                                <button class="save-user-btn flex-1 py-2 ${isSuper ? 'bg-blue-600 hover:bg-blue-500' : 'bg-amber-600 hover:bg-amber-500'} text-white rounded-xl text-xs font-semibold transition-all shadow-md flex items-center justify-center gap-1.5" data-id="${u.id}">
+                                    ${isSuper ? '<span>Save Changes (Direct)</span>' : '<span>🛡️ Submit for Super Admin Approval</span>'}
+                                </button>
                                 <button class="cancel-user-edit-btn px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-medium transition-all">Cancel</button>
                                 ${isManuallyUpdated ? `
-                                    <button class="restore-user-btn px-4 py-2 bg-orange-600/10 hover:bg-orange-600 text-orange-500 hover:text-white border border-orange-500/30 rounded-xl text-xs font-semibold transition-all" data-id="${u.id}" title="Revert to Excel Data">Restore</button>
+                                    <button class="restore-user-btn px-3 py-2 bg-orange-600/10 hover:bg-orange-600 text-orange-500 hover:text-white border border-orange-500/30 rounded-xl text-xs font-semibold transition-all" data-id="${u.id}" title="Revert to Excel Data">
+                                        ${isSuper ? 'Restore' : 'Request Restore'}
+                                    </button>
                                 ` : ''}
-                                <button class="delete-user-btn p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-all" data-id="${u.id}" title="Delete User">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                </button>
+                                ${isSuper ? `
+                                    <button class="delete-user-btn p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-all" data-id="${u.id}" title="Delete User">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                ` : `
+                                    <button class="p-2 text-zinc-600 cursor-not-allowed rounded-xl transition-all" title="Only Super Admins can delete users" disabled>
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                `}
                             </div>
                         ` : ''}
                     </div>`;
@@ -393,8 +590,25 @@ const AdminView = (() => {
         allPosts = await ICCSupabase.getAllPosts();
         allUsers = await ICCSupabase.getAllProfiles();
         allEvents = await ICCSupabase.fetchEvents();
+        pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
         container.innerHTML = render();
         bindEvents(container);
+
+        // Realtime subscription for pending user edit requests
+        if (!window._adminUserEditSubscribed) {
+            window._adminUserEditSubscribed = true;
+            ICCSupabase.subscribeToUserEditRequests(async () => {
+                pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
+                allUsers = await ICCSupabase.getAllProfiles();
+                if (activeTab === 'users') {
+                    const content = document.getElementById('admin-content');
+                    if (content) {
+                        content.innerHTML = renderTab();
+                        bindEvents(document.getElementById('admin-section') || container);
+                    }
+                }
+            });
+        }
     }
 
     function bindEvents(container) {
@@ -414,6 +628,7 @@ const AdminView = (() => {
             if (res.error) Toast.error('Action failed: ' + res.error.message);
             else Toast.success('System Wiped: All notifications cleared! 🎉');
         });
+
         // Broadcast
         document.getElementById('broadcast-msg')?.addEventListener('input', e => {
             const chars = document.getElementById('broadcast-chars');
@@ -441,6 +656,69 @@ const AdminView = (() => {
                 });
             }
         });
+
+        // Super Admin Request Approval & Rejection Handlers
+        container.querySelectorAll('.approve-edit-req-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const reqId = btn.dataset.id;
+                const origText = btn.innerHTML;
+                btn.innerHTML = 'Approving...';
+                btn.disabled = true;
+
+                const res = await ICCSupabase.approveUserEditRequest(reqId);
+                if (res.error) {
+                    Toast.error('Approval failed: ' + res.error.message);
+                    btn.innerHTML = origText;
+                    btn.disabled = false;
+                } else {
+                    Toast.success('✅ Request approved! User profile details updated.');
+                    pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
+                    allUsers = await ICCSupabase.getAllProfiles();
+                    container.innerHTML = render();
+                    bindEvents(container);
+                }
+            });
+        });
+
+        container.querySelectorAll('.reject-edit-req-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const reqId = btn.dataset.id;
+                const reason = prompt('Optional rejection reason for the requesting admin:');
+                if (reason === null) return; // cancelled prompt
+                
+                const origText = btn.textContent;
+                btn.textContent = 'Rejecting...';
+                btn.disabled = true;
+
+                const res = await ICCSupabase.rejectUserEditRequest(reqId, reason);
+                if (res.error) {
+                    Toast.error('Rejection failed: ' + res.error.message);
+                    btn.textContent = origText;
+                    btn.disabled = false;
+                } else {
+                    Toast.info('Request rejected.');
+                    pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
+                    container.innerHTML = render();
+                    bindEvents(container);
+                }
+            });
+        });
+
+        container.querySelectorAll('.cancel-edit-req-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const reqId = btn.dataset.id;
+                if (!confirm('Are you sure you want to cancel this change request?')) return;
+                const res = await ICCSupabase.cancelUserEditRequest(reqId);
+                if (res?.error) Toast.error('Failed to cancel request');
+                else {
+                    Toast.info('Change request cancelled');
+                    pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
+                    container.innerHTML = render();
+                    bindEvents(container);
+                }
+            });
+        });
+
         // Approve/deny leads
         container.querySelectorAll('.approve-lead-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
@@ -500,6 +778,9 @@ const AdminView = (() => {
         container.querySelectorAll('.save-user-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const userId = btn.dataset.id;
+                const targetUser = allUsers.find(u => u.id === userId);
+                const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(targetUser?.email) : null;
+
                 const card = container.querySelector(`.glass-card[data-user-id="${userId}"]`);
                 const fullName = card.querySelector(`.user-name-input`)?.value.trim();
                 const username = card.querySelector(`.user-username-input`)?.value.trim();
@@ -519,8 +800,8 @@ const AdminView = (() => {
                     return;
                 }
 
-                const originalText = btn.textContent;
-                btn.textContent = 'Saving...';
+                const originalText = btn.innerHTML;
+                btn.innerHTML = 'Submitting...';
                 btn.disabled = true;
                 
                 const fields = { 
@@ -530,44 +811,97 @@ const AdminView = (() => {
                     phone: cleanedPhone
                 };
 
-                const { error } = await ICCSupabase.adminUpdateUser(userId, fields);
-                if (error) {
-                    Toast.error('Failed to update user: ' + error.message);
-                    btn.textContent = originalText;
-                    btn.disabled = false;
+                const origData = {
+                    full_name: targetUser?.full_name || (student ? student.fullName : ''),
+                    username: targetUser?.username || '',
+                    usn: targetUser?.usn || (student ? student.usn : ''),
+                    phone: targetUser?.phone || (student ? student.phone : ''),
+                    team_id: targetUser?.team_id
+                };
+
+                const isSuper = ICCSupabase.isSuperAdmin();
+
+                if (isSuper) {
+                    const { error } = await ICCSupabase.adminUpdateUser(userId, fields);
+                    if (error) {
+                        Toast.error('Failed to update user: ' + error.message);
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    } else {
+                        Toast.success('User profile updated directly (Super Admin)!');
+                        editingUserId = null;
+                        allUsers = await ICCSupabase.getAllProfiles();
+                        pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
+                        container.innerHTML = render(); bindEvents(container);
+                    }
                 } else {
-                    Toast.success('User profile updated!');
-                    editingUserId = null;
-                    allUsers = await ICCSupabase.getAllProfiles();
-                    container.innerHTML = render(); bindEvents(container);
+                    // Regular Admin: create change request for Super Admin
+                    const { error } = await ICCSupabase.requestUserUpdate(userId, fields, origData);
+                    if (error) {
+                        Toast.error('Failed to submit request: ' + (error.message || error));
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    } else {
+                        Toast.success('🛡️ Change request submitted! A Super Admin will review and approve these changes before they take effect.');
+                        editingUserId = null;
+                        pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
+                        container.innerHTML = render(); bindEvents(container);
+                    }
                 }
             });
         });
 
         container.querySelectorAll('.restore-user-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
-                if (!confirm('Are you sure you want to revert to the original Excel verified data? This will clear manual overrides.')) return;
                 const userId = btn.dataset.id;
+                const targetUser = allUsers.find(u => u.id === userId);
+                const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(targetUser?.email) : null;
+                const isSuper = ICCSupabase.isSuperAdmin();
+
+                if (!confirm(isSuper ? 'Are you sure you want to revert to the original Excel verified data?' : 'Request Super Admin approval to revert this user to Excel verified data?')) return;
+                
                 const originalText = btn.textContent;
-                btn.textContent = 'Restoring...';
+                btn.textContent = 'Processing...';
                 btn.disabled = true;
                 
                 const fields = { 
                     full_name: null, 
-                    usn: null,
-                    phone: null
+                    usn: null, 
+                    phone: null 
                 };
 
-                const { error } = await ICCSupabase.adminUpdateUser(userId, fields);
-                if (error) {
-                    Toast.error('Restore failed: ' + error.message);
-                    btn.textContent = originalText;
-                    btn.disabled = false;
+                const origData = {
+                    full_name: targetUser?.full_name || (student ? student.fullName : ''),
+                    username: targetUser?.username || '',
+                    usn: targetUser?.usn || (student ? student.usn : ''),
+                    phone: targetUser?.phone || (student ? student.phone : '')
+                };
+
+                if (isSuper) {
+                    const { error } = await ICCSupabase.adminUpdateUser(userId, fields);
+                    if (error) {
+                        Toast.error('Restore failed: ' + error.message);
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    } else {
+                        Toast.success('Reverted to Excel values!');
+                        editingUserId = null;
+                        allUsers = await ICCSupabase.getAllProfiles();
+                        pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
+                        container.innerHTML = render(); bindEvents(container);
+                    }
                 } else {
-                    Toast.success('Reverted to Excel values!');
-                    editingUserId = null;
-                    allUsers = await ICCSupabase.getAllProfiles();
-                    container.innerHTML = render(); bindEvents(container);
+                    const { error } = await ICCSupabase.requestUserUpdate(userId, fields, origData);
+                    if (error) {
+                        Toast.error('Failed to submit restore request: ' + (error.message || error));
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    } else {
+                        Toast.success('🛡️ Restore request submitted to Super Admin for approval.');
+                        editingUserId = null;
+                        pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
+                        container.innerHTML = render(); bindEvents(container);
+                    }
                 }
             });
         });
@@ -709,7 +1043,12 @@ const AdminView = (() => {
             if (!error && userEmailToAssign && teamId) {
                 const targetUser = allUsers.find(u => u.email === userEmailToAssign);
                 if (targetUser) {
-                    await ICCSupabase.adminUpdateUser(targetUser.id, { role: 'lead', team_id: teamId, is_pending_member: false });
+                    if (ICCSupabase.isSuperAdmin()) {
+                        await ICCSupabase.adminUpdateUser(targetUser.id, { role: 'lead', team_id: teamId, is_pending_member: false });
+                    } else {
+                        await ICCSupabase.requestUserUpdate(targetUser.id, { role: 'lead', team_id: teamId, is_pending_member: false }, { role: targetUser.role, team_id: targetUser.team_id });
+                        Toast.info('Lead appointment submitted to Super Admin for approval.');
+                    }
                 } else {
                     Toast.error('Team saved, but no user found with email: ' + userEmailToAssign);
                 }

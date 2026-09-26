@@ -8,37 +8,37 @@ const TeamChatModal = (() => {
 
     function render(team) {
         return `
-        <div id="team-chat-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div class="modal-content glass-card w-full max-w-lg h-[80vh] flex flex-col overflow-hidden animate-zoom-in">
+        <div id="team-chat-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0e1621]/80 backdrop-blur-md">
+            <div class="modal-content bg-[#17212b] border border-[#242f3d] w-full max-w-lg h-[80vh] flex flex-col overflow-hidden rounded-2xl shadow-2xl animate-zoom-in">
                 <!-- Header -->
-                <div class="p-4 border-b border-zinc-800/50 flex items-center justify-between bg-zinc-900/50 backdrop-blur-md">
+                <div class="p-4 border-b border-[#101921] flex items-center justify-between bg-[#17212b]">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-gradient-to-br ${team.gradient} flex items-center justify-center text-xs font-bold text-white shadow-lg">
+                        <div class="w-10 h-10 rounded-full bg-[#3390ec] flex items-center justify-center text-xs font-bold text-white shadow-sm">
                             ${team.initials}
                         </div>
                         <div>
-                            <h2 class="font-heading font-bold text-sm leading-tight">${team.team} Chat</h2>
-                            <p class="text-[10px] text-zinc-500 font-medium">Team Only Room</p>
+                            <h2 class="font-heading font-bold text-sm leading-tight text-white">${team.team} Chat</h2>
+                            <p class="text-[10px] text-[#708499] font-medium">Team Room</p>
                         </div>
                     </div>
-                    <button id="close-team-chat" class="p-2 hover:bg-zinc-800 rounded-full transition-colors text-zinc-400 cursor-pointer">
+                    <button id="close-team-chat" class="p-2 hover:bg-[#242f3d] rounded-full transition-colors text-[#708499] hover:text-white cursor-pointer">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
 
                 <!-- Messages Container -->
-                <div id="team-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-zinc-950/20">
+                <div id="team-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-[#0e1621]">
                     <div class="flex items-center justify-center py-12" id="team-chat-loading-spinner">
                         <div class="spinner w-6 h-6"></div>
                     </div>
                 </div>
 
                 <!-- Input Area -->
-                <form id="team-chat-form" class="p-4 bg-zinc-900/50 border-t border-zinc-800/50">
-                    <div class="relative flex items-center gap-2">
-                        <input type="text" id="team-chat-input" placeholder="Message team..." class="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-600/50 transition-all" autocomplete="off">
-                        <button type="submit" id="team-chat-send-btn" class="w-12 h-12 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/20 transition-all active:scale-95 disabled:opacity-50">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7"/></svg>
+                <form id="team-chat-form" class="p-3 bg-[#17212b] border-t border-[#101921]">
+                    <div class="relative flex items-center gap-2.5">
+                        <input type="text" id="team-chat-input" placeholder="Message team..." class="flex-1 bg-[#242f3d] border border-[#2b394a] rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#708499] focus:outline-none focus:border-[#3390ec] transition-all" autocomplete="off">
+                        <button type="submit" id="team-chat-send-btn" class="w-10 h-10 bg-[#3390ec] hover:bg-[#2b7cce] text-white rounded-full flex items-center justify-center shadow-md transition-all active:scale-95 disabled:opacity-50">
+                            <svg class="w-5 h-5 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
                         </button>
                     </div>
                 </form>

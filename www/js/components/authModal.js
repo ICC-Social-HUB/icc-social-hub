@@ -34,21 +34,21 @@ const AuthModal = (() => {
         if (step === 'forgot-reset') title = 'New Password';
 
         return `
-        <div class="modal-backdrop fixed inset-0 z-[2000] flex items-center justify-center p-4" id="auth-overlay">
-            <div class="modal-content bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-                <div class="relative p-6 pb-4">
-                    <button id="auth-close" class="absolute top-4 right-4 p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+        <div class="modal-backdrop fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-[#0e1621]/80 backdrop-blur-md" id="auth-overlay">
+            <div class="modal-content bg-[#17212b] border border-[#242f3d] rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                <div class="relative p-6 pb-4 bg-[#17212b]">
+                    <button id="auth-close" class="absolute top-4 right-4 p-2 text-[#708499] hover:text-white hover:bg-[#242f3d] rounded-lg transition-colors">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                     <div class="flex items-center gap-3 mb-1">
-                        <div class="w-10 h-10 bg-gradient-to-br from-red-600 to-rose-700 rounded-xl flex items-center justify-center font-heading font-bold text-sm">ICC</div>
+                        <div class="w-10 h-10 bg-[#3390ec] text-white rounded-xl flex items-center justify-center font-heading font-bold text-sm shadow-sm">ICC</div>
                         <div>
-                            <h2 class="font-heading font-bold text-lg">${title}</h2>
-                            <p class="text-xs text-zinc-500">Innovation Social Hub</p>
+                            <h2 class="font-heading font-bold text-lg text-white">${title}</h2>
+                            <p class="text-xs text-[#708499]">Innovation Social Hub</p>
                         </div>
                     </div>
                 </div>
-                <div class="px-6 pb-6">
+                <div class="px-6 pb-6 bg-[#17212b]">
                     ${renderContent()}
                 </div>
             </div>
@@ -66,41 +66,41 @@ const AuthModal = (() => {
 
     function renderMain() {
         return `
-        <div class="flex gap-2 mb-4 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
-            <button type="button" id="tab-login" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors ${authMode === 'login' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-white'}">Log In</button>
-            <button type="button" id="tab-signup" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors ${authMode === 'signup' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-white'}">Sign Up</button>
+        <div class="flex gap-2 mb-4 bg-[#0e1621] p-1 rounded-xl border border-[#242f3d]">
+            <button type="button" id="tab-login" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors ${authMode === 'login' ? 'bg-[#3390ec] text-white' : 'text-[#708499] hover:text-white'}">Log In</button>
+            <button type="button" id="tab-signup" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors ${authMode === 'signup' ? 'bg-[#3390ec] text-white' : 'text-[#708499] hover:text-white'}">Sign Up</button>
         </div>
-        <div class="px-3 py-2.5 bg-zinc-800/60 border border-zinc-700/50 rounded-xl mb-4">
-            <p class="text-[11px] text-zinc-400 text-center">🔒 Access is restricted to approved ICC members only</p>
+        <div class="px-3 py-2.5 bg-[#242f3d]/60 border border-[#2b394a] rounded-xl mb-4">
+            <p class="text-[11px] text-[#708499] text-center">🔒 Access is restricted to approved ICC members only</p>
         </div>
         <form id="auth-form" class="space-y-3">
             ${authMode === 'signup' ? `
             <div>
-                <label class="block text-xs font-medium text-zinc-400 mb-1.5">Full Name</label>
-                <input type="text" id="auth-name" placeholder="John Doe" required class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm placeholder-zinc-600">
+                <label class="block text-xs font-medium text-[#708499] mb-1.5">Full Name</label>
+                <input type="text" id="auth-name" placeholder="John Doe" required class="form-input w-full px-4 py-2.5 bg-[#242f3d] border border-[#2b394a] rounded-xl text-white text-sm placeholder-[#708499]">
             </div>
             <div>
-                <label class="block text-xs font-medium text-zinc-400 mb-1.5">Username</label>
-                <input type="text" id="auth-username" placeholder="johndoe" required pattern="[a-zA-Z0-9_]+" minlength="3" maxlength="20" class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm placeholder-zinc-600">
+                <label class="block text-xs font-medium text-[#708499] mb-1.5">Username</label>
+                <input type="text" id="auth-username" placeholder="johndoe" required pattern="[a-zA-Z0-9_]+" minlength="3" maxlength="20" class="form-input w-full px-4 py-2.5 bg-[#242f3d] border border-[#2b394a] rounded-xl text-white text-sm placeholder-[#708499]">
             </div>` : ''}
             <div>
-                <label class="block text-xs font-medium text-zinc-400 mb-1.5">Email address</label>
-                <input type="email" id="auth-email" placeholder="you@example.com" value="${email}" required class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm placeholder-zinc-600">
+                <label class="block text-xs font-medium text-[#708499] mb-1.5">Email address</label>
+                <input type="email" id="auth-email" placeholder="you@example.com" value="${email}" required class="form-input w-full px-4 py-2.5 bg-[#242f3d] border border-[#2b394a] rounded-xl text-white text-sm placeholder-[#708499]">
             </div>
             ${authMode === 'login' ? `
             <div>
                 <div class="flex items-center justify-between mb-1.5">
-                    <label class="block text-xs font-medium text-zinc-400">Password</label>
-                    <button type="button" id="forgot-password-btn" class="text-[10px] text-zinc-500 hover:text-white transition-colors">Forgot?</button>
+                    <label class="block text-xs font-medium text-[#708499]">Password</label>
+                    <button type="button" id="forgot-password-btn" class="text-[10px] text-[#708499] hover:text-[#3390ec] transition-colors">Forgot?</button>
                 </div>
-                <input type="password" id="auth-password" placeholder="••••••••" required class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm placeholder-zinc-600">
+                <input type="password" id="auth-password" placeholder="••••••••" required class="form-input w-full px-4 py-2.5 bg-[#242f3d] border border-[#2b394a] rounded-xl text-white text-sm placeholder-[#708499]">
             </div>` : ''}
             ${errorMsg ? `<div class="px-3 py-2 bg-red-900/30 border border-red-800/50 rounded-lg"><p class="text-sm text-red-400">${errorMsg}</p></div>` : ''}
-            <button type="submit" class="w-full py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 border border-zinc-700" ${loading ? 'disabled' : ''}>
+            <button type="submit" class="w-full py-3 bg-[#3390ec] hover:bg-[#2b7cce] rounded-xl text-sm font-semibold text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-md" ${loading ? 'disabled' : ''}>
                 ${loading ? '<div class="spinner spinner-sm"></div>' : (authMode === 'login' ? 'Sign In' : 'Send Code')}
             </button>
         </form>
-        <p class="text-[11px] text-zinc-600 text-center mt-4">By signing in, you agree to ICC's community guidelines</p>`;
+        <p class="text-[11px] text-[#708499] text-center mt-4">By signing in, you agree to ICC's community guidelines</p>`;
     }
 
     function renderOTP() {
