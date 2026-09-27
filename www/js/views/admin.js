@@ -8,6 +8,8 @@ const AdminView = (() => {
     let allPosts = [];
     let allUsers = [];
     let allEvents = [];
+    let allAttendance = [];
+    let attendanceMap = {}; // user_id -> { present, total, percent }
     let editingLead = null;
     let editingUserId = null;
     let editingEvent = null;
@@ -23,6 +25,25 @@ const AdminView = (() => {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+    }
+
+    function updateAttendanceStats(records) {
+        attendanceMap = {};
+        if (!Array.isArray(records)) return;
+        records.forEach(r => {
+            if (!r.user_id) return;
+            if (!attendanceMap[r.user_id]) {
+                attendanceMap[r.user_id] = { present: 0, total: 0, percent: 0 };
+            }
+            attendanceMap[r.user_id].total++;
+            if (r.status === 'present') {
+                attendanceMap[r.user_id].present++;
+            }
+        });
+        Object.keys(attendanceMap).forEach(uid => {
+            const item = attendanceMap[uid];
+            item.percent = item.total > 0 ? Math.round((item.present / item.total) * 100) : 0;
+        });
     }
 
     function getUserDetails(u) {
@@ -50,6 +71,11 @@ const AdminView = (() => {
             milestoneProgress = Math.round((completedCount / 8) * 100);
         }
 
+        const attInfo = attendanceMap[u.id];
+        const attendancePercent = attInfo && attInfo.total > 0 ? `${attInfo.percent}%` : '0%';
+        const attendancePresent = attInfo ? attInfo.present : 0;
+        const attendanceTotal = attInfo ? attInfo.total : 0;
+
         return {
             id: u.id,
             fullName,
@@ -58,6 +84,10 @@ const AdminView = (() => {
             phone: phone ? String(phone) : '',
             usn,
             section,
+            attendancePercent,
+            attendancePresent,
+            attendanceTotal,
+            attendanceStatsStr: attInfo && attInfo.total > 0 ? `${attInfo.percent}% (${attInfo.present}/${attInfo.total})` : '0% (0/0)',
             teamId: u.team_id,
             teamName,
             teamLeader,
@@ -122,7 +152,7 @@ const AdminView = (() => {
         URL.revokeObjectURL(url);
     }
 
-    function exportUsersAndTeamsToExcel() {
+    async function exportUsersAndTeamsToExcel() {
         try {
             const filteredUsers = getFilteredUsers();
             if (filteredUsers.length === 0) {
@@ -131,6 +161,17 @@ const AdminView = (() => {
             }
 
             Toast.info('Preparing Team-Grouped Excel export...');
+
+            // Ensure fresh attendance records are loaded
+            try {
+                const attData = await ICCSupabase.fetchAllAttendanceData();
+                if (attData && attData.length > 0) {
+                    allAttendance = attData;
+                    updateAttendanceStats(allAttendance);
+                }
+            } catch (attErr) {
+                console.warn('Could not refresh attendance for Excel export:', attErr);
+            }
 
             // Build filter description for title
             const filterParts = [];
@@ -152,7 +193,7 @@ const AdminView = (() => {
 
             // Title Banner
             aoaGrouped.push(['ICC SOCIAL HUB — TEAM-WISE USERS ROSTER']);
-            aoaGrouped.push([`Generated On: ${new Date().toLocaleString('en-IN')}`, '', '', '', `Applied Filters: ${activeFilterStr}`]);
+            aoaGrouped.push([`Generated On: ${new Date().toLocaleString('en-IN')}`, '', '', '', '', `Applied Filters: ${activeFilterStr}`]);
             aoaGrouped.push([]); // Blank separator
 
             // Determine which teams to iterate through
@@ -202,6 +243,7 @@ const AdminView = (() => {
                     'Member Full Name',
                     'USN / Reg No',
                     'Section',
+                    'Attendance %',
                     'Email Address',
                     'Phone Number',
                     'Role',
@@ -213,7 +255,7 @@ const AdminView = (() => {
 
                 // 3. Member Rows (Listed one below the other)
                 if (teamMembers.length === 0) {
-                    aoaGrouped.push(['—', '(No members in this team matching active filter)', '', '', '', '', '', '', '', '', '']);
+                    aoaGrouped.push(['—', '(No members in this team matching active filter)', '', '', '', '', '', '', '', '', '', '']);
                 } else {
                     teamMembers.forEach((u, idx) => {
                         const d = getUserDetails(u);
@@ -222,6 +264,7 @@ const AdminView = (() => {
                             d.fullName,
                             d.usn,
                             d.section,
+                            d.attendancePercent,
                             d.email,
                             d.phone,
                             d.role,
@@ -256,6 +299,7 @@ const AdminView = (() => {
                     'Member Full Name',
                     'USN / Reg No',
                     'Section',
+                    'Attendance %',
                     'Email Address',
                     'Phone Number',
                     'Role',
@@ -266,7 +310,7 @@ const AdminView = (() => {
                 ]);
 
                 if (unassignedMembers.length === 0) {
-                    aoaGrouped.push(['—', '(No unassigned members matching active filter)', '', '', '', '', '', '', '', '', '']);
+                    aoaGrouped.push(['—', '(No unassigned members matching active filter)', '', '', '', '', '', '', '', '', '', '']);
                 } else {
                     unassignedMembers.forEach((u, idx) => {
                         const d = getUserDetails(u);
@@ -275,6 +319,7 @@ const AdminView = (() => {
                             d.fullName,
                             d.usn,
                             d.section,
+                            d.attendancePercent,
                             d.email,
                             d.phone,
                             d.role,
@@ -303,6 +348,7 @@ const AdminView = (() => {
                     'Student Full Name': d.fullName,
                     'USN / Reg No': d.usn,
                     'Section': d.section,
+                    'Attendance %': d.attendancePercent,
                     'Email Address': d.email,
                     'Phone Number': d.phone,
                     'Role': d.role,
@@ -377,6 +423,7 @@ const AdminView = (() => {
                     { wch: 28 },  // Full Name / Leader
                     { wch: 18 },  // USN / Lead Email
                     { wch: 10 },  // Section / Project
+                    { wch: 16 },  // Attendance %
                     { wch: 32 },  // Email Address / Progress
                     { wch: 18 },  // Phone Number / Total Members
                     { wch: 14 },  // Role / Filtered in view
@@ -395,6 +442,7 @@ const AdminView = (() => {
                     { wch: 24 }, // Student Full Name
                     { wch: 15 }, // USN
                     { wch: 9 },  // Section
+                    { wch: 16 }, // Attendance %
                     { wch: 30 }, // Email Address
                     { wch: 15 }, // Phone Number
                     { wch: 10 }, // Role
@@ -928,6 +976,14 @@ const AdminView = (() => {
                                             <h4 class="text-sm font-semibold text-white break-words">${escapeHtml(fullName || 'Anonymous')}</h4>
                                             ${isVerified ? `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Excel Verified</span>` : `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20">Unverified</span>`}
                                             ${isManuallyUpdated ? `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">Manually Updated</span>` : ''}
+                                            ${(() => {
+                                                const att = attendanceMap[u.id];
+                                                if (att && att.total > 0) {
+                                                    const col = att.percent >= 75 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : att.percent >= 50 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20';
+                                                    return `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${col}" title="Attendance: ${att.present}/${att.total} days">Att: ${att.percent}%</span>`;
+                                                }
+                                                return `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-zinc-800 text-zinc-500 border border-zinc-700/30">Att: 0%</span>`;
+                                            })()}
                                         </div>
                                         <p class="text-[11px] text-zinc-500 truncate">@${escapeHtml(u.username || '—')}</p>
                                     </div>
@@ -941,7 +997,7 @@ const AdminView = (() => {
                             ` : ''}
                         </div>
 
-                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-zinc-800/50 pt-4">
+                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 border-t border-zinc-800/50 pt-4">
                             <div class="space-y-1">
                                 <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Email Address (Read Only)</span>
                                 <p class="text-[11px] text-zinc-400 font-mono truncate">${escapeHtml(u.email || 'No email')}</p>
@@ -969,6 +1025,19 @@ const AdminView = (() => {
                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${u.team_id ? 'bg-blue-500/10 text-blue-400' : 'bg-zinc-800 text-zinc-500'}">
                                         ${escapeHtml(teamName)}
                                     </span>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Attendance Rate</span>
+                                <div class="flex items-center gap-1.5">
+                                    ${(() => {
+                                        const att = attendanceMap[u.id];
+                                        if (att && att.total > 0) {
+                                            const colorCls = att.percent >= 75 ? 'text-emerald-400' : att.percent >= 50 ? 'text-amber-400' : 'text-red-400';
+                                            return `<p class="text-[11px] font-bold font-mono ${colorCls}">${att.percent}% <span class="text-zinc-500 font-normal font-sans text-[10px]">(${att.present}/${att.total} days)</span></p>`;
+                                        }
+                                        return `<p class="text-[11px] text-zinc-500 font-mono">0% <span class="text-zinc-600 font-normal font-sans text-[10px]">(0 days)</span></p>`;
+                                    })()}
                                 </div>
                             </div>
                         </div>
@@ -1014,6 +1083,12 @@ const AdminView = (() => {
         allUsers = await ICCSupabase.getAllProfiles();
         allEvents = await ICCSupabase.fetchEvents();
         pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
+        try {
+            allAttendance = await ICCSupabase.fetchAllAttendanceData();
+            updateAttendanceStats(allAttendance);
+        } catch (attErr) {
+            console.warn('Admin mount fetchAllAttendanceData error:', attErr);
+        }
         container.innerHTML = render();
         bindEvents(container);
 
@@ -1023,6 +1098,10 @@ const AdminView = (() => {
             ICCSupabase.subscribeToUserEditRequests(async () => {
                 pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
                 allUsers = await ICCSupabase.getAllProfiles();
+                try {
+                    allAttendance = await ICCSupabase.fetchAllAttendanceData();
+                    updateAttendanceStats(allAttendance);
+                } catch (e) {}
                 if (activeTab === 'users') {
                     const content = document.getElementById('admin-content');
                     if (content) {
