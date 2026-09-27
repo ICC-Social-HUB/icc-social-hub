@@ -102,17 +102,15 @@ const AdminView = (() => {
         });
     }
 
-    function downloadCSVFallback(data, filename) {
-        if (!data || !data.length) return;
-        const headers = Object.keys(data[0]);
-        const csvRows = [];
-        csvRows.push(headers.map(h => `"${String(h).replace(/"/g, '""')}"`).join(','));
-        for (const row of data) {
-            csvRows.push(headers.map(h => {
-                const val = row[h] === null || row[h] === undefined ? '' : String(row[h]);
+    function downloadCSVFallback(aoaData, filename) {
+        if (!aoaData || !aoaData.length) return;
+        const csvRows = aoaData.map(row => {
+            if (!Array.isArray(row)) return '';
+            return row.map(cell => {
+                const val = cell === null || cell === undefined ? '' : String(cell);
                 return `"${val.replace(/"/g, '""')}"`;
-            }).join(','));
-        }
+            }).join(',');
+        });
         const blob = new Blob(['\uFEFF' + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -132,10 +130,170 @@ const AdminView = (() => {
                 return;
             }
 
-            Toast.info('Preparing Excel export...');
+            Toast.info('Preparing Team-Grouped Excel export...');
 
-            // Sheet 1: Filtered Users (Dynamic to active filter)
-            const usersData = filteredUsers.map((u, idx) => {
+            // Build filter description for title
+            const filterParts = [];
+            if (userSectionFilter) filterParts.push(`Section: ${userSectionFilter}`);
+            if (userTeamFilter) {
+                if (userTeamFilter === 'none') filterParts.push('Team: No Team (Unassigned)');
+                else {
+                    const tObj = CORE_LEADS.find(l => String(l.id) === String(userTeamFilter));
+                    if (tObj) filterParts.push(`Team: ${tObj.team}`);
+                }
+            }
+            if (userSearchQuery) filterParts.push(`Search: "${userSearchQuery}"`);
+            const activeFilterStr = filterParts.length ? filterParts.join(' | ') : 'All Members (No Filter)';
+
+            // ═════════════════════════════════════════════════════════════
+            // SHEET 1: TEAM-WISE GROUPED ROSTER (Main Sheet)
+            // ═════════════════════════════════════════════════════════════
+            const aoaGrouped = [];
+
+            // Title Banner
+            aoaGrouped.push(['ICC SOCIAL HUB — TEAM-WISE USERS ROSTER']);
+            aoaGrouped.push([`Generated On: ${new Date().toLocaleString('en-IN')}`, '', '', '', `Applied Filters: ${activeFilterStr}`]);
+            aoaGrouped.push([]); // Blank separator
+
+            // Determine which teams to iterate through
+            let teamsToIterate = [...CORE_LEADS];
+            if (userTeamFilter === 'none') {
+                teamsToIterate = []; // only unassigned
+            } else if (userTeamFilter) {
+                teamsToIterate = CORE_LEADS.filter(l => String(l.id) === String(userTeamFilter));
+            }
+
+            let renderedTeamsCount = 0;
+
+            teamsToIterate.forEach(lead => {
+                // Find all matching users for this team from filteredUsers
+                const teamMembers = filteredUsers.filter(u => Number(u.team_id) === Number(lead.id));
+                const allTeamMembers = allUsers.filter(u => Number(u.team_id) === Number(lead.id) && u.role !== 'admin' && u.role !== 'lead');
+
+                // If filtering by specific section/search across all teams and this team has 0 matches, skip
+                if (filteredUsers.length > 0 && teamMembers.length === 0 && (userSectionFilter || userSearchQuery) && !userTeamFilter) {
+                    return;
+                }
+
+                renderedTeamsCount++;
+                const assignedLeadUser = allUsers.find(u => Number(u.team_id) === Number(lead.id) && u.role === 'lead');
+                const leadEmail = assignedLeadUser ? assignedLeadUser.email : 'Unassigned';
+
+                let progress = 0;
+                if (lead.milestones) {
+                    const completedCount = Object.values(lead.milestones).filter(Boolean).length;
+                    progress = Math.round((completedCount / 8) * 100);
+                }
+
+                // 1. Team Header Row (Team name, Lead name once, Lead email, Project & Stats)
+                aoaGrouped.push([
+                    `TEAM: ${lead.team.toUpperCase()}`,
+                    `Team Leader: ${lead.name}`,
+                    `Leader Email: ${leadEmail}`,
+                    `Project: ${lead.project_name || 'TBD'}`,
+                    `Progress: ${progress}%`,
+                    `Total Members: ${allTeamMembers.length}`,
+                    `Filtered in View: ${teamMembers.length}`
+                ]);
+
+                // 2. Member Column Headers
+                aoaGrouped.push([
+                    '#',
+                    'Member Full Name',
+                    'USN / Reg No',
+                    'Section',
+                    'Email Address',
+                    'Phone Number',
+                    'Role',
+                    'Verification Status',
+                    'Username',
+                    'DISC Personality',
+                    'Registered Date'
+                ]);
+
+                // 3. Member Rows (Listed one below the other)
+                if (teamMembers.length === 0) {
+                    aoaGrouped.push(['—', '(No members in this team matching active filter)', '', '', '', '', '', '', '', '', '']);
+                } else {
+                    teamMembers.forEach((u, idx) => {
+                        const d = getUserDetails(u);
+                        aoaGrouped.push([
+                            idx + 1,
+                            d.fullName,
+                            d.usn,
+                            d.section,
+                            d.email,
+                            d.phone,
+                            d.role,
+                            d.status,
+                            d.username,
+                            d.discTag,
+                            d.createdAt
+                        ]);
+                    });
+                }
+
+                // 4. Spacer rows before next team
+                aoaGrouped.push([]);
+                aoaGrouped.push([]);
+            });
+
+            // 5. Unassigned / No Team Section
+            const unassignedMembers = filteredUsers.filter(u => !u.team_id || u.team_id === 'null' || u.team_id === 'undefined');
+            if (unassignedMembers.length > 0 || userTeamFilter === 'none') {
+                aoaGrouped.push([
+                    'TEAM: UNASSIGNED / NO TEAM',
+                    'Team Leader: None',
+                    'Leader Email: N/A',
+                    'Project: None',
+                    'Progress: N/A',
+                    `Total Unassigned: ${unassignedMembers.length}`,
+                    `Filtered in View: ${unassignedMembers.length}`
+                ]);
+
+                aoaGrouped.push([
+                    '#',
+                    'Member Full Name',
+                    'USN / Reg No',
+                    'Section',
+                    'Email Address',
+                    'Phone Number',
+                    'Role',
+                    'Verification Status',
+                    'Username',
+                    'DISC Personality',
+                    'Registered Date'
+                ]);
+
+                if (unassignedMembers.length === 0) {
+                    aoaGrouped.push(['—', '(No unassigned members matching active filter)', '', '', '', '', '', '', '', '', '']);
+                } else {
+                    unassignedMembers.forEach((u, idx) => {
+                        const d = getUserDetails(u);
+                        aoaGrouped.push([
+                            idx + 1,
+                            d.fullName,
+                            d.usn,
+                            d.section,
+                            d.email,
+                            d.phone,
+                            d.role,
+                            d.status,
+                            d.username,
+                            d.discTag,
+                            d.createdAt
+                        ]);
+                    });
+                }
+
+                aoaGrouped.push([]);
+                aoaGrouped.push([]);
+            }
+
+            // ═════════════════════════════════════════════════════════════
+            // SHEET 2: FLAT FILTERED TABLE (For Sorting / Pivots)
+            // ═════════════════════════════════════════════════════════════
+            const flatUsersData = filteredUsers.map((u, idx) => {
                 const d = getUserDetails(u);
                 return {
                     'SL No': idx + 1,
@@ -157,7 +315,9 @@ const AdminView = (() => {
                 };
             });
 
-            // Sheet 2: Teams Overview
+            // ═════════════════════════════════════════════════════════════
+            // SHEET 3: TEAMS SUMMARY
+            // ═════════════════════════════════════════════════════════════
             const teamsData = CORE_LEADS.map(lead => {
                 const assignedLeadUser = allUsers.find(u => Number(u.team_id) === Number(lead.id) && u.role === 'lead');
                 const members = allUsers.filter(u => Number(u.team_id) === Number(lead.id) && u.role !== 'admin' && u.role !== 'lead');
@@ -189,26 +349,6 @@ const AdminView = (() => {
                 };
             });
 
-            // Sheet 3: Master Directory of All Registered Users
-            const displayUsers = allUsers.filter(u => u.role !== 'admin' && u.role !== 'lead');
-            const allUsersData = displayUsers.map((u, idx) => {
-                const d = getUserDetails(u);
-                return {
-                    'SL No': idx + 1,
-                    'Team Name': d.teamName,
-                    'Team Leader': d.teamLeader,
-                    'Student Full Name': d.fullName,
-                    'USN / Reg No': d.usn,
-                    'Section': d.section,
-                    'Email Address': d.email,
-                    'Phone Number': d.phone,
-                    'Role': d.role,
-                    'Verification Status': d.status,
-                    'Username': d.username,
-                    'Account Created': d.createdAt
-                };
-            });
-
             // Build dynamic filename reflecting current filters
             const dateStr = new Date().toISOString().slice(0, 10);
             let filterSuffix = '';
@@ -222,17 +362,32 @@ const AdminView = (() => {
             }
             if (userSearchQuery) filterSuffix += `_Filtered`;
 
-            const fileName = `ICC_Users_and_Teams${filterSuffix || '_All'}_${dateStr}.xlsx`;
+            const fileName = `ICC_Team_Roster${filterSuffix || '_All'}_${dateStr}.xlsx`;
 
             if (window.XLSX) {
                 const wb = XLSX.utils.book_new();
 
-                const wsUsers = XLSX.utils.json_to_sheet(usersData);
+                const wsGrouped = XLSX.utils.aoa_to_sheet(aoaGrouped);
+                const wsFlat = XLSX.utils.json_to_sheet(flatUsersData);
                 const wsTeams = XLSX.utils.json_to_sheet(teamsData);
-                const wsAll = XLSX.utils.json_to_sheet(allUsersData);
 
-                // Column widths
-                wsUsers['!cols'] = [
+                // Column widths for Grouped Sheet
+                wsGrouped['!cols'] = [
+                    { wch: 8 },   // # or TEAM: XXX
+                    { wch: 28 },  // Full Name / Leader
+                    { wch: 18 },  // USN / Lead Email
+                    { wch: 10 },  // Section / Project
+                    { wch: 32 },  // Email Address / Progress
+                    { wch: 18 },  // Phone Number / Total Members
+                    { wch: 14 },  // Role / Filtered in view
+                    { wch: 20 },  // Verification Status
+                    { wch: 18 },  // Username
+                    { wch: 18 },  // DISC Personality
+                    { wch: 22 }   // Registered Date
+                ];
+
+                // Column widths for Flat Sheet
+                wsFlat['!cols'] = [
                     { wch: 8 },  // SL No
                     { wch: 18 }, // Team Name
                     { wch: 20 }, // Team Leader
@@ -251,6 +406,7 @@ const AdminView = (() => {
                     { wch: 22 }  // Account Created
                 ];
 
+                // Column widths for Teams Overview
                 wsTeams['!cols'] = [
                     { wch: 8 },  // Team ID
                     { wch: 18 }, // Team Name
@@ -265,20 +421,15 @@ const AdminView = (() => {
                     { wch: 40 }  // Team Bio
                 ];
 
-                wsAll['!cols'] = wsUsers['!cols'];
-
-                const mainSheetTitle = filterSuffix ? 'Filtered Users' : 'Users & Teams';
-                XLSX.utils.book_append_sheet(wb, wsUsers, mainSheetTitle);
+                XLSX.utils.book_append_sheet(wb, wsGrouped, 'Team-Wise Roster');
+                XLSX.utils.book_append_sheet(wb, wsFlat, 'All Members (Flat Table)');
                 XLSX.utils.book_append_sheet(wb, wsTeams, 'Teams Overview');
-                if (filterSuffix) {
-                    XLSX.utils.book_append_sheet(wb, wsAll, 'All Registered Users');
-                }
 
                 XLSX.writeFile(wb, fileName);
-                Toast.success(`📊 Excel downloaded: ${filteredUsers.length} user records exported!`);
+                Toast.success(`📊 Excel downloaded: ${filteredUsers.length} members grouped team-wise!`);
             } else {
-                downloadCSVFallback(usersData, fileName.replace('.xlsx', '.csv'));
-                Toast.success(`📊 CSV downloaded: ${filteredUsers.length} user records exported!`);
+                downloadCSVFallback(aoaGrouped, fileName.replace('.xlsx', '.csv'));
+                Toast.success(`📊 CSV downloaded: ${filteredUsers.length} members grouped team-wise!`);
             }
         } catch (err) {
             console.error('Error exporting users Excel:', err);
