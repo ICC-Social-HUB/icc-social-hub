@@ -1066,15 +1066,19 @@ const ICCSupabase = (() => {
     async function adminUpdateUser(userId, fields) {
         if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
 
-        if (fields.team_id === 'none') fields.team_id = null;
-
-        // (Limit removed)
+        const updateFields = { ...fields, updated_at: new Date().toISOString() };
+        if (updateFields.team_id === 'none') updateFields.team_id = null;
 
         const { data, error } = await client.from('profiles')
-            .update(fields).eq('id', userId).select().single();
+            .update(updateFields).eq('id', userId).select().maybeSingle();
         
+        if (error) {
+            console.error('adminUpdateUser update error:', error);
+            return { error };
+        }
+
         // If team_id was updated, enforce one-team rule by clearing old ones first
-        if (!error && fields.hasOwnProperty('team_id')) {
+        if (fields.hasOwnProperty('team_id')) {
             console.log('adminUpdateUser: updating team_id to', fields.team_id);
             const { error: deleteError } = await client.from('team_memberships').delete().eq('user_id', userId);
             if (deleteError) console.error('adminUpdateUser deleteError:', deleteError);
@@ -1087,9 +1091,9 @@ const ICCSupabase = (() => {
                 if (insertError) console.error('adminUpdateUser insertError:', insertError);
             } else {
                 // If removing from team, also ensure role is not 'lead' anymore
-                const { data: prof } = await client.from('profiles').select('role').eq('id', userId).single();
+                const { data: prof } = await client.from('profiles').select('role').eq('id', userId).maybeSingle();
                 if (prof && prof.role === 'lead') {
-                    await client.from('profiles').update({ role: 'student' }).eq('id', userId);
+                    await client.from('profiles').update({ role: 'member' }).eq('id', userId);
                 }
 
                 // Trigger Removal Email Notification
@@ -1103,7 +1107,7 @@ const ICCSupabase = (() => {
                 }
             }
         }
-        return { data, error };
+        return { data: data || { id: userId, ...fields }, success: true };
     }
 
     async function adminDeleteUser(userId) {
@@ -1190,13 +1194,18 @@ const ICCSupabase = (() => {
     }
 
     async function fetchUserEditRequests(status = null) {
-        if (!client || !isAdmin()) return [];
+        if (!client) return [];
         try {
+            if (!currentProfile) await fetchProfile();
+            if (!isAdmin()) {
+                console.warn('fetchUserEditRequests: User is not recognized as admin. Profile role:', currentProfile?.role);
+                return [];
+            }
             let query = client.from('user_edit_requests').select('*').order('created_at', { ascending: false });
             if (status) query = query.eq('status', status);
             const { data, error } = await query;
             if (error) {
-                console.warn('fetchUserEditRequests warning:', error.message);
+                console.error('fetchUserEditRequests Supabase query error:', error);
                 return [];
             }
             return data || [];

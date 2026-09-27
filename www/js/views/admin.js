@@ -586,6 +586,11 @@ const AdminView = (() => {
     async function mount(container) {
         activeTab = 'users';
         container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
+        try {
+            await ICCSupabase.fetchProfile();
+        } catch (e) {
+            console.warn('Admin mount fetchProfile error:', e);
+        }
         pendingLeads = await ICCSupabase.getPendingLeads();
         allPosts = await ICCSupabase.getAllPosts();
         allUsers = await ICCSupabase.getAllProfiles();
@@ -757,6 +762,64 @@ const AdminView = (() => {
                 const { error } = await ICCSupabase.adminDeletePost(btn.dataset.postId);
                 if (error) Toast.error('Delete failed');
                 else { Toast.success('Post deleted'); allPosts = await ICCSupabase.getAllPosts(); container.innerHTML = render(); bindEvents(container); }
+            });
+        });
+
+        // Super Admin Approval Actions
+        container.querySelectorAll('.approve-edit-req-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const reqId = btn.dataset.id;
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = 'Approving...';
+                btn.disabled = true;
+
+                const res = await ICCSupabase.approveUserEditRequest(reqId);
+                if (res.error) {
+                    Toast.error('Approval failed: ' + (res.error.message || res.error));
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                } else {
+                    Toast.success('✅ Change request approved and applied successfully!');
+                    pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
+                    allUsers = await ICCSupabase.getAllProfiles();
+                    container.innerHTML = render(); bindEvents(container);
+                }
+            });
+        });
+
+        container.querySelectorAll('.reject-edit-req-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const reqId = btn.dataset.id;
+                const reason = prompt('Optional: Enter rejection reason / notes for the admin:') || '';
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = 'Rejecting...';
+                btn.disabled = true;
+
+                const res = await ICCSupabase.rejectUserEditRequest(reqId, reason);
+                if (res.error) {
+                    Toast.error('Rejection failed: ' + (res.error.message || res.error));
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                } else {
+                    Toast.info('❌ Change request rejected.');
+                    pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
+                    container.innerHTML = render(); bindEvents(container);
+                }
+            });
+        });
+
+        container.querySelectorAll('.cancel-edit-req-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const reqId = btn.dataset.id;
+                if (!confirm('Cancel this pending change request?')) return;
+                const res = await ICCSupabase.cancelUserEditRequest(reqId);
+                if (res.error) {
+                    Toast.error('Cancel failed: ' + (res.error.message || res.error));
+                } else {
+                    Toast.info('Request cancelled.');
+                    pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
+                    container.innerHTML = render(); bindEvents(container);
+                }
             });
         });
 

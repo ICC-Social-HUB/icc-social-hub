@@ -6,18 +6,26 @@
 
 -- 1. Update profiles table constraint to allow 'super_admin' and 'superadmin' roles
 DO $$
+DECLARE
+    r RECORD;
 BEGIN
-    -- Drop existing check constraint if it exists
-    ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
-    
-    -- Add updated check constraint with super_admin support
-    ALTER TABLE public.profiles 
-        ADD CONSTRAINT profiles_role_check 
-        CHECK (role IN ('member', 'lead', 'admin', 'super_admin', 'superadmin'));
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE NOTICE 'Constraint update notice: %', SQLERRM;
+    FOR r IN (
+        SELECT c.conname
+        FROM pg_constraint c
+        JOIN pg_namespace n ON n.oid = c.connamespace
+        JOIN pg_class cl ON cl.oid = c.conrelid
+        WHERE n.nspname = 'public'
+          AND cl.relname = 'profiles'
+          AND c.contype = 'c'
+          AND pg_get_constraintdef(c.oid) ILIKE '%role%'
+    ) LOOP
+        EXECUTE 'ALTER TABLE public.profiles DROP CONSTRAINT ' || quote_ident(r.conname);
+    END LOOP;
 END $$;
+
+ALTER TABLE public.profiles 
+    ADD CONSTRAINT profiles_role_check 
+    CHECK (role IN ('member', 'lead', 'admin', 'super_admin', 'superadmin'));
 
 -- 2. Create user_edit_requests table
 CREATE TABLE IF NOT EXISTS public.user_edit_requests (
@@ -112,8 +120,43 @@ CREATE POLICY "Admins can delete/cancel edit requests"
         )
     );
 
--- Enable Realtime for user_edit_requests
-ALTER PUBLICATION supabase_realtime ADD TABLE public.user_edit_requests;
+-- 5. Enable Realtime updates (safe check)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+          AND schemaname = 'public' 
+          AND tablename = 'user_edit_requests'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.user_edit_requests;
+    END IF;
+END $$;
+
+-- 6. Allow Admins and Super Admins to update user profiles (required for approving edits)
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Admins and Super Admins can update any profile" ON public.profiles;
+
+CREATE POLICY "Admins and Super Admins can update any profile"
+    ON public.profiles
+    FOR UPDATE
+    TO authenticated
+    USING (
+        auth.uid() = id OR
+        EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid()
+            AND p.role IN ('admin', 'super_admin', 'superadmin')
+        )
+    )
+    WITH CHECK (
+        auth.uid() = id OR
+        EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid()
+            AND p.role IN ('admin', 'super_admin', 'superadmin')
+        )
+    );
 
 -- =========================================================================
 -- HOW TO ASSIGN A SUPER ADMIN IN SUPABASE:

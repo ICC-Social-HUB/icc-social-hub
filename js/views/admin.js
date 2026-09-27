@@ -25,6 +25,267 @@ const AdminView = (() => {
             .replace(/'/g, '&#039;');
     }
 
+    function getUserDetails(u) {
+        const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
+        const isVerified = !!student;
+        const fullName = u.full_name || (student ? student.fullName : '') || 'Anonymous';
+        const usn = (u.usn || (student ? student.usn : '') || '').trim().toUpperCase();
+        const phone = u.phone || (student ? student.phone : '') || '';
+        const section = (student ? student.section : '') || '';
+        const isManuallyUpdated = !!(u.usn || u.phone || (u.full_name && u.full_name !== (student ? student.fullName : '')));
+
+        let status = 'Unverified';
+        if (isManuallyUpdated) status = 'Manually Updated';
+        else if (isVerified) status = 'Excel Verified';
+
+        const leadObj = CORE_LEADS.find(l => Number(l.id) === Number(u.team_id));
+        const teamName = leadObj ? leadObj.team : (u.team_id ? `Team ${u.team_id}` : 'No Team');
+        const teamLeader = leadObj ? leadObj.name : 'N/A';
+        const teamLeaderEmail = leadObj ? (allUsers.find(au => Number(au.team_id) === Number(leadObj.id) && au.role === 'lead')?.email || '') : '';
+        const projectName = leadObj?.project_name || 'TBD';
+
+        let milestoneProgress = 0;
+        if (leadObj && leadObj.milestones) {
+            const completedCount = Object.values(leadObj.milestones).filter(Boolean).length;
+            milestoneProgress = Math.round((completedCount / 8) * 100);
+        }
+
+        return {
+            id: u.id,
+            fullName,
+            username: u.username ? `@${u.username}` : '',
+            email: u.email || '',
+            phone: phone ? String(phone) : '',
+            usn,
+            section,
+            teamId: u.team_id,
+            teamName,
+            teamLeader,
+            teamLeaderEmail,
+            projectName,
+            milestoneProgress: `${milestoneProgress}%`,
+            role: u.role || 'member',
+            status,
+            discTag: u.disc_tag || '',
+            discSummary: u.summary || '',
+            createdAt: u.created_at ? new Date(u.created_at).toLocaleString('en-IN') : ''
+        };
+    }
+
+    function getFilteredUsers() {
+        const displayUsers = allUsers.filter(u => u.role !== 'admin' && u.role !== 'lead');
+        const query = (userSearchQuery || '').trim().toLowerCase();
+        const sectionQuery = (userSectionFilter || '').trim().toUpperCase();
+        const teamQuery = (userTeamFilter || '').trim();
+
+        return displayUsers.filter(u => {
+            const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
+            const fullName = (u.full_name || (student ? student.fullName : '') || '').toLowerCase();
+            const username = (u.username || '').toLowerCase();
+            const email = (u.email || '').toLowerCase();
+            const usn = (u.usn || (student ? student.usn : '') || '').toLowerCase();
+            const section = (student ? student.section : '') || '';
+            const cardTeamId = u.team_id !== null && u.team_id !== undefined ? String(u.team_id) : '';
+
+            const searchText = `${fullName} ${username} ${email} ${usn}`;
+            const matchesSearch = !query || searchText.includes(query);
+            const matchesSection = !sectionQuery || section.toUpperCase() === sectionQuery;
+
+            let matchesTeam = true;
+            if (teamQuery === 'none') {
+                matchesTeam = !cardTeamId || cardTeamId === 'null' || cardTeamId === 'undefined';
+            } else if (teamQuery) {
+                matchesTeam = cardTeamId === teamQuery;
+            }
+
+            return matchesSearch && matchesSection && matchesTeam;
+        });
+    }
+
+    function downloadCSVFallback(data, filename) {
+        if (!data || !data.length) return;
+        const headers = Object.keys(data[0]);
+        const csvRows = [];
+        csvRows.push(headers.map(h => `"${String(h).replace(/"/g, '""')}"`).join(','));
+        for (const row of data) {
+            csvRows.push(headers.map(h => {
+                const val = row[h] === null || row[h] === undefined ? '' : String(row[h]);
+                return `"${val.replace(/"/g, '""')}"`;
+            }).join(','));
+        }
+        const blob = new Blob(['\uFEFF' + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    function exportUsersAndTeamsToExcel() {
+        try {
+            const filteredUsers = getFilteredUsers();
+            if (filteredUsers.length === 0) {
+                Toast.error('No users match the selected filters to export.');
+                return;
+            }
+
+            Toast.info('Preparing Excel export...');
+
+            // Sheet 1: Filtered Users (Dynamic to active filter)
+            const usersData = filteredUsers.map((u, idx) => {
+                const d = getUserDetails(u);
+                return {
+                    'SL No': idx + 1,
+                    'Team Name': d.teamName,
+                    'Team Leader': d.teamLeader,
+                    'Team Leader Email': d.teamLeaderEmail,
+                    'Student Full Name': d.fullName,
+                    'USN / Reg No': d.usn,
+                    'Section': d.section,
+                    'Email Address': d.email,
+                    'Phone Number': d.phone,
+                    'Role': d.role,
+                    'Verification Status': d.status,
+                    'Username': d.username,
+                    'Team Project': d.projectName,
+                    'Project Progress': d.milestoneProgress,
+                    'DISC Personality': d.discTag,
+                    'Account Created': d.createdAt
+                };
+            });
+
+            // Sheet 2: Teams Overview
+            const teamsData = CORE_LEADS.map(lead => {
+                const assignedLeadUser = allUsers.find(u => Number(u.team_id) === Number(lead.id) && u.role === 'lead');
+                const members = allUsers.filter(u => Number(u.team_id) === Number(lead.id) && u.role !== 'admin' && u.role !== 'lead');
+                const membersListStr = members.map(m => {
+                    const s = window.getStudentDataByEmail ? window.getStudentDataByEmail(m.email) : null;
+                    const name = m.full_name || (s ? s.fullName : '') || m.username || 'User';
+                    const usn = m.usn || (s ? s.usn : '') || '';
+                    return usn ? `${name} (${usn})` : name;
+                }).join(', ');
+
+                let progress = 0;
+                if (lead.milestones) {
+                    const completedCount = Object.values(lead.milestones).filter(Boolean).length;
+                    progress = Math.round((completedCount / 8) * 100);
+                }
+
+                return {
+                    'Team ID': lead.id,
+                    'Team Name': lead.team,
+                    'Team Leader': lead.name,
+                    'Leader Email': assignedLeadUser ? assignedLeadUser.email : 'Unassigned',
+                    'Leader Initials': lead.initials,
+                    'Project Name': lead.project_name || 'TBD',
+                    'Milestone Progress': `${progress}%`,
+                    'Total Members Count': members.length,
+                    'Team Members (Names & USNs)': membersListStr || 'No members yet',
+                    'Specialties': Array.isArray(lead.specialties) ? lead.specialties.join(', ') : (lead.specialties || ''),
+                    'Team Bio': lead.bio || ''
+                };
+            });
+
+            // Sheet 3: Master Directory of All Registered Users
+            const displayUsers = allUsers.filter(u => u.role !== 'admin' && u.role !== 'lead');
+            const allUsersData = displayUsers.map((u, idx) => {
+                const d = getUserDetails(u);
+                return {
+                    'SL No': idx + 1,
+                    'Team Name': d.teamName,
+                    'Team Leader': d.teamLeader,
+                    'Student Full Name': d.fullName,
+                    'USN / Reg No': d.usn,
+                    'Section': d.section,
+                    'Email Address': d.email,
+                    'Phone Number': d.phone,
+                    'Role': d.role,
+                    'Verification Status': d.status,
+                    'Username': d.username,
+                    'Account Created': d.createdAt
+                };
+            });
+
+            // Build dynamic filename reflecting current filters
+            const dateStr = new Date().toISOString().slice(0, 10);
+            let filterSuffix = '';
+            if (userSectionFilter) filterSuffix += `_Sec_${userSectionFilter}`;
+            if (userTeamFilter) {
+                if (userTeamFilter === 'none') filterSuffix += '_NoTeam';
+                else {
+                    const teamObj = CORE_LEADS.find(l => String(l.id) === String(userTeamFilter));
+                    if (teamObj) filterSuffix += `_${teamObj.team.replace(/\s+/g, '_')}`;
+                }
+            }
+            if (userSearchQuery) filterSuffix += `_Filtered`;
+
+            const fileName = `ICC_Users_and_Teams${filterSuffix || '_All'}_${dateStr}.xlsx`;
+
+            if (window.XLSX) {
+                const wb = XLSX.utils.book_new();
+
+                const wsUsers = XLSX.utils.json_to_sheet(usersData);
+                const wsTeams = XLSX.utils.json_to_sheet(teamsData);
+                const wsAll = XLSX.utils.json_to_sheet(allUsersData);
+
+                // Column widths
+                wsUsers['!cols'] = [
+                    { wch: 8 },  // SL No
+                    { wch: 18 }, // Team Name
+                    { wch: 20 }, // Team Leader
+                    { wch: 28 }, // Team Leader Email
+                    { wch: 24 }, // Student Full Name
+                    { wch: 15 }, // USN
+                    { wch: 9 },  // Section
+                    { wch: 30 }, // Email Address
+                    { wch: 15 }, // Phone Number
+                    { wch: 10 }, // Role
+                    { wch: 18 }, // Verification Status
+                    { wch: 16 }, // Username
+                    { wch: 22 }, // Team Project
+                    { wch: 18 }, // Project Progress
+                    { wch: 16 }, // DISC Personality
+                    { wch: 22 }  // Account Created
+                ];
+
+                wsTeams['!cols'] = [
+                    { wch: 8 },  // Team ID
+                    { wch: 18 }, // Team Name
+                    { wch: 20 }, // Team Leader
+                    { wch: 28 }, // Leader Email
+                    { wch: 15 }, // Leader Initials
+                    { wch: 22 }, // Project Name
+                    { wch: 18 }, // Milestone Progress
+                    { wch: 18 }, // Total Members Count
+                    { wch: 50 }, // Team Members
+                    { wch: 35 }, // Specialties
+                    { wch: 40 }  // Team Bio
+                ];
+
+                wsAll['!cols'] = wsUsers['!cols'];
+
+                const mainSheetTitle = filterSuffix ? 'Filtered Users' : 'Users & Teams';
+                XLSX.utils.book_append_sheet(wb, wsUsers, mainSheetTitle);
+                XLSX.utils.book_append_sheet(wb, wsTeams, 'Teams Overview');
+                if (filterSuffix) {
+                    XLSX.utils.book_append_sheet(wb, wsAll, 'All Registered Users');
+                }
+
+                XLSX.writeFile(wb, fileName);
+                Toast.success(`📊 Excel downloaded: ${filteredUsers.length} user records exported!`);
+            } else {
+                downloadCSVFallback(usersData, fileName.replace('.xlsx', '.csv'));
+                Toast.success(`📊 CSV downloaded: ${filteredUsers.length} user records exported!`);
+            }
+        } catch (err) {
+            console.error('Error exporting users Excel:', err);
+            Toast.error('Export failed: ' + err.message);
+        }
+    }
+
     function renderRequestDiff(req) {
         const changes = req.proposed_changes || {};
         const orig = req.original_data || {};
@@ -450,10 +711,16 @@ const AdminView = (() => {
                         <option value="none" ${userTeamFilter === 'none' ? 'selected' : ''}>No Team</option>
                         ${CORE_LEADS.map(l => `<option value="${l.id}" ${userTeamFilter === String(l.id) ? 'selected' : ''}>${l.team}</option>`).join('')}
                     </select>
-                    <div class="relative flex-1 sm:w-64">
+                    <div class="relative flex-1 sm:w-56">
                         <input type="text" id="admin-user-search" placeholder="Search by name, email, or USN..." class="form-input w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white" value="${userSearchQuery}">
                         <svg class="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
+                    <button id="admin-download-excel-btn" class="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all cursor-pointer whitespace-nowrap group" title="Download dynamic Excel format (.xlsx) of users & teams based on active filters">
+                        <svg class="w-4 h-4 text-emerald-100 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span id="admin-excel-btn-text">${(userSectionFilter || userTeamFilter || userSearchQuery) ? 'Export Filtered (.xlsx)' : 'Download Excel (.xlsx)'}</span>
+                    </button>
                 </div>
             </div>
 
@@ -586,6 +853,11 @@ const AdminView = (() => {
     async function mount(container) {
         activeTab = 'users';
         container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
+        try {
+            await ICCSupabase.fetchProfile();
+        } catch (e) {
+            console.warn('Admin mount fetchProfile error:', e);
+        }
         pendingLeads = await ICCSupabase.getPendingLeads();
         allPosts = await ICCSupabase.getAllPosts();
         allUsers = await ICCSupabase.getAllProfiles();
@@ -757,6 +1029,64 @@ const AdminView = (() => {
                 const { error } = await ICCSupabase.adminDeletePost(btn.dataset.postId);
                 if (error) Toast.error('Delete failed');
                 else { Toast.success('Post deleted'); allPosts = await ICCSupabase.getAllPosts(); container.innerHTML = render(); bindEvents(container); }
+            });
+        });
+
+        // Super Admin Approval Actions
+        container.querySelectorAll('.approve-edit-req-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const reqId = btn.dataset.id;
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = 'Approving...';
+                btn.disabled = true;
+
+                const res = await ICCSupabase.approveUserEditRequest(reqId);
+                if (res.error) {
+                    Toast.error('Approval failed: ' + (res.error.message || res.error));
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                } else {
+                    Toast.success('✅ Change request approved and applied successfully!');
+                    pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
+                    allUsers = await ICCSupabase.getAllProfiles();
+                    container.innerHTML = render(); bindEvents(container);
+                }
+            });
+        });
+
+        container.querySelectorAll('.reject-edit-req-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const reqId = btn.dataset.id;
+                const reason = prompt('Optional: Enter rejection reason / notes for the admin:') || '';
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = 'Rejecting...';
+                btn.disabled = true;
+
+                const res = await ICCSupabase.rejectUserEditRequest(reqId, reason);
+                if (res.error) {
+                    Toast.error('Rejection failed: ' + (res.error.message || res.error));
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                } else {
+                    Toast.info('❌ Change request rejected.');
+                    pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
+                    container.innerHTML = render(); bindEvents(container);
+                }
+            });
+        });
+
+        container.querySelectorAll('.cancel-edit-req-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const reqId = btn.dataset.id;
+                if (!confirm('Cancel this pending change request?')) return;
+                const res = await ICCSupabase.cancelUserEditRequest(reqId);
+                if (res.error) {
+                    Toast.error('Cancel failed: ' + (res.error.message || res.error));
+                } else {
+                    Toast.info('Request cancelled.');
+                    pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
+                    container.innerHTML = render(); bindEvents(container);
+                }
             });
         });
 
@@ -940,6 +1270,12 @@ const AdminView = (() => {
             });
             const countBadge = document.getElementById('users-count-badge');
             if (countBadge) countBadge.textContent = visibleCount + ' members';
+
+            const excelBtnText = document.getElementById('admin-excel-btn-text');
+            if (excelBtnText) {
+                const hasFilters = !!(query || sectionQuery || teamQuery);
+                excelBtnText.textContent = hasFilters ? `Export Filtered (${visibleCount})` : 'Download Excel (.xlsx)';
+            }
         };
 
         const searchInput = document.getElementById('admin-user-search');
@@ -963,6 +1299,15 @@ const AdminView = (() => {
             teamSelect.addEventListener('change', e => {
                 userTeamFilter = e.target.value;
                 applyUserFilters();
+            });
+        }
+
+        // Excel Download Button Listener
+        const excelBtn = document.getElementById('admin-download-excel-btn');
+        if (excelBtn) {
+            excelBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                exportUsersAndTeamsToExcel();
             });
         }
 
