@@ -25,7 +25,7 @@ CREATE POLICY "Only admins can manage inventory"
     USING (
         EXISTS (
             SELECT 1 FROM public.profiles
-            WHERE id = auth.uid() AND role = 'admin'
+            WHERE id = auth.uid() AND role IN ('admin', 'super_admin', 'superadmin')
         )
     );
 
@@ -52,13 +52,13 @@ CREATE POLICY "Users can view their own requests"
     ON public.inventory_requests FOR SELECT
     USING (auth.uid() = user_id);
 
--- Admins can view all requests
+-- Admins & Super Admins can view all requests
 CREATE POLICY "Admins can view all requests"
     ON public.inventory_requests FOR SELECT
     USING (
         EXISTS (
             SELECT 1 FROM public.profiles
-            WHERE id = auth.uid() AND role = 'admin'
+            WHERE id = auth.uid() AND role IN ('admin', 'super_admin', 'superadmin')
         )
     );
 
@@ -67,13 +67,13 @@ CREATE POLICY "Users can create requests"
     ON public.inventory_requests FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
--- Admins can update requests
+-- Admins & Super Admins can update requests
 CREATE POLICY "Admins can update requests"
     ON public.inventory_requests FOR UPDATE
     USING (
         EXISTS (
             SELECT 1 FROM public.profiles
-            WHERE id = auth.uid() AND role = 'admin'
+            WHERE id = auth.uid() AND role IN ('admin', 'super_admin', 'superadmin')
         )
     );
 
@@ -82,7 +82,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.inventory;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.inventory_requests;
 
 -- ==========================================
-18. STORAGE SETUP (Run in SQL Editor)
+-- 18. STORAGE SETUP (Run in SQL Editor)
 -- ==========================================
 -- Create inventory bucket if it doesn't exist
 INSERT INTO storage.buckets (id, name, public)
@@ -94,25 +94,25 @@ CREATE POLICY "Inventory images are publicly accessible"
     ON storage.objects FOR SELECT
     USING (bucket_id = 'inventory');
 
--- Allow authenticated users to upload to inventory
+-- Allow authenticated admins & super admins to upload to inventory
 CREATE POLICY "Admins can upload inventory images"
     ON storage.objects FOR INSERT
     WITH CHECK (
         bucket_id = 'inventory' AND 
         EXISTS (
             SELECT 1 FROM public.profiles
-            WHERE id = auth.uid() AND role = 'admin'
+            WHERE id = auth.uid() AND role IN ('admin', 'super_admin', 'superadmin')
         )
     );
 
--- Allow admins to update/delete inventory images
+-- Allow admins & super admins to update/delete inventory images
 CREATE POLICY "Admins can manage inventory images"
     ON storage.objects FOR UPDATE
     USING (
         bucket_id = 'inventory' AND 
         EXISTS (
             SELECT 1 FROM public.profiles
-            WHERE id = auth.uid() AND role = 'admin'
+            WHERE id = auth.uid() AND role IN ('admin', 'super_admin', 'superadmin')
         )
     );
 
@@ -122,6 +122,6 @@ CREATE POLICY "Admins can delete inventory images"
         bucket_id = 'inventory' AND 
         EXISTS (
             SELECT 1 FROM public.profiles
-            WHERE id = auth.uid() AND role = 'admin'
+            WHERE id = auth.uid() AND role IN ('admin', 'super_admin', 'superadmin')
         )
     );

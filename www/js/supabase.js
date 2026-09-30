@@ -1736,7 +1736,7 @@ const ICCSupabase = (() => {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
         
         // Check availability
-        const { data: item } = await client.from('inventory').select('available_stock').eq('id', itemId).single();
+        const { data: item } = await client.from('inventory').select('available_stock, name').eq('id', itemId).single();
         if (!item || item.available_stock < quantity) {
             return { error: { message: 'Requested quantity exceeds available stock' } };
         }
@@ -1749,6 +1749,31 @@ const ICCSupabase = (() => {
             team_name: teamName,
             status: 'pending'
         }).select().single();
+
+        // Notify all Admins and Super Admins about the new component order
+        if (!error && data) {
+            try {
+                const { data: adminProfiles } = await client.from('profiles')
+                    .select('id')
+                    .or('role.eq.admin,role.eq.super_admin,role.eq.superadmin');
+
+                if (adminProfiles && adminProfiles.length > 0) {
+                    const itemName = item?.name || 'Component';
+                    for (const adm of adminProfiles) {
+                        if (adm.id === currentUser.id) continue;
+                        await createNotification({
+                            userId: adm.id,
+                            type: 'system',
+                            actorId: currentUser.id,
+                            body: `inventory_order:${data.id}:${itemName}:${quantity}`,
+                            referenceId: String(data.id)
+                        });
+                    }
+                }
+            } catch (notifErr) {
+                console.warn('Notification to admins error:', notifErr);
+            }
+        }
 
         return { data, error };
     }
@@ -1818,7 +1843,19 @@ const ICCSupabase = (() => {
             return { data: null, error: { message: 'Update blocked by database policy. Please contact an admin.' } };
         }
 
-        // Send rejection notification to the user when admin cancels their request
+        // Send approval notification to the user when admin/super_admin approves their request
+        if (!error && isAdminUser && status === 'taken' && requestData.user_id) {
+            const itemName = requestData.inventory?.name || 'your component request';
+            await createNotification({
+                userId: requestData.user_id,
+                type: 'system',
+                actorId: currentUser.id,
+                body: `inventory_approve:${requestData.item_id}:${itemName}`,
+                referenceId: String(requestData.id)
+            });
+        }
+
+        // Send rejection notification to the user when admin/super_admin cancels their request
         if (!error && isAdminUser && status === 'cancelled' && requestData.user_id) {
             const itemName = requestData.inventory?.name || 'your component request';
             await createNotification({

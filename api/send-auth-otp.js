@@ -114,20 +114,41 @@ module.exports = async (req, res) => {
                 emailSent = true;
             } catch (e) {
                 errorMessage = e.message;
+                console.error('Gmail SMTP failed:', e.message);
             }
         }
 
-        // CRITICAL FALLBACK: If both failed, log the OTP so the admin can see it in Vercel Logs
+        // Fallback: Resend API if configured
+        if (!emailSent && process.env.RESEND_API_KEY) {
+            try {
+                const resendRes = await fetch('https://api.resend.com/emails', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        from: 'ICC Social Hub <onboarding@resend.dev>',
+                        to: email,
+                        subject: mailOptions.subject,
+                        html: mailOptions.html
+                    })
+                });
+                if (resendRes.ok) {
+                    emailSent = true;
+                } else {
+                    const resendErr = await resendRes.text();
+                    errorMessage += ` | Resend error: ${resendErr}`;
+                }
+            } catch (re) {
+                errorMessage += ` | Resend exception: ${re.message}`;
+            }
+        }
+
         if (!emailSent) {
             console.error('🔴 ALL EMAIL METHODS FAILED. Error:', errorMessage);
             console.info('🔑 EMERGENCY OTP FOR', email, 'IS:', otpCode);
-            // We return success: true but with a warning, so the UI doesn't just hang
-            return res.status(200).json({ 
-                success: true, 
-                message: 'Service is experiencing high volume. Please contact support if you dont receive an email.', 
-                userId,
-                _debug: process.env.NODE_ENV === 'development' ? otpCode : null 
-            });
+            return sendError(`Failed to send verification email. (${errorMessage || 'Invalid email credentials'})`);
         }
 
         return res.status(200).json({ success: true, message: 'OTP sent', userId });

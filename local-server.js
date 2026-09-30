@@ -1,7 +1,7 @@
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://gryfobekzlmfonnrwbpg.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyeWZvYmVremxtZm9ubnJ3YnBnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Njg2OTQxNiwiZXhwIjoyMDkyNDQ1NDE2fQ.jKBfT0TtW55ol9WLteUXUlbkg64M6LrSpleNxJcXEGY';
-process.env.EMAIL_USER = process.env.EMAIL_USER || 'saravanantm1920@gmail.com';
-process.env.EMAIL_PASS = process.env.EMAIL_PASS || 'kfnl nxta haaq qxly';
+process.env.EMAIL_USER = process.env.EMAIL_USER || 'iccsocialhub@gmail.com';
+process.env.EMAIL_PASS = process.env.EMAIL_PASS || 'bywz uurd fsvd qcyp';
 
 const http = require('http');
 const cors = require('cors');

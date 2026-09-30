@@ -131,6 +131,19 @@ const NotificationsView = (() => {
                     const itemName = parts.slice(2).join(':') || 'your component';
                     return `❌ Your borrow request for <span class="text-white font-semibold">${escapeHtml(itemName)}</span> was <span class="text-red-400 font-semibold">rejected</span> by an admin.`;
                 }
+                // Handle inventory order placed: body format = 'inventory_order:<request_id>:<item_name>:<quantity>'
+                if (n.body?.startsWith('inventory_order:')) {
+                    const parts = n.body.split(':');
+                    const itemName = parts[2] || 'Component';
+                    const qty = parts[3] || '1';
+                    return `📦 <span class="text-white font-semibold">${actor}</span> placed an order for <span class="text-white font-semibold">${escapeHtml(itemName)}</span> (${escapeHtml(qty)} unit${Number(qty) > 1 ? 's' : ''}).`;
+                }
+                // Handle inventory approval: body format = 'inventory_approve:<item_id>:<item_name>'
+                if (n.body?.startsWith('inventory_approve:')) {
+                    const parts = n.body.split(':');
+                    const itemName = parts.slice(2).join(':') || 'your component';
+                    return `✅ Your borrow request for <span class="text-white font-semibold">${escapeHtml(itemName)}</span> was <span class="text-emerald-400 font-semibold">approved</span>! Please visit the lab for collection.`;
+                }
                 return n.body || 'New notification';
             }
             default: return n.body || 'New notification';
@@ -147,8 +160,8 @@ const NotificationsView = (() => {
             case 'team_approve':
             case 'team_deny': return `#teams/${n.reference_id || ''}`;
             case 'system': {
-                // Inventory reject notification links back to the inventory page
-                if (n.body?.startsWith('inventory_reject:')) return '#inventory';
+                // Inventory notifications link back to the inventory page
+                if (n.body?.startsWith('inventory_reject:') || n.body?.startsWith('inventory_order:') || n.body?.startsWith('inventory_approve:')) return '#inventory';
                 return '#';
             }
             default: return '#';

@@ -62,7 +62,16 @@ const sendOTP = async (email, otp) => {
         console.log('OTP email sent via Gmail to', email);
         return true;
     } catch (error) {
-        console.error('Final email error:', error);
+        console.error('Gmail SMTP error:', error.message);
+        
+        // Fallback to Resend
+        const resendRes = await sendEmailViaResend(mailOptions);
+        if (resendRes.success) {
+            console.log('OTP email sent via Resend to', email);
+            return true;
+        }
+
+        console.error('Final email error:', resendRes.error || error.message);
         console.info('🔑 EMERGENCY OTP FOR', email, 'IS:', otp);
         return false;
     }
