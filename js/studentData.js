@@ -916,6 +916,153 @@ const STUDENT_DATA = [
   "section": "K",
   "email": "binitasai@gmail.com",
   "phone": 9513371651
+},
+  {
+  "fullName": "A D HANSIKA ",
+  "usn": "1KS25AI001",
+  "section": "Aiml,A",
+  "email": "hansikaad04@gmail.com",
+  "phone": 7093413463
+},
+  {
+  "fullName": "Rishika Shreya Rajath",
+  "usn": "1KS25AI081",
+  "section": "AIML B",
+  "email": "rishikarajath971@gmail.com",
+  "phone": 9008403080
+},
+  {
+  "fullName": "Pallavi K C ",
+  "usn": "1KS25CS079",
+  "section": "B",
+  "email": "pallavikc226@gmail.com",
+  "phone": 9076907610
+},
+  {
+  "fullName": "Sohan s dadamode ",
+  "usn": "1KS25AIO98 ",
+  "section": "B",
+  "email": "sohandadamode43@gmail.com",
+  "phone": 6361137412
+},
+  {
+  "fullName": "Chinmayi K S ",
+  "usn": "1KS25IC012",
+  "section": "I",
+  "email": "chinmayi.cks@gmail.com",
+  "phone": 8217783429
+},
+  {
+  "fullName": "Yashwanth gowda sn ",
+  "usn": "1ks25cm033",
+  "section": "J",
+  "email": "yashwan7896@gmail.com",
+  "phone": 8310033121
+},
+  {
+  "fullName": "Shalini S ",
+  "usn": "1KS25CS113 ",
+  "section": "C",
+  "email": "SHALINI.V1910@GMAIL.COM",
+  "phone": 6363258023
+},
+  {
+  "fullName": "M G AKHIL ",
+  "usn": "1KS25CS061",
+  "section": "Cse B ",
+  "email": "mgakhil6776@gmail.com",
+  "phone": 7022476472
+},
+  {
+  "fullName": "Manish H R ",
+  "usn": "1KS25CS065",
+  "section": "B",
+  "email": "hrmanish64@gmail.com",
+  "phone": 9148012082
+},
+  {
+  "fullName": "Srushti S Wali ",
+  "usn": "1KS25EC106",
+  "section": "ECE-B",
+  "email": "srushtiwali1404@gmail.com",
+  "phone": 9945005986
+},
+  {
+  "fullName": "Arpitha R",
+  "usn": "1KS25EC015",
+  "section": "A",
+  "email": "arpitha0607@gmail.com",
+  "phone": 9108052213
+},
+  {
+  "fullName": "apurva bg",
+  "usn": "1KS25IC005",
+  "section": "I",
+  "email": "bgap13355@gmail.com",
+  "phone": 8310533071
+},
+  {
+  "fullName": "Arpitha R",
+  "usn": "1KS25EC015",
+  "section": "A",
+  "email": "arpitha0607@gmail.com",
+  "phone": 9108052213
+},
+  {
+  "fullName": "JOLLU VENKATA KOMAL SAI ",
+  "usn": "1KS25EC046",
+  "section": "A",
+  "email": "komalsai0401@gmail.com",
+  "phone": 8904058576
+},
+  {
+  "fullName": "Thaman Raju R",
+  "usn": "1KS25CS148",
+  "section": "C",
+  "email": "thamanr752@gmail.com",
+  "phone": 9148599459
+},
+  {
+  "fullName": "Akash M K",
+  "usn": "1KS25AI004",
+  "section": "A",
+  "email": "akashmk1080@gmail.com",
+  "phone": 9110629809
+},
+  {
+  "fullName": "Chandana L",
+  "usn": "1KS25IC009",
+  "section": "I",
+  "email": "chandanalokesha.l2007@gmail.com",
+  "phone": 9606261619
+},
+  {
+  "fullName": "Maheshwari .M",
+  "usn": "1KS25EC055",
+  "section": "A",
+  "email": "sindhumahesh360@gmail.com",
+  "phone": 8971832397
+},
+  {
+  "fullName": "Shree lakshmi.M",
+  "usn": "1KS25AI096 ",
+  "section": "B",
+  "email": "shreelakshmi.j15@gmail.com",
+  "phone": 7892337295
+},
+  {
+  "fullName": "Shreelakshmi.M ",
+  "usn": "1KS25AI096 ",
+  "section": "B",
+  "email": "shreelakshmi.j15@gmail.com",
+  "phone": 7892337295
+},
+  {
+  "fullName": "NETHAN TD ",
+  "usn": "1KS25AIO62 ",
+  "section": "B",
+  "email": "nethantd07@gmail.com",
+  "phone": 9353755817
 }
 // ── STUDENT_DATA_END ──
 ];
