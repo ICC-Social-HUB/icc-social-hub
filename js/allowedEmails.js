@@ -155,6 +155,20 @@ const _ALLOWED_EMAIL_LIST = [
     "ahmedsapphireshaik0007@gmail.com",
     "soukhyagowdar@gmail.com",
     "sairam27v0000@gmail.com",
+    "mshahidafnan99@gmail.com",
+    "jayarama.harshith@gmail.com",
+    "rahulranganathsr7@gmail.com",
+    "yashwanthiyengar7@gmail.com",
+    "pranav.p16082007@gmail.com",
+    "harshithag9963@gmail.com",
+    "kavishree161107@gmail.com",
+    "sanjithakv2007@gmail.com",
+    "ansiyanehak220@gmail.com",
+    "sowmyabojanapati@gmail.com",
+    "ananyamu41@gmail.com",
+    "dvmanassrujan@gmail.com",
+    "vasisthanaveen10@gmail.com",
+    "binitasai@gmail.com",
 // ── BATCH_STUDENTS_END ──
 
 ];

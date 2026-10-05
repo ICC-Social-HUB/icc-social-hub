@@ -818,6 +818,104 @@ const STUDENT_DATA = [
   "section": "k",
   "email": "sairam27v0000@gmail.com",
   "phone": 6366668996
+},
+  {
+  "fullName": "M SHAHID AFNAN",
+  "usn": "1KS25AI045",
+  "section": "A",
+  "email": "mshahidafnan99@gmail.com",
+  "phone": 9740122874
+},
+  {
+  "fullName": "Harshith J",
+  "usn": "1KS25CM007",
+  "section": "J",
+  "email": "jayarama.harshith@gmail.com",
+  "phone": 9900427070
+},
+  {
+  "fullName": "Rahul Ranganath S R ",
+  "usn": "1KS25CS096",
+  "section": "2-B",
+  "email": "rahulranganathsr7@gmail.com",
+  "phone": 9113682424
+},
+  {
+  "fullName": "Yaswanth V",
+  "usn": "1KS25EC121",
+  "section": "B",
+  "email": "yashwanthiyengar7@gmail.com",
+  "phone": 8310224830
+},
+  {
+  "fullName": "Pranav P ",
+  "usn": "1KS25AI072",
+  "section": "B",
+  "email": "pranav.p16082007@gmail.com",
+  "phone": 8317406290
+},
+  {
+  "fullName": "Harshitha G ",
+  "usn": "1KS25AI029",
+  "section": "A",
+  "email": "harshithag9963@gmail.com",
+  "phone": 8660055213
+},
+  {
+  "fullName": "Kavishree R ",
+  "usn": "1KS25EC049 ",
+  "section": "A",
+  "email": "kavishree161107@gmail.com",
+  "phone": 9663712663
+},
+  {
+  "fullName": "Sanjitha V ",
+  "usn": "1KS25CS112",
+  "section": "C",
+  "email": "sanjithakv2007@gmail.com",
+  "phone": 8792748647
+},
+  {
+  "fullName": "Ansiya Nehak",
+  "usn": "1KS25AI006",
+  "section": "A",
+  "email": "ansiyanehak220@gmail.com",
+  "phone": 9620775001
+},
+  {
+  "fullName": "Sowmya B ",
+  "usn": "1KS25CG031 ",
+  "section": "D",
+  "email": "sowmyabojanapati@gmail.com",
+  "phone": 8088060998
+},
+  {
+  "fullName": "Ananya MU ",
+  "usn": "1KS25AI005",
+  "section": "A",
+  "email": "ananyamu41@gmail.com",
+  "phone": 9740824856
+},
+  {
+  "fullName": "D V MANAS SRUJAN ",
+  "usn": "1KS25IC015",
+  "section": "I",
+  "email": "dvmanassrujan@gmail.com",
+  "phone": 9886675444
+},
+  {
+  "fullName": "Naveen Vasista KM ",
+  "usn": "1KS25ME016",
+  "section": "K",
+  "email": "vasisthanaveen10@gmail.com",
+  "phone": 7483464138
+},
+  {
+  "fullName": "Binita Sai C ",
+  "usn": "1KS25ME004",
+  "section": "K",
+  "email": "binitasai@gmail.com",
+  "phone": 9513371651
 }
 // ── STUDENT_DATA_END ──
 ];
