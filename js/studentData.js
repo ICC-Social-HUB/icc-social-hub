@@ -1063,6 +1063,41 @@ const STUDENT_DATA = [
   "section": "B",
   "email": "nethantd07@gmail.com",
   "phone": 9353755817
+},
+  {
+  "fullName": "Rachana ",
+  "usn": "1KS25IC047 ",
+  "section": "I",
+  "email": "rachanacodes24@gmail.com ",
+  "phone": 8904043656
+},
+  {
+  "fullName": "Chinmay.s",
+  "usn": "1KS25ME005",
+  "section": "K",
+  "email": "J.p nagar, bengaluru 78",
+  "phone": 9902808369
+},
+  {
+  "fullName": "Chiranthan H",
+  "usn": "1KS25AI020 ",
+  "section": "A",
+  "email": "hchiranthan2@gmail.com",
+  "phone": 9019099749
+},
+  {
+  "fullName": "Kaushik G L",
+  "usn": "1KS25CS049",
+  "section": "A",
+  "email": "Kaushikgutha36@gmail.com ",
+  "phone": 7676797653
+},
+  {
+  "fullName": "Achyuta H Padaki ",
+  "usn": "1KS25CS002 ",
+  "section": "A",
+  "email": "achyutahpadaki@gmail.com",
+  "phone": 6361631011
 }
 // ── STUDENT_DATA_END ──
 ];
