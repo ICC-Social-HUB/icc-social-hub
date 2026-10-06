@@ -5,4 +5,5 @@ Thumbs.db
 scratch/
 wipe_notification.js
 *.apk
-assets/*.apk
+!assets/icc-social-hub.apk
+!www/assets/icc-social-hub.apk

@@ -137,9 +137,37 @@ const DownloadView = (() => {
         const versionBadge = container.querySelector('#apk-version-badge');
 
         if (downloadBtn) {
-            // Append cache buster to ensure the user always gets the freshest build
             const cacheBuster = `?v=${Date.now()}`;
-            downloadBtn.href = `assets/icc-social-hub.apk${cacheBuster}`;
+            const isNativeOrLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:' || (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()));
+            
+            const origin = isNativeOrLocal 
+                ? 'https://icc-social-hub.vercel.app' 
+                : window.location.origin;
+
+            const primaryUrl = `${origin}/assets/icc-social-hub.apk`;
+            const fallbackUrl = `${origin}/www/assets/icc-social-hub.apk`;
+
+            // Default download href to primary
+            downloadBtn.href = `${primaryUrl}${cacheBuster}`;
+
+            // Verify availability in background, switch to fallback if primary returns 404/non-OK
+            fetch(primaryUrl, { method: 'HEAD' })
+                .then(res => {
+                    const contentType = res.headers.get('content-type') || '';
+                    if (!res.ok || contentType.includes('text/html') || contentType.includes('text/plain')) {
+                        downloadBtn.href = `${fallbackUrl}${cacheBuster}`;
+                    }
+                })
+                .catch(() => {
+                    downloadBtn.href = `${fallbackUrl}${cacheBuster}`;
+                });
+
+            downloadBtn.onclick = (e) => {
+                if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+                    e.preventDefault();
+                    window.open(downloadBtn.href, '_system');
+                }
+            };
         }
 
         try {
