@@ -133,6 +133,7 @@ const Router = (() => {
         });
 
         Sidebar.mount();
+        if (typeof ProfileCompletionModal !== 'undefined') ProfileCompletionModal.checkAndShow();
         window.scrollTo(0, 0);
     }
 

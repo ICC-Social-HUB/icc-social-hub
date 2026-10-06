@@ -42,13 +42,29 @@ const OnboardingView = (() => {
             <h2 class="font-heading font-semibold text-lg">Choose your identity</h2>
             <div>
                 <label class="block text-xs font-medium text-zinc-400 mb-1.5">Username *</label>
-                <input type="text" id="ob-username" value="${formData.username}" placeholder="your_username" class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm" pattern="[a-zA-Z0-9_]+" minlength="3" maxlength="20">
+                <input type="text" id="ob-username" value="${formData.username || ''}" placeholder="your_username" class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm" pattern="[a-zA-Z0-9_]+" minlength="3" maxlength="20">
                 <p class="text-[11px] text-zinc-600 mt-1">Letters, numbers, underscore only</p>
                 ${usernameError ? `<p class="text-[11px] text-red-400 mt-1">${usernameError}</p>` : ''}
             </div>
             <div>
                 <label class="block text-xs font-medium text-zinc-400 mb-1.5">Full Name</label>
                 <input type="text" id="ob-name" value="${formData.full_name || defaultName}" class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm" placeholder="Your full name">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-zinc-400 mb-1.5">Academic Year *</label>
+                    <select id="ob-year" class="form-input w-full px-3 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-xs" required>
+                        <option value="" disabled ${!formData.year ? 'selected' : ''}>Select Year</option>
+                        ${['1st Year', '2nd Year', '3rd Year', '4th Year'].map(y => `<option value="${y}" ${formData.year === y ? 'selected' : ''}>${y}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-zinc-400 mb-1.5">Branch *</label>
+                    <select id="ob-branch" class="form-input w-full px-3 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-xs" required>
+                        <option value="" disabled ${!formData.branch ? 'selected' : ''}>Select Branch</option>
+                        ${['AIML', 'CSE', 'Mech', 'ICB', 'CCE', 'CSD', 'ECE'].map(b => `<option value="${b}" ${formData.branch === b ? 'selected' : ''}>${b}</option>`).join('')}
+                    </select>
+                </div>
             </div>
             <button id="ob-next-1" class="w-full py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all">Continue</button>
         </div>`;
@@ -113,13 +129,21 @@ const OnboardingView = (() => {
         document.getElementById('ob-next-1')?.addEventListener('click', async () => {
             const username = document.getElementById('ob-username')?.value?.trim().toLowerCase();
             const fullName = document.getElementById('ob-name')?.value?.trim();
+            const year = document.getElementById('ob-year')?.value;
+            const branch = document.getElementById('ob-branch')?.value;
+
             if (!username || username.length < 3) { usernameError = 'Username must be at least 3 characters'; container.innerHTML = render(); bindEvents(container); return; }
             if (!/^[a-zA-Z0-9_]+$/.test(username)) { usernameError = 'Only letters, numbers, and underscore'; container.innerHTML = render(); bindEvents(container); return; }
+            if (!year || !branch) { usernameError = 'Please select both your Year and Branch'; container.innerHTML = render(); bindEvents(container); return; }
+
             const user = ICCSupabase.getUser();
             const available = await ICCSupabase.checkUsernameAvailable(username, user?.email);
             if (!available) { usernameError = 'Username is taken'; container.innerHTML = render(); bindEvents(container); return; }
+
             formData.username = username;
             formData.full_name = fullName;
+            formData.year = year;
+            formData.branch = branch;
             usernameError = '';
             step = 2; container.innerHTML = render(); bindEvents(container);
         });
@@ -162,6 +186,8 @@ const OnboardingView = (() => {
             const { error } = await ICCSupabase.updateProfile({
                 username: formData.username,
                 full_name: formData.full_name,
+                year: formData.year,
+                branch: formData.branch,
                 bio: formData.bio,
                 skills: formData.skills,
                 avatar_url: avatarUrl

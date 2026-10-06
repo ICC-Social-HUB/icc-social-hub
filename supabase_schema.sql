@@ -42,6 +42,12 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'github') THEN
         ALTER TABLE public.profiles ADD COLUMN github TEXT;
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'year') THEN
+        ALTER TABLE public.profiles ADD COLUMN year TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'branch') THEN
+        ALTER TABLE public.profiles ADD COLUMN branch TEXT;
+    END IF;
 END $$;
 
 -- Enable RLS

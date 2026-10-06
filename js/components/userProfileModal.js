@@ -78,6 +78,8 @@ const UserProfileModal = (() => {
                             ${profile.username ? `<p class="text-sm text-zinc-400 font-medium">@${escapeHtml(profile.username)}</p>` : ''}
                             
                             <div class="flex flex-wrap items-center justify-center gap-2 pt-2">
+                                ${profile.year ? `<span class="px-3 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full text-xs font-semibold">${escapeHtml(profile.year)}</span>` : ''}
+                                ${profile.branch ? `<span class="px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full text-xs font-semibold">${escapeHtml(profile.branch)}</span>` : ''}
                                 ${teamLead ? `<span class="px-3 py-1 bg-zinc-800/90 border border-zinc-700/80 rounded-full text-xs text-zinc-200 font-medium">${teamLead.team}</span>` : ''}
                                 ${profile.role === 'lead' ? `<span class="px-3 py-1 bg-red-600/20 text-red-400 border border-red-500/30 rounded-full text-xs font-bold uppercase tracking-wider">${profile.role}</span>` : ''}
                                 ${profile.role === 'admin' ? `<span class="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full text-xs font-bold uppercase tracking-wider">Admin</span>` : ''}

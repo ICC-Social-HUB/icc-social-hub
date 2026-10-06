@@ -93,11 +93,14 @@ const AppLoader = (() => {
             if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                 if (ICCSupabase.needsOnboarding()) {
                     window.location.hash = '#onboarding';
-                } else if (!isInitialRouteHandled || (newUserId && currentUserId && newUserId !== currentUserId)) {
-                    isInitialRouteHandled = true;
-                    const currentHash = window.location.hash;
-                    if (!currentHash.startsWith('#chat/')) {
-                        window.dispatchEvent(new Event('hashchange'));
+                } else {
+                    if (typeof ProfileCompletionModal !== 'undefined') ProfileCompletionModal.checkAndShow();
+                    if (!isInitialRouteHandled || (newUserId && currentUserId && newUserId !== currentUserId)) {
+                        isInitialRouteHandled = true;
+                        const currentHash = window.location.hash;
+                        if (!currentHash.startsWith('#chat/')) {
+                            window.dispatchEvent(new Event('hashchange'));
+                        }
                     }
                 }
                 currentUserId = newUserId;
