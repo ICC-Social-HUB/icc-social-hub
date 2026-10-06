@@ -54,14 +54,17 @@ END $$;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Policies: anyone can read profiles, users can update their own
+DROP POLICY IF EXISTS "Profiles are viewable by everyone" ON public.profiles;
 CREATE POLICY "Profiles are viewable by everyone"
     ON public.profiles FOR SELECT
     USING (true);
 
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
 CREATE POLICY "Users can insert their own profile"
     ON public.profiles FOR INSERT
     WITH CHECK (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 CREATE POLICY "Users can update their own profile"
     ON public.profiles FOR UPDATE
     USING (auth.uid() = id);
@@ -121,19 +124,23 @@ CREATE TABLE IF NOT EXISTS public.posts (
 
 ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Posts are viewable by everyone" ON public.posts;
 CREATE POLICY "Posts are viewable by everyone"
     ON public.posts FOR SELECT
     USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can create posts" ON public.posts;
 CREATE POLICY "Authenticated users can create posts"
     ON public.posts FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own posts" ON public.posts;
 CREATE POLICY "Users can delete their own posts"
     ON public.posts FOR DELETE
     USING (auth.uid() = user_id);
 
 -- Admins can also delete any post
+DROP POLICY IF EXISTS "Admins can delete any post" ON public.posts;
 CREATE POLICY "Admins can delete any post"
     ON public.posts FOR DELETE
     USING (
@@ -156,14 +163,17 @@ CREATE TABLE IF NOT EXISTS public.likes (
 
 ALTER TABLE public.likes ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Likes are viewable by everyone" ON public.likes;
 CREATE POLICY "Likes are viewable by everyone"
     ON public.likes FOR SELECT
     USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can like" ON public.likes;
 CREATE POLICY "Authenticated users can like"
     ON public.likes FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can unlike their own likes" ON public.likes;
 CREATE POLICY "Users can unlike their own likes"
     ON public.likes FOR DELETE
     USING (auth.uid() = user_id);
@@ -181,18 +191,22 @@ CREATE TABLE IF NOT EXISTS public.comments (
 
 ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Comments are viewable by everyone" ON public.comments;
 CREATE POLICY "Comments are viewable by everyone"
     ON public.comments FOR SELECT
     USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can comment" ON public.comments;
 CREATE POLICY "Authenticated users can comment"
     ON public.comments FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own comments" ON public.comments;
 CREATE POLICY "Users can delete their own comments"
     ON public.comments FOR DELETE
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins can delete any comment" ON public.comments;
 CREATE POLICY "Admins can delete any comment"
     ON public.comments FOR DELETE
     USING (
@@ -202,6 +216,7 @@ CREATE POLICY "Admins can delete any comment"
         )
     );
 
+DROP POLICY IF EXISTS "Post owners can delete any comment on their post" ON public.comments;
 CREATE POLICY "Post owners can delete any comment on their post"
     ON public.comments FOR DELETE
     USING (
@@ -225,18 +240,22 @@ CREATE TABLE IF NOT EXISTS public.messages (
 
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their own messages" ON public.messages;
 CREATE POLICY "Users can view their own messages"
     ON public.messages FOR SELECT
     USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
 
+DROP POLICY IF EXISTS "Authenticated users can send messages" ON public.messages;
 CREATE POLICY "Authenticated users can send messages"
     ON public.messages FOR INSERT
     WITH CHECK (auth.uid() = sender_id);
 
+DROP POLICY IF EXISTS "Receiver can mark messages as read" ON public.messages;
 CREATE POLICY "Receiver can mark messages as read"
     ON public.messages FOR UPDATE
     USING (auth.uid() = receiver_id);
 
+DROP POLICY IF EXISTS "Sender can delete their own messages" ON public.messages;
 CREATE POLICY "Sender can delete their own messages"
     ON public.messages FOR DELETE
     USING (auth.uid() = sender_id);
@@ -254,10 +273,12 @@ CREATE TABLE IF NOT EXISTS public.broadcasts (
 
 ALTER TABLE public.broadcasts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Broadcasts are viewable by everyone" ON public.broadcasts;
 CREATE POLICY "Broadcasts are viewable by everyone"
     ON public.broadcasts FOR SELECT
     USING (true);
 
+DROP POLICY IF EXISTS "Only admins can create broadcasts" ON public.broadcasts;
 CREATE POLICY "Only admins can create broadcasts"
     ON public.broadcasts FOR INSERT
     WITH CHECK (
@@ -267,6 +288,7 @@ CREATE POLICY "Only admins can create broadcasts"
         )
     );
 
+DROP POLICY IF EXISTS "Only admins can update broadcasts" ON public.broadcasts;
 CREATE POLICY "Only admins can update broadcasts"
     ON public.broadcasts FOR UPDATE
     USING (
@@ -313,6 +335,7 @@ END $$;
 
 ALTER TABLE public.core_leads ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Core leads are viewable by everyone" ON public.core_leads;
 CREATE POLICY "Core leads are viewable by everyone"
     ON public.core_leads FOR SELECT
     USING (true);
@@ -446,22 +469,27 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their own notifications" ON public.notifications;
 CREATE POLICY "Users can view their own notifications"
     ON public.notifications FOR SELECT
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Authenticated users can create notifications" ON public.notifications;
 CREATE POLICY "Authenticated users can create notifications"
     ON public.notifications FOR INSERT
     WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Users can update their own notifications" ON public.notifications;
 CREATE POLICY "Users can update their own notifications"
     ON public.notifications FOR UPDATE
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own notifications" ON public.notifications;
 CREATE POLICY "Users can delete their own notifications"
     ON public.notifications FOR DELETE
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins can delete any notification" ON public.notifications;
 CREATE POLICY "Admins can delete any notification"
     ON public.notifications FOR DELETE
     USING (
@@ -499,28 +527,34 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Avatars Policies
+DROP POLICY IF EXISTS "Avatar images are publicly accessible." ON storage.objects;
 CREATE POLICY "Avatar images are publicly accessible."
     ON storage.objects FOR SELECT
     USING (bucket_id = 'avatars');
 
+DROP POLICY IF EXISTS "Anyone can upload an avatar." ON storage.objects;
 CREATE POLICY "Anyone can upload an avatar."
     ON storage.objects FOR INSERT
     WITH CHECK (bucket_id = 'avatars');
 
+DROP POLICY IF EXISTS "Users can update their own avatars." ON storage.objects;
 CREATE POLICY "Users can update their own avatars."
     ON storage.objects FOR UPDATE
     USING (auth.uid() = owner)
     WITH CHECK (bucket_id = 'avatars');
 
 -- Posts Policies
+DROP POLICY IF EXISTS "Post images are publicly accessible." ON storage.objects;
 CREATE POLICY "Post images are publicly accessible."
     ON storage.objects FOR SELECT
     USING (bucket_id = 'posts');
 
+DROP POLICY IF EXISTS "Authenticated users can upload post images." ON storage.objects;
 CREATE POLICY "Authenticated users can upload post images."
     ON storage.objects FOR INSERT
     WITH CHECK (bucket_id = 'posts' AND auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Users can delete their own post images." ON storage.objects;
 CREATE POLICY "Users can delete their own post images."
     ON storage.objects FOR DELETE
     USING (bucket_id = 'posts' AND auth.uid() = owner);
@@ -543,11 +577,13 @@ CREATE TABLE IF NOT EXISTS public.team_join_data (
 ALTER TABLE public.team_join_data ENABLE ROW LEVEL SECURITY;
 
 -- Users can manage their own join data
+DROP POLICY IF EXISTS "Users can manage their own join data" ON public.team_join_data;
 CREATE POLICY "Users can manage their own join data"
     ON public.team_join_data FOR ALL
     USING (auth.uid() = user_id);
 
 -- Leads and admins can view join data for applicants
+DROP POLICY IF EXISTS "Leads and admins can view join data" ON public.team_join_data;
 CREATE POLICY "Leads and admins can view join data"
     ON public.team_join_data FOR SELECT
     USING (
@@ -561,6 +597,7 @@ CREATE POLICY "Leads and admins can view join data"
     );
 
 -- Leads and admins can delete join data (when approving/denying)
+DROP POLICY IF EXISTS "Leads and admins can delete join data" ON public.team_join_data;
 CREATE POLICY "Leads and admins can delete join data"
     ON public.team_join_data FOR DELETE
     USING (
@@ -585,10 +622,12 @@ CREATE TABLE IF NOT EXISTS public.team_memberships (
 
 ALTER TABLE public.team_memberships ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Team memberships are viewable by everyone" ON public.team_memberships;
 CREATE POLICY "Team memberships are viewable by everyone"
     ON public.team_memberships FOR SELECT
     USING (true);
 
+DROP POLICY IF EXISTS "Leads and admins can remove members" ON public.team_memberships;
 CREATE POLICY "Leads and admins can remove members"
     ON public.team_memberships FOR DELETE
     USING (
@@ -601,6 +640,7 @@ CREATE POLICY "Leads and admins can remove members"
         )
     );
 
+DROP POLICY IF EXISTS "Leads and admins can add members" ON public.team_memberships;
 CREATE POLICY "Leads and admins can add members"
     ON public.team_memberships FOR INSERT
     WITH CHECK (
@@ -630,6 +670,7 @@ CREATE TABLE IF NOT EXISTS public.team_messages (
 ALTER TABLE public.team_messages ENABLE ROW LEVEL SECURITY;
 
 -- Team members and admins can view team messages
+DROP POLICY IF EXISTS "Team members and admins can view team messages" ON public.team_messages;
 CREATE POLICY "Team members and admins can view team messages"
     ON public.team_messages FOR SELECT
     USING (
@@ -643,6 +684,7 @@ CREATE POLICY "Team members and admins can view team messages"
     );
 
 -- Only team members can send team messages
+DROP POLICY IF EXISTS "Team members can send team messages" ON public.team_messages;
 CREATE POLICY "Team members can send team messages"
     ON public.team_messages FOR INSERT
     WITH CHECK (
@@ -679,8 +721,7 @@ ALTER TABLE public.user_edit_requests ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Admins can view user edit requests" ON public.user_edit_requests;
 DROP POLICY IF EXISTS "Admins can create user edit requests" ON public.user_edit_requests;
 DROP POLICY IF EXISTS "Admins can update user edit requests" ON public.user_edit_requests;
-DROP POLICY IF EXISTS "Admins can delete user edit requests" ON public.user_edit_requests;
-
+DROP POLICY IF EXISTS "Admins can view user edit requests" ON public.user_edit_requests;
 CREATE POLICY "Admins can view user edit requests"
     ON public.user_edit_requests FOR SELECT
     USING (
@@ -690,6 +731,7 @@ CREATE POLICY "Admins can view user edit requests"
         )
     );
 
+DROP POLICY IF EXISTS "Admins can create user edit requests" ON public.user_edit_requests;
 CREATE POLICY "Admins can create user edit requests"
     ON public.user_edit_requests FOR INSERT
     WITH CHECK (
@@ -699,6 +741,7 @@ CREATE POLICY "Admins can create user edit requests"
         )
     );
 
+DROP POLICY IF EXISTS "Admins can update user edit requests" ON public.user_edit_requests;
 CREATE POLICY "Admins can update user edit requests"
     ON public.user_edit_requests FOR UPDATE
     USING (
@@ -708,6 +751,7 @@ CREATE POLICY "Admins can update user edit requests"
         )
     );
 
+DROP POLICY IF EXISTS "Admins can delete user edit requests" ON public.user_edit_requests;
 CREATE POLICY "Admins can delete user edit requests"
     ON public.user_edit_requests FOR DELETE
     USING (
