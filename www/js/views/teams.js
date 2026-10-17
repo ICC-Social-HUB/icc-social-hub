@@ -13,19 +13,34 @@ const TeamsView = (() => {
 
     function getMemberTags(teamId) {
         const lead = CORE_LEADS.find(l => l.id === Number(teamId));
-        let tags = lead?.milestones?.member_tags || {};
+        let milestones = lead?.milestones || {};
+        if (typeof milestones === 'string') {
+            try { milestones = JSON.parse(milestones); } catch(e) { milestones = {}; }
+        }
+        let tags = milestones?.member_tags || {};
+        if (typeof tags === 'string') {
+            try { tags = JSON.parse(tags); } catch(e) { tags = {}; }
+        }
         try {
             const local = JSON.parse(localStorage.getItem(`team_tags_${teamId}`) || '{}');
             tags = { ...tags, ...local };
         } catch(e) {}
-        return tags;
+        return tags || {};
     }
 
     async function saveMemberTag(teamId, memberId, newTag) {
         let currentLead = CORE_LEADS.find(l => l.id === Number(teamId));
         if (!currentLead) return;
-        if (!currentLead.milestones) currentLead.milestones = {};
-        if (!currentLead.milestones.member_tags) currentLead.milestones.member_tags = {};
+        if (!currentLead.milestones || typeof currentLead.milestones !== 'object') {
+            try {
+                currentLead.milestones = typeof currentLead.milestones === 'string' ? JSON.parse(currentLead.milestones) : {};
+            } catch(e) {
+                currentLead.milestones = {};
+            }
+        }
+        if (!currentLead.milestones.member_tags || typeof currentLead.milestones.member_tags !== 'object') {
+            currentLead.milestones.member_tags = {};
+        }
 
         if (newTag) {
             currentLead.milestones.member_tags[memberId] = newTag;
@@ -374,6 +389,7 @@ const TeamsView = (() => {
         const isPending = profile?.pending_teams?.includes(lead.id);
         const isLeadUser = profile?.role === 'lead' && Number(profile.team_id) === Number(lead.id);
         const isLeadOrAdmin = isLeadUser || ICCSupabase.isAdmin();
+        const memberTags = getMemberTags(lead.id);
 
         return `
         <section class="min-h-screen" id="team-detail-section">
