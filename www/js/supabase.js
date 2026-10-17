@@ -1241,16 +1241,22 @@ const ICCSupabase = (() => {
 
             const { data, error } = await client.from('profiles')
                 .update({ 
-                    admin_permissions: cleanPermissions,
-                    updated_at: new Date().toISOString()
+                    admin_permissions: cleanPermissions
                 })
                 .eq('id', userId)
-                .select()
+                .select('id, role, admin_permissions')
                 .maybeSingle();
 
             if (error) {
                 console.error('updateAdminPermissions error:', error);
                 return { error };
+            }
+
+            // If data is null, the row was NOT returned — could indicate RLS blocked the select or the row update didn't match
+            if (!data) {
+                console.warn('updateAdminPermissions: update executed without error but no row returned. Check RLS policy on profiles table.');
+            } else {
+                console.log('updateAdminPermissions: confirmed saved →', data.admin_permissions);
             }
 
             // Sync currentProfile cache if updating oneself

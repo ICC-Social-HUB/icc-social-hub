@@ -2466,7 +2466,8 @@ const AdminView = (() => {
                     toggle.checked = !isAll;
                 } else {
                     Toast.success(`${isAll ? 'Full feature access granted' : 'All feature access revoked'} for ${userName}`);
-                    if (targetUser) targetUser.admin_permissions = updated;
+                    // Re-fetch fresh data from DB to ensure UI reflects actual persisted state
+                    allUsers = await ICCSupabase.getAllProfiles();
                     const me = ICCSupabase.getUser();
                     if (me && me.id === userId && ICCSupabase.getProfile()) {
                         ICCSupabase.getProfile().admin_permissions = updated;
@@ -2511,7 +2512,8 @@ const AdminView = (() => {
                         users: 'User Management'
                     };
                     Toast.success(`${permNames[perm] || perm} ${checked ? 'enabled' : 'disabled'} for ${userName}`);
-                    if (targetUser) targetUser.admin_permissions = currentPerms;
+                    // Re-fetch fresh data from DB to ensure UI reflects actual persisted state
+                    allUsers = await ICCSupabase.getAllProfiles();
                     const me = ICCSupabase.getUser();
                     if (me && me.id === userId && ICCSupabase.getProfile()) {
                         ICCSupabase.getProfile().admin_permissions = currentPerms;
