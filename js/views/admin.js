@@ -1049,88 +1049,88 @@ const AdminView = (() => {
                             <!-- Granular Feature Access Toggles -->
                             <div class="mt-4 pt-4 border-t ${isSuper ? 'border-amber-500/20' : 'border-zinc-800/80'}">
                                 ${isSuper ? `
-                                    <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-2.5 text-xs text-amber-200">
+                                    <div class="mb-3 p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-2 text-xs text-amber-200">
                                         <span class="text-base">🛡️</span>
-                                        <span>Super Administrators inherently possess unrestricted permissions for all dashboard modules, database mutations, and the Access Control console.</span>
+                                        <span>Super Administrator: Full administrative privileges &amp; Access Control console authority. Toggle individual features below to configure live access.</span>
                                     </div>
-                                ` : `
-                                    <div class="space-y-3">
-                                        <!-- Master Toggle -->
-                                        <div class="flex items-center justify-between p-3 bg-zinc-950/70 rounded-xl border border-zinc-800">
-                                            <div>
-                                                <span class="text-xs font-semibold text-white block">⚡ Master Toggle: Full Access (All Features)</span>
-                                                <span class="text-[10px] text-zinc-400">Grant or remove all 5 administrator permissions simultaneously</span>
+                                ` : ''}
+
+                                <div class="space-y-3">
+                                    <!-- Master Toggle -->
+                                    <div class="flex items-center justify-between p-3 bg-zinc-950/70 rounded-xl border border-zinc-800">
+                                        <div>
+                                            <span class="text-xs font-semibold text-white block">⚡ Master Toggle: Full Access (All Features)</span>
+                                            <span class="text-[10px] text-zinc-400">Grant or remove all 5 administrator permissions simultaneously</span>
+                                        </div>
+                                        <label class="switch-container">
+                                            <input type="checkbox" class="switch-input admin-all-perm-toggle" data-user-id="${u.id}" data-name="${escapeHtml(fullName)}" ${perms.all ? 'checked' : ''}>
+                                            <span class="switch-slider"></span>
+                                        </label>
+                                    </div>
+
+                                    <!-- Individual 5 Feature Toggles -->
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                                        <!-- 1. Broadcast -->
+                                        <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
+                                            <div class="min-w-0 pr-2">
+                                                <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">📢 Broadcast Alerts</span>
+                                                <span class="text-[10px] text-zinc-500 block truncate">Blast app-wide alert banner</span>
                                             </div>
-                                            <label class="switch-container">
-                                                <input type="checkbox" class="switch-input admin-all-perm-toggle" data-user-id="${u.id}" data-name="${escapeHtml(fullName)}" ${perms.all ? 'checked' : ''}>
+                                            <label class="switch-container flex-shrink-0">
+                                                <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="broadcast" data-name="${escapeHtml(fullName)}" ${perms.broadcast ? 'checked' : ''}>
                                                 <span class="switch-slider"></span>
                                             </label>
                                         </div>
 
-                                        <!-- Individual 5 Feature Toggles -->
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                                            <!-- 1. Broadcast -->
-                                            <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
-                                                <div class="min-w-0 pr-2">
-                                                    <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">📢 Broadcast Alerts</span>
-                                                    <span class="text-[10px] text-zinc-500 block truncate">Blast app-wide alert banner</span>
-                                                </div>
-                                                <label class="switch-container flex-shrink-0">
-                                                    <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="broadcast" data-name="${escapeHtml(fullName)}" ${(perms.all || perms.broadcast) ? 'checked' : ''} ${perms.all ? 'disabled' : ''}>
-                                                    <span class="switch-slider"></span>
-                                                </label>
+                                        <!-- 2. Moderate -->
+                                        <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
+                                            <div class="min-w-0 pr-2">
+                                                <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">🛡️ Moderate Content</span>
+                                                <span class="text-[10px] text-zinc-500 block truncate">Delete posts & moderate feed</span>
                                             </div>
+                                            <label class="switch-container flex-shrink-0">
+                                                <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="moderate" data-name="${escapeHtml(fullName)}" ${perms.moderate ? 'checked' : ''}>
+                                                <span class="switch-slider"></span>
+                                            </label>
+                                        </div>
 
-                                            <!-- 2. Moderate -->
-                                            <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
-                                                <div class="min-w-0 pr-2">
-                                                    <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">🛡️ Moderate Content</span>
-                                                    <span class="text-[10px] text-zinc-500 block truncate">Delete posts & moderate feed</span>
-                                                </div>
-                                                <label class="switch-container flex-shrink-0">
-                                                    <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="moderate" data-name="${escapeHtml(fullName)}" ${(perms.all || perms.moderate) ? 'checked' : ''} ${perms.all ? 'disabled' : ''}>
-                                                    <span class="switch-slider"></span>
-                                                </label>
+                                        <!-- 3. Events -->
+                                        <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
+                                            <div class="min-w-0 pr-2">
+                                                <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">📅 Add & Manage Events</span>
+                                                <span class="text-[10px] text-zinc-500 block truncate">Create, edit, delete events</span>
                                             </div>
+                                            <label class="switch-container flex-shrink-0">
+                                                <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="events" data-name="${escapeHtml(fullName)}" ${perms.events ? 'checked' : ''}>
+                                                <span class="switch-slider"></span>
+                                            </label>
+                                        </div>
 
-                                            <!-- 3. Events -->
-                                            <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
-                                                <div class="min-w-0 pr-2">
-                                                    <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">📅 Add & Manage Events</span>
-                                                    <span class="text-[10px] text-zinc-500 block truncate">Create, edit, delete events</span>
-                                                </div>
-                                                <label class="switch-container flex-shrink-0">
-                                                    <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="events" data-name="${escapeHtml(fullName)}" ${(perms.all || perms.events) ? 'checked' : ''} ${perms.all ? 'disabled' : ''}>
-                                                    <span class="switch-slider"></span>
-                                                </label>
+                                        <!-- 4. Leads -->
+                                        <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
+                                            <div class="min-w-0 pr-2">
+                                                <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">👥 Core Team Leads</span>
+                                                <span class="text-[10px] text-zinc-500 block truncate">Appoint leads & teams</span>
                                             </div>
+                                            <label class="switch-container flex-shrink-0">
+                                                <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="leads" data-name="${escapeHtml(fullName)}" ${perms.leads ? 'checked' : ''}>
+                                                <span class="switch-slider"></span>
+                                            </label>
+                                        </div>
 
-                                            <!-- 4. Leads -->
-                                            <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
-                                                <div class="min-w-0 pr-2">
-                                                    <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">👥 Core Team Leads</span>
-                                                    <span class="text-[10px] text-zinc-500 block truncate">Appoint leads & teams</span>
-                                                </div>
-                                                <label class="switch-container flex-shrink-0">
-                                                    <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="leads" data-name="${escapeHtml(fullName)}" ${(perms.all || perms.leads) ? 'checked' : ''} ${perms.all ? 'disabled' : ''}>
-                                                    <span class="switch-slider"></span>
-                                                </label>
+                                        <!-- 5. Users -->
+                                        <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60 sm:col-span-2 lg:col-span-2">
+                                            <div class="min-w-0 pr-2">
+                                                <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">📋 User Management & Roster</span>
+                                                <span class="text-[10px] text-zinc-500 block truncate">Edit members, approve change requests & export roster Excel</span>
                                             </div>
-
-                                            <!-- 5. Users -->
-                                            <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60 sm:col-span-2 lg:col-span-2">
-                                                <div class="min-w-0 pr-2">
-                                                    <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">📋 User Management & Roster</span>
-                                                    <span class="text-[10px] text-zinc-500 block truncate">Edit members, approve change requests & export roster Excel</span>
-                                                </div>
-                                                <label class="switch-container flex-shrink-0">
-                                                    <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="users" data-name="${escapeHtml(fullName)}" ${(perms.all || perms.users) ? 'checked' : ''} ${perms.all ? 'disabled' : ''}>
-                                                    <span class="switch-slider"></span>
-                                                </label>
-                                            </div>
+                                            <label class="switch-container flex-shrink-0">
+                                                <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="users" data-name="${escapeHtml(fullName)}" ${perms.users ? 'checked' : ''}>
+                                                <span class="switch-slider"></span>
+                                            </label>
                                         </div>
                                     </div>
-                                `}
+                                </div>
                             </div>
                         </div>`;
                     }).join('')}
@@ -2432,15 +2432,13 @@ const AdminView = (() => {
                 const isAll = e.target.checked;
                 
                 const targetUser = allUsers.find(u => u.id === userId);
-                const currentPerms = ICCSupabase.getAdminPermissions(targetUser);
                 const updated = {
-                    ...currentPerms,
                     all: isAll,
-                    broadcast: isAll ? true : currentPerms.broadcast,
-                    moderate: isAll ? true : currentPerms.moderate,
-                    events: isAll ? true : currentPerms.events,
-                    leads: isAll ? true : currentPerms.leads,
-                    users: isAll ? true : currentPerms.users
+                    broadcast: isAll,
+                    moderate: isAll,
+                    events: isAll,
+                    leads: isAll,
+                    users: isAll
                 };
 
                 const res = await ICCSupabase.updateAdminPermissions(userId, updated);
@@ -2448,8 +2446,12 @@ const AdminView = (() => {
                     Toast.error('Failed to update permissions: ' + (res.error.message || res.error));
                     toggle.checked = !isAll;
                 } else {
-                    Toast.success(`Updated permissions for ${userName}`);
+                    Toast.success(`${isAll ? 'Full feature access granted' : 'All feature access revoked'} for ${userName}`);
                     if (targetUser) targetUser.admin_permissions = updated;
+                    const me = ICCSupabase.getUser();
+                    if (me && me.id === userId && ICCSupabase.getProfile()) {
+                        ICCSupabase.getProfile().admin_permissions = updated;
+                    }
                     container.innerHTML = render();
                     bindEvents(container);
                 }
@@ -2468,7 +2470,7 @@ const AdminView = (() => {
                 const currentPerms = { ...ICCSupabase.getAdminPermissions(targetUser) };
                 currentPerms[perm] = checked;
                 
-                const allFive = currentPerms.broadcast && currentPerms.moderate && currentPerms.events && currentPerms.leads && currentPerms.users;
+                const allFive = !!(currentPerms.broadcast && currentPerms.moderate && currentPerms.events && currentPerms.leads && currentPerms.users);
                 currentPerms.all = allFive;
 
                 const res = await ICCSupabase.updateAdminPermissions(userId, currentPerms);
@@ -2478,13 +2480,17 @@ const AdminView = (() => {
                 } else {
                     const permNames = {
                         broadcast: 'Broadcast',
-                        moderate: 'Moderate',
-                        events: 'Events',
-                        leads: 'Leads',
-                        users: 'Users'
+                        moderate: 'Moderate Content',
+                        events: 'Manage Events',
+                        leads: 'Team Leads',
+                        users: 'User Management'
                     };
-                    Toast.success(`${permNames[perm] || perm} access ${checked ? 'granted' : 'removed'} for ${userName}`);
+                    Toast.success(`${permNames[perm] || perm} ${checked ? 'enabled' : 'disabled'} for ${userName}`);
                     if (targetUser) targetUser.admin_permissions = currentPerms;
+                    const me = ICCSupabase.getUser();
+                    if (me && me.id === userId && ICCSupabase.getProfile()) {
+                        ICCSupabase.getProfile().admin_permissions = currentPerms;
+                    }
                     container.innerHTML = render();
                     bindEvents(container);
                 }

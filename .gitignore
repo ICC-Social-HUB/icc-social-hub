@@ -7,3 +7,4 @@ wipe_notification.js
 *.apk
 !assets/icc-social-hub.apk
 !www/assets/icc-social-hub.apk
+.vercel

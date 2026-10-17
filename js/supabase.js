@@ -1130,7 +1130,7 @@ const ICCSupabase = (() => {
         const target = prof || currentProfile;
         if (!target && !currentUser) return false;
         const role = (target?.role || '').toLowerCase().trim();
-        return role === 'super_admin' || role === 'superadmin';
+        return role === 'super_admin' || role === 'superadmin' || target?.email === 'iccsocialhub@gmail.com' || currentUser?.email === 'iccsocialhub@gmail.com';
     }
 
     function getAdminPermissions(prof = currentProfile) {
@@ -1139,14 +1139,11 @@ const ICCSupabase = (() => {
             return { broadcast: false, moderate: false, events: false, leads: false, users: false, all: false };
         }
         const role = (target?.role || '').toLowerCase().trim();
-        
-        // Super Admins always possess full permissions across all features
-        if (role === 'super_admin' || role === 'superadmin') {
-            return { broadcast: true, moderate: true, events: true, leads: true, users: true, all: true };
-        }
+        const isSuper = role === 'super_admin' || role === 'superadmin' || target?.email === 'iccsocialhub@gmail.com';
+        const isAdmin = role === 'admin';
 
         // Non-admins have no admin permissions
-        if (role !== 'admin') {
+        if (!isSuper && !isAdmin) {
             return { broadcast: false, moderate: false, events: false, leads: false, users: false, all: false };
         }
 
@@ -1158,21 +1155,37 @@ const ICCSupabase = (() => {
         // If stored as JSON object
         if (typeof target.admin_permissions === 'object' && !Array.isArray(target.admin_permissions)) {
             const p = target.admin_permissions;
-            const hasAll = !!p.all || (p.broadcast !== false && p.moderate !== false && p.events !== false && p.leads !== false && p.users !== false && p.broadcast && p.moderate && p.events && p.leads && p.users);
+            const keys = Object.keys(p);
+            if (keys.length === 0) {
+                return { broadcast: true, moderate: true, events: true, leads: true, users: true, all: true };
+            }
+
+            // Cleanup for bugged legacy state where master toggle was turned off but individual features remained true
+            if (p.all === false && (p.broadcast === true && p.moderate === true && p.events === true && p.leads === true && p.users === true)) {
+                return { broadcast: false, moderate: false, events: false, leads: false, users: false, all: false };
+            }
+
+            const b = !!p.broadcast;
+            const m = !!p.moderate;
+            const e = !!p.events;
+            const l = !!p.leads;
+            const u = !!p.users;
+            const all = (p.all === true) || (p.all !== false && (b && m && e && l && u));
+
             return {
-                broadcast: hasAll || !!p.broadcast,
-                moderate: hasAll || !!p.moderate,
-                events: hasAll || !!p.events,
-                leads: hasAll || !!p.leads,
-                users: hasAll || !!p.users,
-                all: hasAll
+                broadcast: all ? true : b,
+                moderate: all ? true : m,
+                events: all ? true : e,
+                leads: all ? true : l,
+                users: all ? true : u,
+                all: all
             };
         }
 
         // If stored as Array
         if (Array.isArray(target.admin_permissions)) {
             const arr = target.admin_permissions;
-            const hasAll = arr.includes('all');
+            const hasAll = arr.includes('all') || (arr.includes('broadcast') && arr.includes('moderate') && arr.includes('events') && arr.includes('leads') && arr.includes('users'));
             return {
                 broadcast: hasAll || arr.includes('broadcast'),
                 moderate: hasAll || arr.includes('moderate'),
