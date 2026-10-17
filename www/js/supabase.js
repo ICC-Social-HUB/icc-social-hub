@@ -1123,6 +1123,8 @@ const ICCSupabase = (() => {
         moderate: true,
         events: true,
         leads: true,
+        users_edit: true,
+        users_export: true,
         users: true
     };
 
@@ -1136,7 +1138,7 @@ const ICCSupabase = (() => {
     function getAdminPermissions(prof = currentProfile) {
         const target = prof || currentProfile;
         if (!target && !currentUser) {
-            return { broadcast: false, moderate: false, events: false, leads: false, users: false, all: false };
+            return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, all: false };
         }
         const role = (target?.role || '').toLowerCase().trim();
         const isSuper = role === 'super_admin' || role === 'superadmin' || target?.email === 'iccsocialhub@gmail.com';
@@ -1144,12 +1146,12 @@ const ICCSupabase = (() => {
 
         // Non-admins have no admin permissions
         if (!isSuper && !isAdmin) {
-            return { broadcast: false, moderate: false, events: false, leads: false, users: false, all: false };
+            return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, all: false };
         }
 
         // Backward compatibility: If admin_permissions is undefined/null, grant all by default
         if (target.admin_permissions === undefined || target.admin_permissions === null) {
-            return { broadcast: true, moderate: true, events: true, leads: true, users: true, all: true };
+            return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, all: true };
         }
 
         // If stored as JSON object
@@ -1157,27 +1159,35 @@ const ICCSupabase = (() => {
             const p = target.admin_permissions;
             const keys = Object.keys(p);
             if (keys.length === 0) {
-                return { broadcast: true, moderate: true, events: true, leads: true, users: true, all: true };
+                return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, all: true };
             }
 
-            // Cleanup for bugged legacy state where master toggle was turned off but individual features remained true
-            if (p.all === false && (p.broadcast === true && p.moderate === true && p.events === true && p.leads === true && p.users === true)) {
-                return { broadcast: false, moderate: false, events: false, leads: false, users: false, all: false };
-            }
+            // Backward compatibility for legacy 'users' key
+            const legacyUsers = p.users;
+            const ue = p.hasOwnProperty('users_edit') ? !!p.users_edit : (legacyUsers !== undefined ? !!legacyUsers : false);
+            const ux = p.hasOwnProperty('users_export') ? !!p.users_export : (legacyUsers !== undefined ? !!legacyUsers : false);
 
             const b = !!p.broadcast;
             const m = !!p.moderate;
             const e = !!p.events;
             const l = !!p.leads;
-            const u = !!p.users;
-            const all = (p.all === true) || (p.all !== false && (b && m && e && l && u));
+
+            // Cleanup for bugged legacy state where master toggle was turned off but individual features remained true
+            if (p.all === false && (p.broadcast === true && p.moderate === true && p.events === true && p.leads === true && (p.users === true || (ue && ux)))) {
+                return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, all: false };
+            }
+
+            const allSix = (b && m && e && l && ue && ux);
+            const all = (p.all === true) || (p.all !== false && allSix);
 
             return {
                 broadcast: all ? true : b,
                 moderate: all ? true : m,
                 events: all ? true : e,
                 leads: all ? true : l,
-                users: all ? true : u,
+                users_edit: all ? true : ue,
+                users_export: all ? true : ux,
+                users: all ? true : (ue || ux),
                 all: all
             };
         }
@@ -1185,22 +1195,30 @@ const ICCSupabase = (() => {
         // If stored as Array
         if (Array.isArray(target.admin_permissions)) {
             const arr = target.admin_permissions;
-            const hasAll = arr.includes('all') || (arr.includes('broadcast') && arr.includes('moderate') && arr.includes('events') && arr.includes('leads') && arr.includes('users'));
+            const hasLegacyUsers = arr.includes('users');
+            const ue = arr.includes('users_edit') || hasLegacyUsers;
+            const ux = arr.includes('users_export') || hasLegacyUsers;
+            const hasAll = arr.includes('all') || (arr.includes('broadcast') && arr.includes('moderate') && arr.includes('events') && arr.includes('leads') && ue && ux);
             return {
                 broadcast: hasAll || arr.includes('broadcast'),
                 moderate: hasAll || arr.includes('moderate'),
                 events: hasAll || arr.includes('events'),
                 leads: hasAll || arr.includes('leads'),
-                users: hasAll || arr.includes('users'),
+                users_edit: hasAll || ue,
+                users_export: hasAll || ux,
+                users: hasAll || ue || ux,
                 all: hasAll
             };
         }
 
-        return { broadcast: true, moderate: true, events: true, leads: true, users: true, all: true };
+        return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, all: true };
     }
 
     function hasAdminPermission(permKey, prof = currentProfile) {
         const perms = getAdminPermissions(prof);
+        if (permKey === 'users') {
+            return !!(perms.all || perms.users || perms.users_edit || perms.users_export);
+        }
         return !!(perms.all || perms[permKey]);
     }
 
@@ -1215,7 +1233,9 @@ const ICCSupabase = (() => {
                 moderate: !!permissions.moderate,
                 events: !!permissions.events,
                 leads: !!permissions.leads,
-                users: !!permissions.users,
+                users_edit: !!permissions.users_edit,
+                users_export: !!permissions.users_export,
+                users: !!(permissions.users_edit || permissions.users_export),
                 all: !!permissions.all
             };
 
@@ -1319,13 +1339,13 @@ const ICCSupabase = (() => {
     async function requestUserUpdate(userId, proposedFields, originalData = {}) {
         if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
 
-        // If a user with the Super Admin role makes the update directly, apply immediately without approval
-        if (isSuperAdmin()) {
+        // If a user with the Super Admin role or users_edit permission makes the update directly, apply immediately without approval
+        if (isSuperAdmin() || hasAdminPermission('users_edit')) {
             const res = await adminUpdateUser(userId, proposedFields);
             return { direct: true, ...res };
         }
 
-        // For regular admins: create a pending edit request for Super Admins
+        // For regular admins without direct edit permission: create a pending edit request
         try {
             const requesterName = currentProfile?.full_name || currentProfile?.username || currentUser?.email || 'Admin';
             const requesterEmail = currentUser?.email || currentProfile?.email || '';
@@ -1409,8 +1429,8 @@ const ICCSupabase = (() => {
 
     async function approveUserEditRequest(requestId) {
         if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
-        if (!isSuperAdmin()) {
-            return { error: { message: 'Access Denied: Only users with the Super Admin role can approve user detail changes.' } };
+        if (!isSuperAdmin() && !hasAdminPermission('users_edit')) {
+            return { error: { message: 'Access Denied: Only users with the Super Admin role or Edit & Approve Users permission can approve user detail changes.' } };
         }
 
         try {
@@ -1443,7 +1463,7 @@ const ICCSupabase = (() => {
                     userId: req.requester_id,
                     type: 'system',
                     actorId: currentUser.id,
-                    body: `✅ Super Admin Approval: Your requested changes for ${req.target_user_name || 'user'} were APPROVED by a Super Admin.`
+                    body: `✅ User Approval: Your requested changes for ${req.target_user_name || 'user'} were APPROVED.`
                 });
             }
 
@@ -1466,8 +1486,8 @@ const ICCSupabase = (() => {
 
     async function rejectUserEditRequest(requestId, reason = '') {
         if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
-        if (!isSuperAdmin()) {
-            return { error: { message: 'Access Denied: Only users with the Super Admin role can reject user profile edits.' } };
+        if (!isSuperAdmin() && !hasAdminPermission('users_edit')) {
+            return { error: { message: 'Access Denied: Only users with the Super Admin role or Edit & Approve Users permission can reject user profile edits.' } };
         }
 
         try {

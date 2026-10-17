@@ -9,7 +9,9 @@
 -- - moderate: Permission to delete posts and moderate content
 -- - events: Permission to create, edit, and delete events
 -- - leads: Permission to manage core team leads
--- - users: Permission to manage user roster and approvals
+-- - users_edit: Permission to edit user profiles and approve user change requests (accessible to all granted admins)
+-- - users_export: Permission to view user roster table and export/download member Excel (.xlsx)
+-- - users: Legacy backward compatibility flag (true if either users_edit or users_export is true)
 -- =========================================================================
 
 -- 1. Ensure profiles constraint permits 'super_admin' and 'superadmin' roles
@@ -45,13 +47,13 @@ BEGIN
           AND column_name = 'admin_permissions'
     ) THEN
         ALTER TABLE public.profiles 
-            ADD COLUMN admin_permissions JSONB DEFAULT '{"broadcast": true, "moderate": true, "events": true, "leads": true, "users": true}'::jsonb;
+            ADD COLUMN admin_permissions JSONB DEFAULT '{"broadcast": true, "moderate": true, "events": true, "leads": true, "users_edit": true, "users_export": true, "users": true}'::jsonb;
     END IF;
 END $$;
 
 -- 3. Set default permissions for existing admins who don't have it set
 UPDATE public.profiles
-SET admin_permissions = '{"broadcast": true, "moderate": true, "events": true, "leads": true, "users": true}'::jsonb
+SET admin_permissions = '{"broadcast": true, "moderate": true, "events": true, "leads": true, "users_edit": true, "users_export": true, "users": true}'::jsonb
 WHERE role IN ('admin', 'super_admin', 'superadmin') AND (admin_permissions IS NULL OR admin_permissions = '{}'::jsonb);
 
 -- 4. Ensure RLS Policy allows Admins and Super Admins to update profiles

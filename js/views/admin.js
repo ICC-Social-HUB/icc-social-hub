@@ -606,7 +606,7 @@ const AdminView = (() => {
 
         if (isSuper || perms.broadcast) tabs.push({ id: 'broadcast', label: 'Broadcast', icon: '📢' });
         if (isSuper || perms.leads) tabs.push({ id: 'leads', label: 'Leads', icon: '👥' });
-        if (isSuper || perms.users) tabs.push({ id: 'users', label: 'Users', icon: '📋' });
+        if (isSuper || perms.users_edit || perms.users_export || perms.users) tabs.push({ id: 'users', label: 'Users', icon: '📋' });
         if (isSuper || perms.moderate) tabs.push({ id: 'moderate', label: 'Moderate', icon: '🛡️' });
         if (isSuper || perms.events) tabs.push({ id: 'events', label: 'Events', icon: '📅' });
         if (isSuper) tabs.push({ id: 'access_control', label: 'Access Control', icon: '🔐', badge: 'Super' });
@@ -687,7 +687,7 @@ const AdminView = (() => {
         if (activeTab === 'leads' && !isSuper && !perms.leads && !perms.all) {
             return renderPermissionDenied('You have not been granted access to Core Leads management.');
         }
-        if (activeTab === 'users' && !isSuper && !perms.users && !perms.all) {
+        if (activeTab === 'users' && !isSuper && !perms.users_edit && !perms.users_export && !perms.users && !perms.all) {
             return renderPermissionDenied('You have not been granted access to User Management.');
         }
         if (activeTab === 'moderate' && !isSuper && !perms.moderate && !perms.all) {
@@ -894,12 +894,20 @@ const AdminView = (() => {
                                     <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="leads" ${appointingUserDraft?.leads ? 'checked' : ''}>
                                 </label>
 
-                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700 col-span-1 sm:col-span-2">
+                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
                                     <div>
-                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">📋 User Management</span>
-                                        <span class="text-[10px] text-zinc-500">Edit member details, approvals & export roster</span>
+                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">✏️ Edit & Approve Users</span>
+                                        <span class="text-[10px] text-zinc-500">Edit member details & approve change requests</span>
                                     </div>
-                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="users" ${appointingUserDraft?.users ? 'checked' : ''}>
+                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="users_edit" ${appointingUserDraft?.users_edit ? 'checked' : ''}>
+                                </label>
+
+                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
+                                    <div>
+                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">📊 View & Download Excel</span>
+                                        <span class="text-[10px] text-zinc-500">View roster table & export member Excel</span>
+                                    </div>
+                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="users_export" ${appointingUserDraft?.users_export ? 'checked' : ''}>
                                 </label>
                             </div>
                         </div>
@@ -1060,7 +1068,7 @@ const AdminView = (() => {
                                     <div class="flex items-center justify-between p-3 bg-zinc-950/70 rounded-xl border border-zinc-800">
                                         <div>
                                             <span class="text-xs font-semibold text-white block">⚡ Master Toggle: Full Access (All Features)</span>
-                                            <span class="text-[10px] text-zinc-400">Grant or remove all 5 administrator permissions simultaneously</span>
+                                            <span class="text-[10px] text-zinc-400">Grant or remove all 6 administrator permissions simultaneously</span>
                                         </div>
                                         <label class="switch-container">
                                             <input type="checkbox" class="switch-input admin-all-perm-toggle" data-user-id="${u.id}" data-name="${escapeHtml(fullName)}" ${perms.all ? 'checked' : ''}>
@@ -1068,7 +1076,7 @@ const AdminView = (() => {
                                         </label>
                                     </div>
 
-                                    <!-- Individual 5 Feature Toggles -->
+                                    <!-- Individual 6 Feature Toggles -->
                                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                                         <!-- 1. Broadcast -->
                                         <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
@@ -1118,14 +1126,26 @@ const AdminView = (() => {
                                             </label>
                                         </div>
 
-                                        <!-- 5. Users -->
-                                        <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60 sm:col-span-2 lg:col-span-2">
+                                        <!-- 5. Edit & Approve Users -->
+                                        <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
                                             <div class="min-w-0 pr-2">
-                                                <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">📋 User Management & Roster</span>
-                                                <span class="text-[10px] text-zinc-500 block truncate">Edit members, approve change requests & export roster Excel</span>
+                                                <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">✏️ Edit & Approve Users</span>
+                                                <span class="text-[10px] text-zinc-500 block truncate">Edit members & approve requests</span>
                                             </div>
                                             <label class="switch-container flex-shrink-0">
-                                                <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="users" data-name="${escapeHtml(fullName)}" ${perms.users ? 'checked' : ''}>
+                                                <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="users_edit" data-name="${escapeHtml(fullName)}" ${perms.users_edit ? 'checked' : ''}>
+                                                <span class="switch-slider"></span>
+                                            </label>
+                                        </div>
+
+                                        <!-- 6. View & Download Excel -->
+                                        <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
+                                            <div class="min-w-0 pr-2">
+                                                <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">📊 View & Download Excel</span>
+                                                <span class="text-[10px] text-zinc-500 block truncate">View roster & download Excel (.xlsx)</span>
+                                            </div>
+                                            <label class="switch-container flex-shrink-0">
+                                                <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="users_export" data-name="${escapeHtml(fullName)}" ${perms.users_export ? 'checked' : ''}>
                                                 <span class="switch-slider"></span>
                                             </label>
                                         </div>
@@ -1348,23 +1368,26 @@ const AdminView = (() => {
     function renderUsers() {
         const displayUsers = allUsers.filter(u => u.role !== 'admin' && u.role !== 'lead');
         const isSuper = ICCSupabase.isSuperAdmin();
+        const perms = ICCSupabase.getAdminPermissions ? ICCSupabase.getAdminPermissions() : { all: true };
+        const canEditApprove = isSuper || perms.users_edit || perms.all;
+        const canExportExcel = isSuper || perms.users_export || perms.all;
 
         return `
         <div class="space-y-4">
-            <!-- Super Admin Hub / Safety Policy Banner -->
-            ${isSuper ? `
-                <div class="glass-card rounded-2xl p-5 border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-zinc-900 to-zinc-900 shadow-xl">
+            <!-- Approval Hub / Permission Status Banner -->
+            ${canEditApprove ? `
+                <div class="glass-card rounded-2xl p-5 border ${isSuper ? 'border-amber-500/30' : 'border-blue-500/30'} bg-gradient-to-r ${isSuper ? 'from-amber-500/10 via-zinc-900 to-zinc-900' : 'from-blue-500/10 via-zinc-900 to-zinc-900'} shadow-xl">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center text-lg font-bold shadow-inner">
+                            <div class="w-10 h-10 rounded-xl ${isSuper ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400' : 'bg-blue-500/20 border border-blue-500/30 text-blue-400'} flex items-center justify-center text-lg font-bold shadow-inner">
                                 🛡️
                             </div>
                             <div>
-                                <h3 class="font-heading font-bold text-sm text-amber-200">Super Admin Approval Hub</h3>
-                                <p class="text-[11px] text-zinc-400">User modification requests awaiting your authorization</p>
+                                <h3 class="font-heading font-bold text-sm ${isSuper ? 'text-amber-200' : 'text-blue-200'}">${isSuper ? 'Super Admin Approval Hub' : 'Administrator User Approval Hub'}</h3>
+                                <p class="text-[11px] text-zinc-400">User profile modification requests awaiting authorization</p>
                             </div>
                         </div>
-                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${pendingEditRequests.length > 0 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse' : 'bg-zinc-800 text-zinc-500'}">
+                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${pendingEditRequests.length > 0 ? (isSuper ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse' : 'bg-blue-500/20 text-blue-300 border border-blue-500/40 animate-pulse') : 'bg-zinc-800 text-zinc-500'}">
                             ${pendingEditRequests.length} Pending
                         </span>
                     </div>
@@ -1380,32 +1403,10 @@ const AdminView = (() => {
                     `}
                 </div>
             ` : `
-                <div class="glass-card rounded-xl p-4 border border-blue-500/20 bg-blue-500/5 flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
-                        🛡️
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <h4 class="text-xs font-semibold text-blue-300">Safety Policy Active: Super Admin Approval Required</h4>
-                        <p class="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">
-                            For security and data integrity, admins cannot directly modify user details. Any edits you make below will be submitted to a <strong>Super Admin</strong> for review and approval before taking effect.
-                        </p>
-                    </div>
+                <div class="glass-card rounded-xl p-3.5 border border-zinc-800 bg-zinc-950/40 flex items-center gap-2.5 text-xs text-zinc-400">
+                    <span class="text-base">📋</span>
+                    <span>You have view-only access to this user roster. Profile editing and approval authority are restricted.</span>
                 </div>
-
-                ${pendingEditRequests.length > 0 ? `
-                    <div class="glass-card rounded-2xl p-4 border border-zinc-800">
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="text-xs font-semibold text-zinc-300 flex items-center gap-2">
-                                <span>Pending Approval Requests</span>
-                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">${pendingEditRequests.length}</span>
-                            </h4>
-                            <span class="text-[10px] text-zinc-500">Awaiting Super Admin Review</span>
-                        </div>
-                        <div class="space-y-3">
-                            ${pendingEditRequests.map(req => renderPendingRequestCard(req, false)).join('')}
-                        </div>
-                    </div>
-                ` : ''}
             `}
 
             <div class="flex items-center justify-between px-2 flex-wrap gap-3">
@@ -1427,12 +1428,19 @@ const AdminView = (() => {
                         <input type="text" id="admin-user-search" placeholder="Search by name, email, or USN..." class="form-input w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white" value="${userSearchQuery}">
                         <svg class="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
-                    <button id="admin-download-excel-btn" class="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all cursor-pointer whitespace-nowrap group" title="Download dynamic Excel format (.xlsx) of users & teams based on active filters">
-                        <svg class="w-4 h-4 text-emerald-100 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span id="admin-excel-btn-text">${(userSectionFilter || userTeamFilter || userSearchQuery) ? 'Export Filtered (.xlsx)' : 'Download Excel (.xlsx)'}</span>
-                    </button>
+                    ${canExportExcel ? `
+                        <button id="admin-download-excel-btn" class="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all cursor-pointer whitespace-nowrap group" title="Download dynamic Excel format (.xlsx) of users & teams based on active filters">
+                            <svg class="w-4 h-4 text-emerald-100 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span id="admin-excel-btn-text">${(userSectionFilter || userTeamFilter || userSearchQuery) ? 'Export Filtered (.xlsx)' : 'Download Excel (.xlsx)'}</span>
+                        </button>
+                    ` : `
+                        <div class="px-3 py-2 bg-zinc-950/80 border border-zinc-800/80 rounded-xl text-[11px] text-zinc-500 flex items-center gap-1.5" title="Excel download permission restricted">
+                            <span class="text-xs">🔒</span>
+                            <span>Excel Download Restricted</span>
+                        </div>
+                    `}
                 </div>
             </div>
 
@@ -1503,7 +1511,7 @@ const AdminView = (() => {
                                 `}
                             </div>
                             
-                            ${!isEditing ? `
+                            ${canEditApprove && !isEditing ? `
                                 <button class="edit-user-btn p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-all" data-id="${u.id}" title="Edit user details">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                                 </button>
@@ -1557,8 +1565,8 @@ const AdminView = (() => {
 
                         ${isEditing ? `
                             <div class="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-zinc-800/30">
-                                <button class="save-user-btn flex-1 py-2 ${isSuper ? 'bg-blue-600 hover:bg-blue-500' : 'bg-amber-600 hover:bg-amber-500'} text-white rounded-xl text-xs font-semibold transition-all shadow-md flex items-center justify-center gap-1.5" data-id="${u.id}">
-                                    ${isSuper ? '<span>Save Changes (Direct)</span>' : '<span>🛡️ Submit for Super Admin Approval</span>'}
+                                <button class="save-user-btn flex-1 py-2 ${canEditApprove ? 'bg-blue-600 hover:bg-blue-500' : 'bg-amber-600 hover:bg-amber-500'} text-white rounded-xl text-xs font-semibold transition-all shadow-md flex items-center justify-center gap-1.5" data-id="${u.id}">
+                                    ${canEditApprove ? '<span>Save Changes (Direct)</span>' : '<span>🛡️ Submit for Approval</span>'}
                                 </button>
                                 <button class="cancel-user-edit-btn px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-medium transition-all">Cancel</button>
                                 ${isManuallyUpdated ? `
@@ -2321,6 +2329,8 @@ const AdminView = (() => {
                     moderate: true,
                     events: true,
                     leads: true,
+                    users_edit: true,
+                    users_export: true,
                     users: true,
                     all: true,
                     isSuperAdmin: false
@@ -2367,6 +2377,8 @@ const AdminView = (() => {
                 appointingUserDraft.moderate = checked;
                 appointingUserDraft.events = checked;
                 appointingUserDraft.leads = checked;
+                appointingUserDraft.users_edit = checked;
+                appointingUserDraft.users_export = checked;
                 appointingUserDraft.users = checked;
                 container.querySelectorAll('.appoint-perm-check').forEach(cb => {
                     cb.checked = checked;
@@ -2380,7 +2392,10 @@ const AdminView = (() => {
                 const perm = cb.dataset.perm;
                 if (appointingUserDraft) {
                     appointingUserDraft[perm] = e.target.checked;
-                    const allTrue = appointingUserDraft.broadcast && appointingUserDraft.moderate && appointingUserDraft.events && appointingUserDraft.leads && appointingUserDraft.users;
+                    if (perm === 'users_edit' || perm === 'users_export') {
+                        appointingUserDraft.users = !!(appointingUserDraft.users_edit || appointingUserDraft.users_export);
+                    }
+                    const allTrue = appointingUserDraft.broadcast && appointingUserDraft.moderate && appointingUserDraft.events && appointingUserDraft.leads && appointingUserDraft.users_edit && appointingUserDraft.users_export;
                     appointingUserDraft.all = allTrue;
                     const allToggle = container.querySelector('#appoint-all-toggle');
                     if (allToggle) allToggle.checked = allTrue;
@@ -2404,7 +2419,9 @@ const AdminView = (() => {
                 moderate: !!appointingUserDraft.moderate,
                 events: !!appointingUserDraft.events,
                 leads: !!appointingUserDraft.leads,
-                users: !!appointingUserDraft.users,
+                users_edit: !!appointingUserDraft.users_edit,
+                users_export: !!appointingUserDraft.users_export,
+                users: !!(appointingUserDraft.users_edit || appointingUserDraft.users_export),
                 all: !!appointingUserDraft.all
             };
 
@@ -2438,6 +2455,8 @@ const AdminView = (() => {
                     moderate: isAll,
                     events: isAll,
                     leads: isAll,
+                    users_edit: isAll,
+                    users_export: isAll,
                     users: isAll
                 };
 
@@ -2470,8 +2489,12 @@ const AdminView = (() => {
                 const currentPerms = { ...ICCSupabase.getAdminPermissions(targetUser) };
                 currentPerms[perm] = checked;
                 
-                const allFive = !!(currentPerms.broadcast && currentPerms.moderate && currentPerms.events && currentPerms.leads && currentPerms.users);
-                currentPerms.all = allFive;
+                if (perm === 'users_edit' || perm === 'users_export') {
+                    currentPerms.users = !!(currentPerms.users_edit || currentPerms.users_export);
+                }
+
+                const allSix = !!(currentPerms.broadcast && currentPerms.moderate && currentPerms.events && currentPerms.leads && currentPerms.users_edit && currentPerms.users_export);
+                currentPerms.all = allSix;
 
                 const res = await ICCSupabase.updateAdminPermissions(userId, currentPerms);
                 if (res.error) {
@@ -2483,6 +2506,8 @@ const AdminView = (() => {
                         moderate: 'Moderate Content',
                         events: 'Manage Events',
                         leads: 'Team Leads',
+                        users_edit: 'Edit & Approve Users',
+                        users_export: 'View & Download Excel',
                         users: 'User Management'
                     };
                     Toast.success(`${permNames[perm] || perm} ${checked ? 'enabled' : 'disabled'} for ${userName}`);
