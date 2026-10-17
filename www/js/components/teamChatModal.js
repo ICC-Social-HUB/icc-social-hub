@@ -21,9 +21,15 @@ const TeamChatModal = (() => {
                             <p class="text-[10px] text-[#708499] font-medium">Team Room</p>
                         </div>
                     </div>
-                    <button id="close-team-chat" class="p-2 hover:bg-[#242f3d] rounded-full transition-colors text-[#708499] hover:text-white cursor-pointer">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="back-team-chat" class="flex items-center gap-1 px-3 py-1.5 bg-[#242f3d] hover:bg-[#2b394a] text-zinc-200 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer" title="Back to team">
+                            <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                            <span>Back</span>
+                        </button>
+                        <button type="button" id="close-team-chat" class="p-2 hover:bg-[#242f3d] rounded-full transition-colors text-[#708499] hover:text-white cursor-pointer" title="Close">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Messages Container -->
@@ -52,6 +58,11 @@ const TeamChatModal = (() => {
         const team = CORE_LEADS.find(l => l.id === parseInt(teamId));
         if (!team) return;
         currentTeamId = teamId;
+        try {
+            if (!window.history.state?.modalOpen) {
+                window.history.pushState({ modalOpen: true, modal: 'team-chat' }, '');
+            }
+        } catch (e) {}
 
         // 1. Inject into Modal Root for better layer management
         const modalRoot = document.getElementById('modal-root');
@@ -65,9 +76,11 @@ const TeamChatModal = (() => {
         const form = document.getElementById('team-chat-form');
         const input = document.getElementById('team-chat-input');
         const closeBtn = document.getElementById('close-team-chat');
+        const backBtn = document.getElementById('back-team-chat');
 
         // 2. IMMEDIATE EVENT BINDING (Fixes the "Won't close" issue)
-        closeBtn.onclick = close;
+        if (closeBtn) closeBtn.onclick = close;
+        if (backBtn) backBtn.onclick = close;
         
         const handleSend = async (e) => {
             if (e) e.preventDefault();

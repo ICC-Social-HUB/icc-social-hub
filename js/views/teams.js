@@ -70,9 +70,15 @@ const TeamsView = (() => {
                         <h3 class="font-heading font-bold text-base text-white truncate">${escapeHtml(memberName)}</h3>
                         <p class="text-xs text-zinc-400">Manage Team Member</p>
                     </div>
-                    <button id="close-workforce-modal-btn" class="text-zinc-500 hover:text-white p-1 rounded-lg">
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" id="back-workforce-modal-btn" class="flex items-center gap-1 px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer" title="Go Back">
+                            <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                            <span>Back</span>
+                        </button>
+                        <button id="close-workforce-modal-btn" class="text-zinc-500 hover:text-white p-1 rounded-lg">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
+                    </div>
                 </div>
 
                 <!-- Update Tag Form -->
@@ -105,6 +111,16 @@ const TeamsView = (() => {
         const modalEl = document.getElementById('workforce-action-modal');
         modalEl.addEventListener('click', (e) => {
             if (e.target === modalEl) modalEl.remove();
+        });
+
+        try {
+            if (!window.history.state?.modalOpen) {
+                window.history.pushState({ modalOpen: true, modal: 'workforce-action' }, '');
+            }
+        } catch (e) {}
+
+        document.getElementById('back-workforce-modal-btn')?.addEventListener('click', () => {
+            modalEl.remove();
         });
 
         document.getElementById('close-workforce-modal-btn')?.addEventListener('click', () => {
@@ -301,7 +317,13 @@ const TeamsView = (() => {
                 <div class="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl animate-zoom-in">
                     <div class="p-4 border-b border-zinc-800 flex items-center justify-between">
                         <h3 class="font-heading font-bold text-lg">Update Milestones</h3>
-                        <button id="close-progress-modal" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="back-progress-modal" class="flex items-center gap-1 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer" title="Go Back">
+                                <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                                <span>Back</span>
+                            </button>
+                            <button id="close-progress-modal" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                        </div>
                     </div>
                     <div class="p-4 max-h-[60vh] overflow-y-auto">
                         <p class="text-xs text-zinc-500 mb-4">Mark the phases your team has successfully completed.</p>
@@ -332,7 +354,7 @@ const TeamsView = (() => {
             <div class="max-w-5xl mx-auto">
                 <!-- Top Navigation Bar with Back Button -->
                 <div class="mb-4 flex items-center justify-between">
-                    <button id="teams-grid-back-btn" class="flex items-center gap-2 px-3.5 py-2 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer shadow-sm active:scale-95 group" title="Return to Dashboard">
+                    <button id="teams-grid-back-btn" onclick="window.location.hash='#dashboard'" class="flex items-center gap-2 px-3.5 py-2 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer shadow-sm active:scale-95 group" title="Return to Dashboard">
                         <svg class="w-4 h-4 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                         <span>Back to Dashboard</span>
                     </button>
@@ -402,7 +424,7 @@ const TeamsView = (() => {
         return `
         <section class="min-h-screen relative pb-12" id="team-detail-section">
             <!-- Floating Quick-Back Button: stays accessible even when scrolled down -->
-            <button id="team-floating-back-btn" class="fixed bottom-6 left-6 z-40 flex items-center gap-2 px-4 py-2.5 bg-[#17212b]/95 hover:bg-[#242f3d] text-white text-xs font-bold rounded-full border border-[#2b394a] shadow-2xl backdrop-blur-md transition-all active:scale-95 cursor-pointer group" title="Go Back">
+            <button id="team-floating-back-btn" onclick="TeamsView.goBack(event)" class="fixed bottom-6 left-6 z-40 flex items-center gap-2 px-4 py-2.5 bg-[#17212b]/95 hover:bg-[#242f3d] text-white text-xs font-bold rounded-full border border-[#2b394a] shadow-2xl backdrop-blur-md transition-all active:scale-95 cursor-pointer group" title="Go Back">
                 <svg class="w-4 h-4 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                 <span>Back</span>
             </button>
@@ -413,7 +435,7 @@ const TeamsView = (() => {
                 <div class="absolute inset-0 bg-gradient-to-br ${lead.gradient} overflow-hidden">
                     <div class="absolute inset-0 bg-zinc-950/30"></div>
                 </div>
-                <button id="team-back-btn" class="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-zinc-950/70 hover:bg-zinc-900 backdrop-blur-md rounded-xl text-xs font-semibold text-white border border-white/20 transition-all cursor-pointer shadow-lg active:scale-95">
+                <button id="team-back-btn" onclick="TeamsView.goBack(event)" class="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-zinc-950/70 hover:bg-zinc-900 backdrop-blur-md rounded-xl text-xs font-semibold text-white border border-white/20 transition-all cursor-pointer shadow-lg active:scale-95">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                     <span>Back</span>
                 </button>
@@ -699,33 +721,43 @@ const TeamsView = (() => {
     }
 
     function bindGridEvents() {
-        document.getElementById('teams-grid-back-btn')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (window.history.length > 1) {
-                window.history.back();
-            } else {
+        const gridBackBtn = document.getElementById('teams-grid-back-btn');
+        if (gridBackBtn) {
+            gridBackBtn.onclick = (e) => {
+                e.preventDefault();
                 window.location.hash = '#dashboard';
-            }
-        });
+            };
+        }
 
         document.querySelectorAll('.lead-card').forEach(card => {
-            card.addEventListener('click', () => {
+            card.onclick = () => {
                 window.location.hash = `#teams/${card.dataset.leadId}`;
-            });
+            };
         });
     }
 
+    function goBack(e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (typeof AndroidNavigation !== 'undefined' && AndroidNavigation.hasOpenModal && AndroidNavigation.hasOpenModal()) {
+            AndroidNavigation.closeActiveModal();
+            return;
+        }
+        const prev = (typeof Router !== 'undefined' && Router.getPreviousHash) ? Router.getPreviousHash() : null;
+        if (prev && prev !== window.location.hash && !prev.startsWith('#teams/')) {
+            window.location.hash = prev;
+        } else {
+            window.location.hash = '#teams';
+        }
+    }
+
     function bindDetailEvents(lead) {
-        const handleBack = (e) => {
-            e?.preventDefault();
-            if (window.history.length > 1) {
-                window.history.back();
-            } else {
-                window.location.hash = '#teams';
-            }
-        };
-        document.getElementById('team-back-btn')?.addEventListener('click', handleBack);
-        document.getElementById('team-floating-back-btn')?.addEventListener('click', handleBack);
+        const backBtn = document.getElementById('team-back-btn');
+        if (backBtn) backBtn.onclick = goBack;
+        const floatingBackBtn = document.getElementById('team-floating-back-btn');
+        if (floatingBackBtn) floatingBackBtn.onclick = goBack;
         document.getElementById('lead-profile-link')?.addEventListener('click', () => {
             const leadMember = teamMembers.find(m => m.role === 'lead');
             if (leadMember) {
@@ -844,11 +876,18 @@ const TeamsView = (() => {
         // Milestone Progress Events
         document.getElementById('update-progress-btn')?.addEventListener('click', () => {
             document.getElementById('progress-modal')?.classList.remove('hidden');
+            try {
+                if (!window.history.state?.modalOpen) {
+                    window.history.pushState({ modalOpen: true, modal: 'progress' }, '');
+                }
+            } catch (e) {}
         });
 
-        document.getElementById('close-progress-modal')?.addEventListener('click', () => {
+        const closeProgress = () => {
             document.getElementById('progress-modal')?.classList.add('hidden');
-        });
+        };
+        document.getElementById('close-progress-modal')?.addEventListener('click', closeProgress);
+        document.getElementById('back-progress-modal')?.addEventListener('click', closeProgress);
 
         document.getElementById('update-milestones-form')?.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -885,5 +924,5 @@ const TeamsView = (() => {
         if (workforceModal) workforceModal.remove();
     }
 
-    return { mount, unmount };
+    return { mount, unmount, goBack };
 })();

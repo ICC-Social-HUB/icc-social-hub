@@ -3,10 +3,20 @@
    ============================================ */
 const Router = (() => {
     let previousView = null;
+    let previousHash = null;
+    let currentHash = window.location.hash || '#dashboard';
 
     function init() {
-        window.addEventListener('hashchange', handleRoute);
+        window.addEventListener('hashchange', () => {
+            previousHash = currentHash;
+            currentHash = window.location.hash || '#dashboard';
+            handleRoute();
+        });
         handleRoute();
+    }
+
+    function getPreviousHash() {
+        return previousHash;
     }
 
     function handleRoute() {
@@ -145,6 +155,6 @@ const Router = (() => {
         window.scrollTo(0, 0);
     }
 
-    return { init };
+    return { init, getPreviousHash };
 })();
 

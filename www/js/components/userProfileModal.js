@@ -11,9 +11,19 @@ const UserProfileModal = (() => {
         profile = null; posts = [];
         mountLoading();
         document.body.style.overflow = 'hidden';
-        profile = await ICCSupabase.fetchUserById(userId);
-        posts = await ICCSupabase.fetchPostsByUser(userId);
-        mount();
+        try {
+            if (!window.history.state?.modalOpen) {
+                window.history.pushState({ modalOpen: true, modal: 'user-profile' }, '');
+            }
+        } catch (e) {}
+        try {
+            profile = await ICCSupabase.fetchUserById(userId);
+            posts = await ICCSupabase.fetchPostsByUser(userId);
+            if (isOpen) mount();
+        } catch (e) {
+            console.error('Error fetching user profile:', e);
+            if (isOpen) close();
+        }
     }
 
     function close() {
@@ -25,13 +35,20 @@ const UserProfileModal = (() => {
 
     function mountLoading() {
         const root = document.getElementById('modal-root');
-        if (root) root.innerHTML = `
-        <div class="fixed inset-0 z-[2000] bg-zinc-950/90 backdrop-blur-md flex items-center justify-center">
-            <div class="flex flex-col items-center gap-3">
-                <div class="spinner border-red-500 border-t-transparent w-8 h-8"></div>
-                <p class="text-xs text-zinc-400 font-medium">Loading user profile...</p>
-            </div>
-        </div>`;
+        if (root) {
+            root.innerHTML = `
+            <div class="fixed inset-0 z-[2000] bg-zinc-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
+                <button id="user-profile-loading-back" class="absolute top-4 left-4 p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-full transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer" title="Go Back">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+                    <span>Back</span>
+                </button>
+                <div class="flex flex-col items-center gap-3">
+                    <div class="spinner border-red-500 border-t-transparent w-8 h-8"></div>
+                    <p class="text-xs text-zinc-400 font-medium">Loading user profile...</p>
+                </div>
+            </div>`;
+            document.getElementById('user-profile-loading-back')?.addEventListener('click', close);
+        }
     }
 
     function render() {
@@ -44,9 +61,9 @@ const UserProfileModal = (() => {
         <div class="fixed inset-0 z-[2000] bg-zinc-950 flex flex-col overflow-y-auto w-full h-full animate-fade-in" id="user-profile-overlay">
             <!-- Full Modal Top Sticky Header Bar -->
             <div class="sticky top-0 z-[2100] bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800/80 px-4 h-16 flex items-center justify-between">
-                <button id="user-profile-close" class="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-full transition-colors flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
-                    <span class="text-xs font-semibold uppercase tracking-wider hidden sm:inline">Close Profile</span>
+                <button id="user-profile-close" class="p-2 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-full transition-colors flex items-center gap-1.5 cursor-pointer" title="Go Back">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+                    <span class="text-xs font-bold uppercase tracking-wider">Back</span>
                 </button>
                 <div class="text-center">
                     <h2 class="font-heading font-bold text-sm text-white truncate max-w-[200px]">${escapeHtml(profile.full_name || 'User Profile')}</h2>

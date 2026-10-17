@@ -72,6 +72,7 @@ const AndroidNavigation = (() => {
             if (typeof JoinTeamModal !== 'undefined' && JoinTeamModal.close) JoinTeamModal.close();
             if (typeof ChatPanel !== 'undefined' && ChatPanel.close) ChatPanel.close();
             modalRoot.innerHTML = '';
+            document.body.style.overflow = '';
             return true;
         }
 
@@ -85,8 +86,17 @@ const AndroidNavigation = (() => {
             return;
         }
 
-        // Step 2: If on sub-page (e.g. #teams, #profile, #chat), go back in hash history!
+        // Step 2: Specific team and sub-page hierarchy
         const currentHash = window.location.hash || '#dashboard';
+        if (currentHash.startsWith('#teams/')) {
+            window.location.hash = '#teams';
+            return;
+        }
+        if (currentHash === '#teams') {
+            window.location.hash = '#dashboard';
+            return;
+        }
+
         const isHome = currentHash === '#dashboard' || currentHash === '' || currentHash === '#';
 
         if (!isHome) {
@@ -113,14 +123,21 @@ const AndroidNavigation = (() => {
     }
 
     function init() {
-        console.log('📱 Initializing Android Native Navigation Controller...');
+        console.log('📱 Initializing Android & Web Navigation Controller...');
 
-        // Listen for Capacitor Native Hardware Back Button (Android)
+        // 1. Capacitor Native Hardware Back Button (Android)
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
             window.Capacitor.Plugins.App.addListener('backButton', () => {
                 handleBackAction();
             });
         }
+
+        // 2. Web Popstate Listener (Mobile & Desktop Browsers)
+        window.addEventListener('popstate', (e) => {
+            if (hasOpenModal()) {
+                closeActiveModal();
+            }
+        });
     }
 
     return {

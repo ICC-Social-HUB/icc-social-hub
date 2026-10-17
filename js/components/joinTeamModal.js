@@ -11,6 +11,11 @@ const JoinTeamModal = (() => {
         isOpen = true; 
         loading = false; 
         currentTeam = team;
+        try {
+            if (!window.history.state?.modalOpen) {
+                window.history.pushState({ modalOpen: true, modal: 'join-team' }, '');
+            }
+        } catch (e) {}
         mount(); 
         document.body.style.overflow = 'hidden'; 
     }
@@ -33,9 +38,15 @@ const JoinTeamModal = (() => {
                             <h3 class="font-heading font-bold text-xl">Join ${currentTeam.team}</h3>
                             <p class="text-zinc-500 text-sm mt-1">Lead: <span class="text-zinc-300 font-medium">${currentTeam.name}${ICC_CONFIG.VERIFIED_TICK}</span></p>
                         </div>
-                        <button id="join-modal-close" class="p-2 hover:bg-zinc-800 rounded-full transition-colors">
-                            <svg class="w-5 h-5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="join-modal-back-btn" class="flex items-center gap-1 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer" title="Go Back">
+                                <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                                <span>Back</span>
+                            </button>
+                            <button type="button" id="join-modal-close" class="p-2 hover:bg-zinc-800 rounded-full transition-colors cursor-pointer" title="Close">
+                                <svg class="w-5 h-5 text-zinc-500 hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
                     </div>
 
                     <form id="join-team-form" class="space-y-5">
@@ -100,6 +111,7 @@ const JoinTeamModal = (() => {
     }
 
     function bindEvents() {
+        document.getElementById('join-modal-back-btn')?.addEventListener('click', close);
         document.getElementById('join-modal-close')?.addEventListener('click', close);
         document.getElementById('join-team-overlay')?.addEventListener('click', e => { if (e.target.id === 'join-team-overlay') close(); });
 
