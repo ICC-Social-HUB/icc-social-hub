@@ -6,6 +6,72 @@ const TeamsView = (() => {
     let teamMembers = [];
     let pendingMembers = [];
 
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    }
+
+    function getRoboticAvatar(seed = '') {
+        const colors = ['#38bdf8', '#818cf8', '#34d399', '#f472b6', '#fbbf24', '#a78bfa'];
+        let hash = 0;
+        const str = String(seed || 'robot');
+        for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        const color = colors[Math.abs(hash) % colors.length];
+
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+            <defs>
+                <linearGradient id="bg_${Math.abs(hash)}" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#18181b"/>
+                    <stop offset="100%" stop-color="#09090b"/>
+                </linearGradient>
+            </defs>
+            <circle cx="50" cy="50" r="48" fill="url(#bg_${Math.abs(hash)})" stroke="#27272a" stroke-width="2"/>
+            <circle cx="50" cy="20" r="3.5" fill="${color}"/>
+            <line x1="50" y1="23.5" x2="50" y2="32" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+            <rect x="22" y="44" width="5" height="12" rx="2.5" fill="${color}" opacity="0.8"/>
+            <rect x="73" y="44" width="5" height="12" rx="2.5" fill="${color}" opacity="0.8"/>
+            <rect x="27" y="32" width="46" height="36" rx="10" fill="#27272a" stroke="#3f3f46" stroke-width="2"/>
+            <rect x="33" y="40" width="34" height="14" rx="7" fill="#09090b" stroke="#18181b" stroke-width="1.5"/>
+            <circle cx="42" cy="47" r="3.5" fill="${color}"/>
+            <circle cx="58" cy="47" r="3.5" fill="${color}"/>
+            <circle cx="43" cy="46" r="1.2" fill="#ffffff" opacity="0.8"/>
+            <circle cx="59" cy="46" r="1.2" fill="#ffffff" opacity="0.8"/>
+            <path d="M41 59h18" stroke="#52525b" stroke-width="2" stroke-linecap="round"/>
+            <path d="M43 68h14v5h-14z" fill="#27272a"/>
+            <path d="M25 90c0-10 10-14 25-14s25 4 25 14" fill="#18181b" stroke="#27272a" stroke-width="2"/>
+            <circle cx="50" cy="84" r="2.5" fill="${color}" opacity="0.7"/>
+        </svg>`;
+        return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    }
+
+    function renderWorkforceCard(m, i, isLeadOrAdmin, currentProfileId) {
+        const name = m.full_name || m.username || 'Anonymous';
+        const fallbackAvatar = getRoboticAvatar(m.id || m.username || name);
+        const avatarSrc = m.avatar_url ? m.avatar_url : fallbackAvatar;
+
+        return `
+        <div class="workforce-card open-user-profile group flex flex-col items-center justify-center p-3.5 sm:p-4 rounded-2xl bg-zinc-950/70 hover:bg-zinc-900/90 border border-zinc-800/80 hover:border-zinc-700 hover:shadow-xl transition-all duration-300 cursor-pointer text-center relative" 
+             data-id="${m.id}" 
+             title="View ${escapeHtml(name)}'s Profile"
+             style="animation-delay:${i * 0.04}s">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full p-1 bg-gradient-to-b from-zinc-700/30 via-zinc-800/50 to-zinc-900 border-2 border-zinc-700/60 group-hover:border-zinc-400 group-hover:scale-105 transition-all duration-300 shadow-md flex items-center justify-center overflow-hidden mb-2.5 flex-shrink-0">
+                <img src="${avatarSrc}" 
+                     alt="${escapeHtml(name)}" 
+                     class="w-full h-full object-cover rounded-full" 
+                     onerror="this.onerror=null;this.src='${fallbackAvatar}';">
+            </div>
+            <h4 class="text-xs sm:text-sm font-semibold text-zinc-100 group-hover:text-white transition-colors truncate max-w-full tracking-wide">
+                ${escapeHtml(name)}${m.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}
+            </h4>
+            ${(isLeadOrAdmin && m.id !== currentProfileId) ? `
+                <button class="remove-member-btn mt-2.5 px-2.5 py-0.5 bg-red-500/10 hover:bg-red-500/25 text-red-400 rounded-full text-[10px] font-semibold border border-red-500/25 transition-all z-10" 
+                        data-id="${m.id}" 
+                        title="Remove Member" 
+                        onclick="event.stopPropagation()">Remove</button>
+            ` : ''}
+        </div>`;
+    }
+
     const MILESTONE_PHASES = [
         { id: 'planning', name: 'Planning Phase', desc: 'Purpose, objectives, requirements, and constraints' },
         { id: 'design', name: 'Design Phase', desc: 'Architecture, system design, and technical plans' },
@@ -243,23 +309,21 @@ const TeamsView = (() => {
                         </div>
                     </div>
                     <div>
-                        <div class="glass-card rounded-xl p-4 sticky top-4">
+                        <div class="glass-card rounded-2xl p-4 sticky top-4 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl shadow-xl">
                             <div class="flex items-center justify-between mb-3">
-                                <h3 class="font-heading font-semibold text-sm">Members</h3>
-                                <span id="team-member-count" class="px-2 py-0.5 bg-red-600/15 text-red-400 rounded-full text-xs font-bold">${teamMembers.length}</span>
+                                <h3 class="font-heading font-bold text-sm tracking-wide text-zinc-200">Active Workforce</h3>
+                                <span id="team-member-count" class="px-2.5 py-0.5 bg-red-600/15 text-red-400 border border-red-500/20 rounded-full text-xs font-bold">${teamMembers.length}</span>
                             </div>
-                            <div class="flex items-center gap-1.5 mb-3 px-2 py-1.5 bg-zinc-950 rounded-lg"><span class="relative flex h-1.5 w-1.5"><span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative rounded-full h-1.5 w-1.5 bg-emerald-500"></span></span><span class="text-[10px] text-zinc-500">Live</span></div>
-                            <div id="team-roster" class="space-y-1.5 max-h-60 overflow-y-auto">
-                                ${teamMembers.length === 0 ? '<p class="text-xs text-zinc-600 text-center py-4">No members yet — be first!</p>'
-                : teamMembers.map((m, i) => `
-                                <div class="roster-item flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i * 0.04}s">
-                                    <div class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity open-user-profile" data-id="${m.id}" title="View Profile">
-                                        <div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name || m.username || '?').charAt(0).toUpperCase()}</div>
-                                        <p class="text-xs font-medium truncate">${m.full_name || m.username || 'Anonymous'}${m.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</p>
-                                    </div>
-                                    ${(isLeadOrAdmin && m.id !== profile?.id) ? `<button class="remove-member-btn px-1.5 py-1 bg-red-900/30 text-red-400 hover:bg-red-900/60 rounded text-[10px] font-medium transition-colors" data-id="${m.id}">Remove</button>` : ''}
-                                </div>
-                                `).join('')}
+                            <div class="flex items-center gap-2 mb-3.5 px-2.5 py-1.5 bg-zinc-950/80 border border-zinc-800/60 rounded-xl">
+                                <span class="relative flex h-2 w-2">
+                                    <span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span class="relative rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                <span class="text-[10px] text-zinc-400 font-medium">Live</span>
+                            </div>
+                            <div id="team-roster" class="grid grid-cols-2 gap-3 max-h-[460px] overflow-y-auto p-1">
+                                ${teamMembers.length === 0 ? '<div class="col-span-2 text-xs text-zinc-500 text-center py-8">No members yet — be first!</div>'
+                : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id)).join('')}
                             </div>
                         </div>
                         
@@ -356,16 +420,8 @@ const TeamsView = (() => {
                 // ... (rest of existing logic for members)
                 if (roster) {
                     const isLeadOrAdmin = (profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) || ICCSupabase.isAdmin();
-                    roster.innerHTML = teamMembers.length === 0 ? '<p class="text-xs text-zinc-600 text-center py-4">No members yet — be first!</p>'
-                        : teamMembers.map((m, i) => `
-                                <div class="roster-item flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-950/50 rounded-lg" style="animation-delay:${i * 0.04}s">
-                                    <div class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity open-user-profile" data-id="${m.id}" title="View Profile">
-                                        <div class="w-6 h-6 rounded-full bg-gradient-to-br ${lead.gradient} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(m.full_name || m.username || '?').charAt(0).toUpperCase()}</div>
-                                        <p class="text-xs font-medium truncate">${m.full_name || m.username || 'Anonymous'}${m.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</p>
-                                    </div>
-                                    ${(isLeadOrAdmin && m.id !== profile?.id) ? `<button class="remove-member-btn px-1.5 py-1 bg-red-900/30 text-red-400 hover:bg-red-900/60 rounded text-[10px] font-medium transition-colors" data-id="${m.id}">Remove</button>` : ''}
-                                </div>
-                                `).join('');
+                    roster.innerHTML = teamMembers.length === 0 ? '<div class="col-span-2 text-xs text-zinc-500 text-center py-8">No members yet — be first!</div>'
+                        : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id)).join('');
                 }
                 if (count) count.textContent = teamMembers.length;
 
@@ -481,6 +537,7 @@ const TeamsView = (() => {
         document.getElementById('team-roster')?.addEventListener('click', async (e) => {
             const btn = e.target.closest('.remove-member-btn');
             if (btn) {
+                e.stopPropagation();
                 if (!confirm('Are you sure you want to remove this member?')) return;
                 const userId = btn.dataset.id;
                 const { error } = await ICCSupabase.denyMember(userId, lead.id);
@@ -490,6 +547,15 @@ const TeamsView = (() => {
                 } else {
                     Toast.success('Member removed successfully');
                     const c = document.getElementById('app'); mount(c, lead.id);
+                }
+                return;
+            }
+
+            const profileCard = e.target.closest('.open-user-profile');
+            if (profileCard) {
+                const userId = profileCard.dataset.id;
+                if (userId && typeof UserProfileModal !== 'undefined') {
+                    UserProfileModal.open(userId);
                 }
             }
         });
