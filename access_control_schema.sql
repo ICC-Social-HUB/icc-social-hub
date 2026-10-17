@@ -9,9 +9,12 @@
 -- - moderate: Permission to delete posts and moderate content
 -- - events: Permission to create, edit, and delete events
 -- - leads: Permission to manage core team leads
--- - users_edit: Permission to edit user profiles and approve user change requests (accessible to all granted admins)
+-- - users_edit: Permission for administrators to submit member profile edit requests (subject to Super Admin review & approval)
 -- - users_export: Permission to view user roster table and export/download member Excel (.xlsx)
 -- - users: Legacy backward compatibility flag (true if either users_edit or users_export is true)
+--
+-- Security note: Regular administrators cannot directly approve user changes or bypass approval.
+-- Only Super Admins (role: 'super_admin' or 'superadmin') can review and approve/reject user edits.
 -- =========================================================================
 
 -- 1. Ensure profiles constraint permits 'super_admin' and 'superadmin' roles

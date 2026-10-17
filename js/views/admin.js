@@ -896,8 +896,8 @@ const AdminView = (() => {
 
                                 <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
                                     <div>
-                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">✏️ Edit & Approve Users</span>
-                                        <span class="text-[10px] text-zinc-500">Edit member details & approve change requests</span>
+                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">✏️ Request User Edits</span>
+                                        <span class="text-[10px] text-zinc-500">Submit member edit requests for Super Admin review</span>
                                     </div>
                                     <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="users_edit" ${appointingUserDraft?.users_edit ? 'checked' : ''}>
                                 </label>
@@ -1126,11 +1126,11 @@ const AdminView = (() => {
                                             </label>
                                         </div>
 
-                                        <!-- 5. Edit & Approve Users -->
+                                        <!-- 5. Request User Edits -->
                                         <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
                                             <div class="min-w-0 pr-2">
-                                                <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">✏️ Edit & Approve Users</span>
-                                                <span class="text-[10px] text-zinc-500 block truncate">Edit members & approve requests</span>
+                                                <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">✏️ Request User Edits</span>
+                                                <span class="text-[10px] text-zinc-500 block truncate">Submit user edit requests for Super Admin review</span>
                                             </div>
                                             <label class="switch-container flex-shrink-0">
                                                 <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="users_edit" data-name="${escapeHtml(fullName)}" ${perms.users_edit ? 'checked' : ''}>
@@ -1369,25 +1369,25 @@ const AdminView = (() => {
         const displayUsers = allUsers.filter(u => u.role !== 'admin' && u.role !== 'lead');
         const isSuper = ICCSupabase.isSuperAdmin();
         const perms = ICCSupabase.getAdminPermissions ? ICCSupabase.getAdminPermissions() : { all: true };
-        const canEditApprove = isSuper || perms.users_edit || perms.all;
+        const canRequestEdit = isSuper || perms.users_edit || perms.all;
         const canExportExcel = isSuper || perms.users_export || perms.all;
 
         return `
         <div class="space-y-4">
             <!-- Approval Hub / Permission Status Banner -->
-            ${canEditApprove ? `
-                <div class="glass-card rounded-2xl p-5 border ${isSuper ? 'border-amber-500/30' : 'border-blue-500/30'} bg-gradient-to-r ${isSuper ? 'from-amber-500/10 via-zinc-900 to-zinc-900' : 'from-blue-500/10 via-zinc-900 to-zinc-900'} shadow-xl">
+            ${isSuper ? `
+                <div class="glass-card rounded-2xl p-5 border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-zinc-900 to-zinc-900 shadow-xl">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl ${isSuper ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400' : 'bg-blue-500/20 border border-blue-500/30 text-blue-400'} flex items-center justify-center text-lg font-bold shadow-inner">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center text-lg font-bold shadow-inner">
                                 🛡️
                             </div>
                             <div>
-                                <h3 class="font-heading font-bold text-sm ${isSuper ? 'text-amber-200' : 'text-blue-200'}">${isSuper ? 'Super Admin Approval Hub' : 'Administrator User Approval Hub'}</h3>
-                                <p class="text-[11px] text-zinc-400">User profile modification requests awaiting authorization</p>
+                                <h3 class="font-heading font-bold text-sm text-amber-200">Super Admin Approval Hub</h3>
+                                <p class="text-[11px] text-zinc-400">Review and authorize administrator modification requests</p>
                             </div>
                         </div>
-                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${pendingEditRequests.length > 0 ? (isSuper ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse' : 'bg-blue-500/20 text-blue-300 border border-blue-500/40 animate-pulse') : 'bg-zinc-800 text-zinc-500'}">
+                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${pendingEditRequests.length > 0 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse' : 'bg-zinc-800 text-zinc-500'}">
                             ${pendingEditRequests.length} Pending
                         </span>
                     </div>
@@ -1402,12 +1402,37 @@ const AdminView = (() => {
                         </div>
                     `}
                 </div>
+            ` : (pendingEditRequests.length > 0 ? `
+                <div class="glass-card rounded-2xl p-4 border border-blue-500/30 bg-gradient-to-r from-blue-500/10 via-zinc-900 to-zinc-900 shadow-md">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center text-sm font-bold shadow-inner">
+                                ⏳
+                            </div>
+                            <div>
+                                <h3 class="font-heading font-bold text-xs text-blue-200">Pending User Edit Requests</h3>
+                                <p class="text-[10px] text-zinc-400">Awaiting Super Admin review and authorization</p>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                            ${pendingEditRequests.length} Pending
+                        </span>
+                    </div>
+                    <div class="space-y-2.5">
+                        ${pendingEditRequests.map(req => renderPendingRequestCard(req, false)).join('')}
+                    </div>
+                </div>
+            ` : (canRequestEdit ? `
+                <div class="glass-card rounded-xl p-3.5 border border-zinc-800 bg-zinc-950/40 flex items-center gap-2.5 text-xs text-zinc-400">
+                    <span class="text-base">✏️</span>
+                    <span>You can request edits for member profiles. All submitted changes are reviewed and approved by the Super Admin.</span>
+                </div>
             ` : `
                 <div class="glass-card rounded-xl p-3.5 border border-zinc-800 bg-zinc-950/40 flex items-center gap-2.5 text-xs text-zinc-400">
                     <span class="text-base">📋</span>
-                    <span>You have view-only access to this user roster. Profile editing and approval authority are restricted.</span>
+                    <span>You have view-only access to this user roster. Profile editing requests are restricted.</span>
                 </div>
-            `}
+            `))}
 
             <div class="flex items-center justify-between px-2 flex-wrap gap-3">
                 <div class="flex items-center gap-3">
@@ -1511,8 +1536,8 @@ const AdminView = (() => {
                                 `}
                             </div>
                             
-                            ${canEditApprove && !isEditing ? `
-                                <button class="edit-user-btn p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-all" data-id="${u.id}" title="Edit user details">
+                            ${canRequestEdit && !isEditing ? `
+                                <button class="edit-user-btn p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-all" data-id="${u.id}" title="${isSuper ? 'Edit user details (Direct)' : 'Request edit for user details'}">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                                 </button>
                             ` : ''}
@@ -1565,8 +1590,8 @@ const AdminView = (() => {
 
                         ${isEditing ? `
                             <div class="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-zinc-800/30">
-                                <button class="save-user-btn flex-1 py-2 ${canEditApprove ? 'bg-blue-600 hover:bg-blue-500' : 'bg-amber-600 hover:bg-amber-500'} text-white rounded-xl text-xs font-semibold transition-all shadow-md flex items-center justify-center gap-1.5" data-id="${u.id}">
-                                    ${canEditApprove ? '<span>Save Changes (Direct)</span>' : '<span>🛡️ Submit for Approval</span>'}
+                                <button class="save-user-btn flex-1 py-2 ${isSuper ? 'bg-blue-600 hover:bg-blue-500' : 'bg-amber-600 hover:bg-amber-500'} text-white rounded-xl text-xs font-semibold transition-all shadow-md flex items-center justify-center gap-1.5" data-id="${u.id}">
+                                    ${isSuper ? '<span>Save Changes (Direct)</span>' : '<span>🛡️ Submit Request for Super Admin Approval</span>'}
                                 </button>
                                 <button class="cancel-user-edit-btn px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-medium transition-all">Cancel</button>
                                 ${isManuallyUpdated ? `
@@ -1685,6 +1710,10 @@ const AdminView = (() => {
         // Super Admin Request Approval & Rejection Handlers
         container.querySelectorAll('.approve-edit-req-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
+                if (!ICCSupabase.isSuperAdmin()) {
+                    Toast.error('Access Denied: Only Super Admins can approve user change requests.');
+                    return;
+                }
                 const reqId = btn.dataset.id;
                 const origText = btn.innerHTML;
                 btn.innerHTML = 'Approving...';
@@ -1692,7 +1721,7 @@ const AdminView = (() => {
 
                 const res = await ICCSupabase.approveUserEditRequest(reqId);
                 if (res.error) {
-                    Toast.error('Approval failed: ' + res.error.message);
+                    Toast.error('Approval failed: ' + (res.error.message || res.error));
                     btn.innerHTML = origText;
                     btn.disabled = false;
                 } else {
@@ -1707,6 +1736,10 @@ const AdminView = (() => {
 
         container.querySelectorAll('.reject-edit-req-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
+                if (!ICCSupabase.isSuperAdmin()) {
+                    Toast.error('Access Denied: Only Super Admins can reject user change requests.');
+                    return;
+                }
                 const reqId = btn.dataset.id;
                 const reason = prompt('Optional rejection reason for the requesting admin:');
                 if (reason === null) return; // cancelled prompt
@@ -1717,7 +1750,7 @@ const AdminView = (() => {
 
                 const res = await ICCSupabase.rejectUserEditRequest(reqId, reason);
                 if (res.error) {
-                    Toast.error('Rejection failed: ' + res.error.message);
+                    Toast.error('Rejection failed: ' + (res.error.message || res.error));
                     btn.textContent = origText;
                     btn.disabled = false;
                 } else {
@@ -1734,7 +1767,7 @@ const AdminView = (() => {
                 const reqId = btn.dataset.id;
                 if (!confirm('Are you sure you want to cancel this change request?')) return;
                 const res = await ICCSupabase.cancelUserEditRequest(reqId);
-                if (res?.error) Toast.error('Failed to cancel request');
+                if (res?.error) Toast.error('Failed to cancel request: ' + (res.error.message || res.error));
                 else {
                     Toast.info('Change request cancelled');
                     pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
@@ -1782,64 +1815,6 @@ const AdminView = (() => {
                 const { error } = await ICCSupabase.adminDeletePost(btn.dataset.postId);
                 if (error) Toast.error('Delete failed');
                 else { Toast.success('Post deleted'); allPosts = await ICCSupabase.getAllPosts(); container.innerHTML = render(); bindEvents(container); }
-            });
-        });
-
-        // Super Admin Approval Actions
-        container.querySelectorAll('.approve-edit-req-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const reqId = btn.dataset.id;
-                const originalHtml = btn.innerHTML;
-                btn.innerHTML = 'Approving...';
-                btn.disabled = true;
-
-                const res = await ICCSupabase.approveUserEditRequest(reqId);
-                if (res.error) {
-                    Toast.error('Approval failed: ' + (res.error.message || res.error));
-                    btn.innerHTML = originalHtml;
-                    btn.disabled = false;
-                } else {
-                    Toast.success('✅ Change request approved and applied successfully!');
-                    pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
-                    allUsers = await ICCSupabase.getAllProfiles();
-                    container.innerHTML = render(); bindEvents(container);
-                }
-            });
-        });
-
-        container.querySelectorAll('.reject-edit-req-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const reqId = btn.dataset.id;
-                const reason = prompt('Optional: Enter rejection reason / notes for the admin:') || '';
-                const originalHtml = btn.innerHTML;
-                btn.innerHTML = 'Rejecting...';
-                btn.disabled = true;
-
-                const res = await ICCSupabase.rejectUserEditRequest(reqId, reason);
-                if (res.error) {
-                    Toast.error('Rejection failed: ' + (res.error.message || res.error));
-                    btn.innerHTML = originalHtml;
-                    btn.disabled = false;
-                } else {
-                    Toast.info('❌ Change request rejected.');
-                    pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
-                    container.innerHTML = render(); bindEvents(container);
-                }
-            });
-        });
-
-        container.querySelectorAll('.cancel-edit-req-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const reqId = btn.dataset.id;
-                if (!confirm('Cancel this pending change request?')) return;
-                const res = await ICCSupabase.cancelUserEditRequest(reqId);
-                if (res.error) {
-                    Toast.error('Cancel failed: ' + (res.error.message || res.error));
-                } else {
-                    Toast.info('Request cancelled.');
-                    pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
-                    container.innerHTML = render(); bindEvents(container);
-                }
             });
         });
 
@@ -2507,7 +2482,7 @@ const AdminView = (() => {
                         moderate: 'Moderate Content',
                         events: 'Manage Events',
                         leads: 'Team Leads',
-                        users_edit: 'Edit & Approve Users',
+                        users_edit: 'Request User Edits',
                         users_export: 'View & Download Excel',
                         users: 'User Management'
                     };

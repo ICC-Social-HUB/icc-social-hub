@@ -1066,6 +1066,17 @@ const ICCSupabase = (() => {
     async function adminUpdateUser(userId, fields) {
         if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
 
+        // Profile detail updates (full_name, username, usn, phone) can ONLY be applied directly by Super Admins.
+        // Regular Admins must submit an edit request via requestUserUpdate for Super Admin approval.
+        const isSuper = isSuperAdmin();
+        const hasProfileFields = fields.hasOwnProperty('full_name') || 
+                                 fields.hasOwnProperty('username') || 
+                                 fields.hasOwnProperty('usn') || 
+                                 fields.hasOwnProperty('phone');
+        if (!isSuper && hasProfileFields) {
+            return { error: { message: 'Access Denied: Only Super Admins can directly modify user profiles. Regular admins must submit an edit request.' } };
+        }
+
         const updateFields = { ...fields, updated_at: new Date().toISOString() };
         if (updateFields.team_id === 'none') updateFields.team_id = null;
 
@@ -1351,13 +1362,18 @@ const ICCSupabase = (() => {
     async function requestUserUpdate(userId, proposedFields, originalData = {}) {
         if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
 
-        // If a user with the Super Admin role or users_edit permission makes the update directly, apply immediately without approval
-        if (isSuperAdmin() || hasAdminPermission('users_edit')) {
+        // ONLY Super Admins can apply updates directly without approval
+        if (isSuperAdmin()) {
             const res = await adminUpdateUser(userId, proposedFields);
             return { direct: true, ...res };
         }
 
-        // For regular admins without direct edit permission: create a pending edit request
+        // Regular admins must have the 'users_edit' permission to request user edits
+        if (!hasAdminPermission('users_edit')) {
+            return { error: { message: 'Access Denied: You do not have permission to request user profile edits.' } };
+        }
+
+        // For all regular admins: create a pending edit request for Super Admin review and approval
         try {
             const requesterName = currentProfile?.full_name || currentProfile?.username || currentUser?.email || 'Admin';
             const requesterEmail = currentUser?.email || currentProfile?.email || '';
@@ -1391,7 +1407,7 @@ const ICCSupabase = (() => {
                 return { error };
             }
 
-            // High-priority notifications to all users with Super Admin category
+            // High-priority notifications to all users with Super Admin role
             try {
                 const { data: superAdmins } = await client.from('profiles')
                     .select('id')
@@ -1441,8 +1457,8 @@ const ICCSupabase = (() => {
 
     async function approveUserEditRequest(requestId) {
         if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
-        if (!isSuperAdmin() && !hasAdminPermission('users_edit')) {
-            return { error: { message: 'Access Denied: Only users with the Super Admin role or Edit & Approve Users permission can approve user detail changes.' } };
+        if (!isSuperAdmin()) {
+            return { error: { message: 'Access Denied: Only Super Admins can review and approve user detail changes.' } };
         }
 
         try {
@@ -1451,7 +1467,7 @@ const ICCSupabase = (() => {
             if (fetchErr || !req) return { error: fetchErr || { message: 'Request not found' } };
             if (req.status !== 'pending') return { error: { message: `Request is already ${req.status}` } };
 
-            // 1. Apply changes to the profile
+            // 1. Apply changes to the profile (caller is Super Admin)
             const { error: updateErr } = await adminUpdateUser(req.target_user_id, req.proposed_changes);
             if (updateErr) {
                 return { error: { message: 'Failed to update user profile: ' + updateErr.message } };
@@ -1475,7 +1491,7 @@ const ICCSupabase = (() => {
                     userId: req.requester_id,
                     type: 'system',
                     actorId: currentUser.id,
-                    body: `✅ User Approval: Your requested changes for ${req.target_user_name || 'user'} were APPROVED.`
+                    body: `✅ User Approval: Your requested changes for ${req.target_user_name || 'user'} were APPROVED by Super Admin.`
                 });
             }
 
@@ -1485,7 +1501,7 @@ const ICCSupabase = (() => {
                     userId: req.target_user_id,
                     type: 'system',
                     actorId: currentUser.id,
-                    body: `ℹ️ Your profile details have been updated and approved by Administration.`
+                    body: `ℹ️ Your profile details have been updated and approved by Super Admin.`
                 });
             }
 
@@ -1498,8 +1514,8 @@ const ICCSupabase = (() => {
 
     async function rejectUserEditRequest(requestId, reason = '') {
         if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
-        if (!isSuperAdmin() && !hasAdminPermission('users_edit')) {
-            return { error: { message: 'Access Denied: Only users with the Super Admin role or Edit & Approve Users permission can reject user profile edits.' } };
+        if (!isSuperAdmin()) {
+            return { error: { message: 'Access Denied: Only Super Admins can review and reject user profile edits.' } };
         }
 
         try {
@@ -1511,7 +1527,8 @@ const ICCSupabase = (() => {
                 .update({
                     status: 'rejected',
                     reviewed_by: currentUser.id,
-                    reviewed_at: new Date().toISOString()
+                    reviewed_at: new Date().toISOString(),
+                    rejection_reason: reason || null
                 })
                 .eq('id', requestId)
                 .select().single();
