@@ -11,6 +11,127 @@ const TeamsView = (() => {
         return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
     }
 
+    function getMemberTags(teamId) {
+        const lead = CORE_LEADS.find(l => l.id === Number(teamId));
+        let tags = lead?.milestones?.member_tags || {};
+        try {
+            const local = JSON.parse(localStorage.getItem(`team_tags_${teamId}`) || '{}');
+            tags = { ...tags, ...local };
+        } catch(e) {}
+        return tags;
+    }
+
+    async function saveMemberTag(teamId, memberId, newTag) {
+        let currentLead = CORE_LEADS.find(l => l.id === Number(teamId));
+        if (!currentLead) return;
+        if (!currentLead.milestones) currentLead.milestones = {};
+        if (!currentLead.milestones.member_tags) currentLead.milestones.member_tags = {};
+
+        if (newTag) {
+            currentLead.milestones.member_tags[memberId] = newTag;
+        } else {
+            delete currentLead.milestones.member_tags[memberId];
+        }
+
+        try {
+            localStorage.setItem(`team_tags_${teamId}`, JSON.stringify(currentLead.milestones.member_tags));
+        } catch(e) {}
+
+        const { error } = await ICCSupabase.updateLead(teamId, { milestones: currentLead.milestones });
+        if (error) {
+            console.warn('Could not persist tag to Supabase:', error);
+        }
+    }
+
+    function openMemberActionModal(memberId, memberName, currentTag, leadId) {
+        const existing = document.getElementById('workforce-action-modal');
+        if (existing) existing.remove();
+
+        const modalHtml = `
+        <div id="workforce-action-modal" class="fixed inset-0 z-[2500] bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-4" onclick="event.stopPropagation()">
+                <div class="flex items-center justify-between pb-3 border-b border-zinc-800">
+                    <div class="min-w-0 pr-2">
+                        <h3 class="font-heading font-bold text-base text-white truncate">${escapeHtml(memberName)}</h3>
+                        <p class="text-xs text-zinc-400">Manage Team Member</p>
+                    </div>
+                    <button id="close-workforce-modal-btn" class="text-zinc-500 hover:text-white p-1 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <!-- Update Tag Form -->
+                <form id="workforce-tag-form" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1.5">Member Tag / Role Title</label>
+                        <input type="text" id="workforce-tag-input" 
+                               value="${escapeHtml(currentTag || '')}" 
+                               placeholder="e.g. Frontend Dev, Robotics Specialist" 
+                               maxlength="40"
+                               class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-colors">
+                        <p class="text-[10px] text-zinc-500 mt-1">Displayed directly under their name on the workforce page.</p>
+                    </div>
+                    <button type="submit" class="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-colors">
+                        Save Tag Name
+                    </button>
+                </form>
+
+                <div class="pt-3 border-t border-zinc-800/80">
+                    <button id="workforce-remove-action-btn" class="w-full py-2 px-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        Remove Member from Team
+                    </button>
+                </div>
+            </div>
+        </div>`;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        const modalEl = document.getElementById('workforce-action-modal');
+        modalEl.addEventListener('click', (e) => {
+            if (e.target === modalEl) modalEl.remove();
+        });
+
+        document.getElementById('close-workforce-modal-btn')?.addEventListener('click', () => {
+            modalEl.remove();
+        });
+
+        document.getElementById('workforce-tag-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const inputVal = document.getElementById('workforce-tag-input')?.value.trim();
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+
+            await saveMemberTag(leadId, memberId, inputVal);
+            modalEl.remove();
+            Toast.success(inputVal ? 'Tag updated!' : 'Tag cleared!');
+            
+            // Re-render workforce roster
+            const roster = document.getElementById('team-roster');
+            if (roster) {
+                const tags = getMemberTags(leadId);
+                const profile = ICCSupabase.getProfile();
+                const isLeadOrAdmin = (profile?.role === 'lead' && Number(profile.team_id) === Number(leadId)) || ICCSupabase.isAdmin();
+                roster.innerHTML = teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No workforce members yet — be first to join!</div>'
+                    : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, tags)).join('');
+            }
+        });
+
+        document.getElementById('workforce-remove-action-btn')?.addEventListener('click', async () => {
+            if (!confirm(`Are you sure you want to remove ${memberName} from this team?`)) return;
+            modalEl.remove();
+            const { error } = await ICCSupabase.denyMember(memberId, leadId);
+            if (error) {
+                Toast.error('Could not remove member: ' + error.message);
+            } else {
+                Toast.success('Member removed successfully');
+                const c = document.getElementById('app');
+                mount(c, leadId);
+            }
+        });
+    }
+
     function getRoboticAvatar(seed = '') {
         const colors = ['#38bdf8', '#818cf8', '#34d399', '#f472b6', '#fbbf24', '#a78bfa'];
         let hash = 0;
@@ -44,30 +165,53 @@ const TeamsView = (() => {
         return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
     }
 
-    function renderWorkforceCard(m, i, isLeadOrAdmin, currentProfileId) {
+    function renderWorkforceCard(m, i, isLeadOrAdmin, currentProfileId, memberTags = {}) {
         const name = m.full_name || m.username || 'Anonymous';
         const fallbackAvatar = getRoboticAvatar(m.id || m.username || name);
         const avatarSrc = m.avatar_url ? m.avatar_url : fallbackAvatar;
+        const tag = memberTags[m.id] || (m.role === 'lead' ? 'Team Lead' : '');
 
         return `
-        <div class="workforce-card open-user-profile group flex flex-col items-center justify-center p-3.5 sm:p-4 rounded-2xl bg-zinc-950/70 hover:bg-zinc-900/90 border border-zinc-800/80 hover:border-zinc-700 hover:shadow-xl transition-all duration-300 cursor-pointer text-center relative" 
-             data-id="${m.id}" 
-             title="View ${escapeHtml(name)}'s Profile"
+        <div class="workforce-member-item group flex flex-col items-center justify-start text-center relative select-none w-full max-w-[150px] sm:max-w-[170px]" 
              style="animation-delay:${i * 0.04}s">
-            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full p-1 bg-gradient-to-b from-zinc-700/30 via-zinc-800/50 to-zinc-900 border-2 border-zinc-700/60 group-hover:border-zinc-400 group-hover:scale-105 transition-all duration-300 shadow-md flex items-center justify-center overflow-hidden mb-2.5 flex-shrink-0">
-                <img src="${avatarSrc}" 
-                     alt="${escapeHtml(name)}" 
-                     class="w-full h-full object-cover rounded-full" 
-                     onerror="this.onerror=null;this.src='${fallbackAvatar}';">
+            <!-- Circular Avatar ONLY (No rectangular/square borders, blends with page) -->
+            <div class="open-user-profile cursor-pointer relative" data-id="${m.id}" title="View ${escapeHtml(name)}'s Profile">
+                <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden shadow-xl ring-2 ring-zinc-800/90 group-hover:ring-emerald-500/80 group-hover:scale-105 transition-all duration-300 flex items-center justify-center bg-zinc-900">
+                    <img src="${avatarSrc}" 
+                         alt="${escapeHtml(name)}" 
+                         class="w-full h-full object-cover rounded-full" 
+                         onerror="this.onerror=null;this.src='${fallbackAvatar}';">
+                </div>
             </div>
-            <h4 class="text-xs sm:text-sm font-semibold text-zinc-100 group-hover:text-white transition-colors truncate max-w-full tracking-wide">
+
+            <!-- Member Name -->
+            <h4 class="open-user-profile text-sm sm:text-base font-bold text-zinc-100 group-hover:text-emerald-400 transition-colors text-center truncate max-w-full mt-3 cursor-pointer leading-snug" 
+                data-id="${m.id}" 
+                title="View ${escapeHtml(name)}'s Profile">
                 ${escapeHtml(name)}${m.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}
             </h4>
+
+            <!-- Member Tag (if present) -->
+            ${tag ? `
+                <span class="text-[11px] sm:text-xs text-zinc-400 text-center font-medium mt-0.5 truncate max-w-full leading-tight block">
+                    ${escapeHtml(tag)}
+                </span>
+            ` : ''}
+
+            <!-- Subtle 3-dot Menu (Team Leader / Admin only) -->
             ${(isLeadOrAdmin && m.id !== currentProfileId) ? `
-                <button class="remove-member-btn mt-2.5 px-2.5 py-0.5 bg-red-500/10 hover:bg-red-500/25 text-red-400 rounded-full text-[10px] font-semibold border border-red-500/25 transition-all z-10" 
+                <button class="member-actions-btn mt-1.5 p-1 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60 rounded-full transition-colors cursor-pointer" 
                         data-id="${m.id}" 
-                        title="Remove Member" 
-                        onclick="event.stopPropagation()">Remove</button>
+                        data-name="${escapeHtml(name)}" 
+                        data-tag="${escapeHtml(tag || '')}" 
+                        title="Member options"
+                        onclick="event.stopPropagation()">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="5" r="1.75"/>
+                        <circle cx="12" cy="12" r="1.75"/>
+                        <circle cx="12" cy="19" r="1.75"/>
+                    </svg>
+                </button>
             ` : ''}
         </div>`;
     }
@@ -252,9 +396,9 @@ const TeamsView = (() => {
                     </div></div>
                 </div>
             </div>
-            <div class="max-w-3xl mx-auto px-4 pt-20 pb-6">
-                <div class="text-center mb-6">
-                    <h1 class="font-heading font-bold text-2xl">${lead.team}</h1>
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-16">
+                <div class="text-center mb-8">
+                    <h1 class="font-heading font-bold text-2xl sm:text-3xl">${lead.team}</h1>
                     <div class="flex flex-col items-center justify-center gap-1 mt-2">
                         <span class="text-zinc-400 text-sm font-medium">Lead: <span id="lead-profile-link" class="text-emerald-400 hover:text-emerald-300 cursor-pointer underline decoration-dotted transition-colors" title="View Profile">${lead.name}${ICC_CONFIG.VERIFIED_TICK}</span></span>
                         <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-semibold mt-1">
@@ -262,20 +406,26 @@ const TeamsView = (() => {
                         </span>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 space-y-5">
+
+                <!-- Top Overview Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 space-y-6">
                         <div><h3 class="font-heading font-semibold text-sm mb-2 text-zinc-400">About</h3><p class="text-sm text-zinc-300 leading-relaxed">${lead.bio}</p></div>
                         <div><h3 class="font-heading font-semibold text-sm mb-2 text-zinc-400">Specialties</h3><div class="flex flex-wrap gap-2">${lead.specialties.map(s => `<span class="specialty-pill px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-400">${s}</span>`).join('')}</div></div>
                         
                         <!-- Milestone Tracker -->
                         ${renderMilestones(lead, isLeadOrAdmin)}
-                        
-                        <div class="pt-2">
+                    </div>
+
+                    <!-- Right Column: Membership Action Card & Pending/Lead Admin Controls -->
+                    <div class="space-y-5">
+                        <div class="glass-card rounded-2xl p-5 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl">
+                            <h4 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-3">Membership</h4>
                             ${(() => {
-                if (!user) return `<button id="team-join-btn" class="join-btn px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Join ${lead.team}</button><p class="text-[11px] text-zinc-600 mt-1.5">Sign in to join</p>`;
+                if (!user) return `<button id="team-join-btn" class="join-btn w-full px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Join ${lead.team}</button><p class="text-[11px] text-zinc-600 mt-1.5 text-center">Sign in to join</p>`;
                 if (isMember || ICCSupabase.isAdmin()) return `
                     <div class="flex flex-col gap-3">
-                        <div class="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600/15 border border-emerald-600/30 rounded-xl">
+                        <div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600/15 border border-emerald-600/30 rounded-xl">
                             <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             <span class="text-emerald-400 text-sm font-semibold">You're a Member</span>
                         </div>
@@ -284,51 +434,31 @@ const TeamsView = (() => {
                             Open Team Chat
                         </button>
                     </div>`;
-                if (profile?.memberships?.length > 0 || profile?.role === 'lead') return `<div class="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60"><svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span class="text-zinc-500 text-sm font-semibold">Already in a Team</span></div><p class="text-[10px] text-zinc-600 mt-2">You can only be in one team at a time.</p>`;
+                if (profile?.memberships?.length > 0 || profile?.role === 'lead') return `<div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60 w-full"><svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span class="text-zinc-500 text-sm font-semibold">Already in a Team</span></div><p class="text-[10px] text-zinc-600 mt-2 text-center">You can only be in one team at a time.</p>`;
                 if (isPending) return `
-                                    <div class="flex flex-col gap-2">
-                                        <div class="inline-flex items-center gap-2 px-6 py-3 bg-amber-500/15 border border-amber-500/30 rounded-xl">
-                                            <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                            <span class="text-amber-400 text-sm font-semibold">Request Pending</span>
-                                        </div>
-                                        <button id="team-cancel-btn" class="text-[11px] text-zinc-500 hover:text-red-400 transition-colors w-fit mx-auto underline decoration-dotted">Cancel Request</button>
-                                    </div>`;
+                    <div class="flex flex-col gap-2">
+                        <div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-amber-500/15 border border-amber-500/30 rounded-xl">
+                            <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="text-amber-400 text-sm font-semibold">Request Pending</span>
+                        </div>
+                        <button id="team-cancel-btn" class="text-[11px] text-zinc-500 hover:text-red-400 transition-colors w-fit mx-auto underline decoration-dotted">Cancel Request</button>
+                    </div>`;
 
                 if (profile?.pending_teams?.length > 0) return `
-                                    <div class="flex flex-col gap-1.5">
-                                        <div class="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60">
-                                            <svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                            <span class="text-zinc-500 text-sm font-semibold">Request Pending Elsewhere</span>
-                                        </div>
-                                        <p class="text-[10px] text-zinc-600 mt-0.5">You already have a pending request for another team. Cancel it to apply here.</p>
-                                    </div>`;
+                    <div class="flex flex-col gap-1.5">
+                        <div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60">
+                            <svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="text-zinc-500 text-sm font-semibold">Request Pending Elsewhere</span>
+                        </div>
+                        <p class="text-[10px] text-zinc-600 mt-0.5 text-center">You already have a pending request for another team. Cancel it to apply here.</p>
+                    </div>`;
 
-
-                return `<button id="team-join-btn" class="join-btn px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Request to Join ${lead.team}</button>`;
+                return `<button id="team-join-btn" class="join-btn w-full px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Request to Join ${lead.team}</button>`;
             })()}
                         </div>
-                    </div>
-                    <div>
-                        <div class="glass-card rounded-2xl p-4 sticky top-4 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl shadow-xl">
-                            <div class="flex items-center justify-between mb-3">
-                                <h3 class="font-heading font-bold text-sm tracking-wide text-zinc-200">Active Workforce</h3>
-                                <span id="team-member-count" class="px-2.5 py-0.5 bg-red-600/15 text-red-400 border border-red-500/20 rounded-full text-xs font-bold">${teamMembers.length}</span>
-                            </div>
-                            <div class="flex items-center gap-2 mb-3.5 px-2.5 py-1.5 bg-zinc-950/80 border border-zinc-800/60 rounded-xl">
-                                <span class="relative flex h-2 w-2">
-                                    <span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                    <span class="relative rounded-full h-2 w-2 bg-emerald-500"></span>
-                                </span>
-                                <span class="text-[10px] text-zinc-400 font-medium">Live</span>
-                            </div>
-                            <div id="team-roster" class="grid grid-cols-2 gap-3 max-h-[460px] overflow-y-auto p-1">
-                                ${teamMembers.length === 0 ? '<div class="col-span-2 text-xs text-zinc-500 text-center py-8">No members yet — be first!</div>'
-                : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id)).join('')}
-                            </div>
-                        </div>
-                        
+
                         ${isLeadOrAdmin ? `
-                        <div class="glass-card rounded-xl p-4 mt-4" id="pending-requests-container">
+                        <div class="glass-card rounded-2xl p-4 border border-zinc-800/80 bg-zinc-950/60" id="pending-requests-container">
                             <h3 class="font-heading font-semibold text-sm mb-3">Pending Requests (${pendingMembers.length})</h3>
                             <div class="space-y-2 max-h-48 overflow-y-auto">
                                 ${pendingMembers.length === 0 ? '<p class="text-xs text-zinc-600">No pending requests</p>' : pendingMembers.map(m => `
@@ -359,8 +489,8 @@ const TeamsView = (() => {
                                 `).join('')}
                             </div>
                             
-                            <div class="flex items-center justify-between mt-6 mb-3">
-                                <h3 class="font-heading font-semibold text-sm">Team Configuration</h3>
+                            <div class="flex items-center justify-between mt-5 mb-2 pt-3 border-t border-zinc-800/60">
+                                <h3 class="font-heading font-semibold text-xs text-zinc-300">Team Configuration</h3>
                                 <button id="toggle-config-btn" class="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500 hover:text-emerald-400" title="Edit Configuration">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                 </button>
@@ -378,6 +508,32 @@ const TeamsView = (() => {
                             </div>
                         </div>
                         ` : ''}
+                    </div>
+                </div>
+
+                <!-- Expansive, Seamless Active Workforce Section (No square or rectangular borders, fully blends into the page) -->
+                <div class="mt-14 pt-10 border-t border-zinc-800/40 w-full">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-10">
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <h3 class="font-heading font-bold text-xl sm:text-2xl text-white tracking-tight">Active Workforce</h3>
+                                <span id="team-member-count" class="px-2.5 py-0.5 bg-red-600/15 text-red-400 border border-red-500/20 rounded-full text-xs font-bold">${teamMembers.length}</span>
+                            </div>
+                            <p class="text-xs text-zinc-400 mt-1">Dedicated contributors powering ${lead.team}</p>
+                        </div>
+                        <div class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900/60 border border-zinc-800/60 rounded-full w-fit">
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <span class="text-xs text-zinc-400 font-medium">Live Roster</span>
+                        </div>
+                    </div>
+
+                    <!-- Clean circle-only grid utilizing full page width -->
+                    <div id="team-roster" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-10 gap-x-6 sm:gap-x-8 justify-items-center">
+                        ${teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No workforce members yet — be first to join!</div>'
+                : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, memberTags)).join('')}
                     </div>
                 </div>
             </div>
@@ -420,8 +576,9 @@ const TeamsView = (() => {
                 // ... (rest of existing logic for members)
                 if (roster) {
                     const isLeadOrAdmin = (profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) || ICCSupabase.isAdmin();
-                    roster.innerHTML = teamMembers.length === 0 ? '<div class="col-span-2 text-xs text-zinc-500 text-center py-8">No members yet — be first!</div>'
-                        : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id)).join('');
+                    const memberTags = getMemberTags(currentTeamId);
+                    roster.innerHTML = teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No workforce members yet — be first to join!</div>'
+                        : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, memberTags)).join('');
                 }
                 if (count) count.textContent = teamMembers.length;
 
@@ -534,20 +691,14 @@ const TeamsView = (() => {
             else { Toast.success('Request cancelled'); const c = document.getElementById('app'); mount(c, lead.id); }
         });
 
-        document.getElementById('team-roster')?.addEventListener('click', async (e) => {
-            const btn = e.target.closest('.remove-member-btn');
-            if (btn) {
+        document.getElementById('team-roster')?.addEventListener('click', (e) => {
+            const actionBtn = e.target.closest('.member-actions-btn');
+            if (actionBtn) {
                 e.stopPropagation();
-                if (!confirm('Are you sure you want to remove this member?')) return;
-                const userId = btn.dataset.id;
-                const { error } = await ICCSupabase.denyMember(userId, lead.id);
-                if (error) {
-                    console.error('Removal error:', error);
-                    Toast.error('Error: Could not remove member.');
-                } else {
-                    Toast.success('Member removed successfully');
-                    const c = document.getElementById('app'); mount(c, lead.id);
-                }
+                const memberId = actionBtn.dataset.id;
+                const memberName = actionBtn.dataset.name;
+                const currentTag = actionBtn.dataset.tag;
+                openMemberActionModal(memberId, memberName, currentTag, lead.id);
                 return;
             }
 
