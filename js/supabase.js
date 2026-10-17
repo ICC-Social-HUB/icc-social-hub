@@ -1160,6 +1160,11 @@ const ICCSupabase = (() => {
             return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, all: false };
         }
 
+        // Super Admins ALWAYS have ALL permissions permanently — immutable and non-degradable
+        if (isSuper) {
+            return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, all: true };
+        }
+
         // Backward compatibility: If admin_permissions is undefined/null, grant all by default
         if (target.admin_permissions === undefined || target.admin_permissions === null) {
             return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, all: true };
@@ -1236,6 +1241,15 @@ const ICCSupabase = (() => {
         }
 
         try {
+            // Guard: Super Admin privileges are permanent and immutable — cannot be modified by anyone or themselves
+            const { data: targetProfile } = await client.from('profiles').select('role, email').eq('id', userId).maybeSingle();
+            if (targetProfile) {
+                const targetRole = (targetProfile.role || '').toLowerCase().trim();
+                if (targetRole === 'super_admin' || targetRole === 'superadmin' || targetProfile.email === 'iccsocialhub@gmail.com') {
+                    return { error: { message: 'Super Administrator privileges are permanent and cannot be modified.' } };
+                }
+            }
+
             const b = !!permissions.broadcast;
             const m = !!permissions.moderate;
             const ev = !!permissions.events;
@@ -1301,11 +1315,22 @@ const ICCSupabase = (() => {
             return { error: { message: 'Unauthorized: Only Super Admins can alter administrator roles.' } };
         }
 
-        if (userId === currentUser.id && newRole !== 'super_admin' && newRole !== 'superadmin') {
-            return { error: { message: 'Safety check: You cannot demote yourself from Super Admin.' } };
-        }
-
         try {
+            // Safety check: Super Admin privileges cannot be demoted or changed by anyone or themselves
+            const { data: targetProfile } = await client.from('profiles').select('role, email').eq('id', userId).maybeSingle();
+            if (targetProfile) {
+                const targetRole = (targetProfile.role || '').toLowerCase().trim();
+                if (targetRole === 'super_admin' || targetRole === 'superadmin' || targetProfile.email === 'iccsocialhub@gmail.com') {
+                    if (newRole !== 'super_admin' && newRole !== 'superadmin') {
+                        return { error: { message: 'Super Administrator access is permanent and cannot be changed or removed by anyone.' } };
+                    }
+                }
+            }
+
+            if (userId === currentUser.id && newRole !== 'super_admin' && newRole !== 'superadmin') {
+                return { error: { message: 'Safety check: You cannot demote yourself from Super Admin.' } };
+            }
+
             const updatePayload = {
                 role: newRole,
                 updated_at: new Date().toISOString()

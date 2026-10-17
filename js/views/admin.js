@@ -985,7 +985,7 @@ const AdminView = (() => {
                             <span>🛡️ Active Administrators & Feature Access</span>
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700">${allAdmins.length}</span>
                         </h4>
-                        <p class="text-[11px] text-zinc-400">Toggle individual feature switches in real time. Changes take effect immediately.</p>
+                        <p class="text-[11px] text-zinc-400">Configure feature access for standard administrators. Super Administrator access is permanent and immutable.</p>
                     </div>
 
                     <!-- Role Filter Pills -->
@@ -1035,34 +1035,28 @@ const AdminView = (() => {
 
                                 <!-- Action Buttons -->
                                 <div class="flex items-center gap-2">
-                                    ${!isMe ? `
-                                        ${isSuper ? `
-                                            <button class="demote-superadmin-btn px-2.5 py-1 text-[11px] font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-colors" data-id="${u.id}" data-name="${escapeHtml(fullName)}">
-                                                Demote to Admin
-                                            </button>
-                                        ` : `
+                                    ${isSuper ? `
+                                        <span class="text-[10px] text-amber-400/90 font-medium px-2.5 py-1 bg-amber-500/10 rounded-lg border border-amber-500/30 flex items-center gap-1.5">
+                                            🔒 Permanent Super Admin
+                                        </span>
+                                    ` : `
+                                        ${!isMe ? `
                                             <button class="promote-superadmin-btn px-2.5 py-1 text-[11px] font-medium bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-white border border-amber-500/30 rounded-lg transition-colors" data-id="${u.id}" data-name="${escapeHtml(fullName)}">
                                                 Promote to Super Admin
                                             </button>
+                                            <button class="revoke-admin-btn px-2.5 py-1 text-[11px] font-medium bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 rounded-lg transition-colors" data-id="${u.id}" data-name="${escapeHtml(fullName)}">
+                                                Revoke Admin
+                                            </button>
+                                        ` : `
+                                            <span class="text-[10px] text-zinc-500 px-2.5 py-1 bg-zinc-950 rounded-lg border border-zinc-800/80">Active User</span>
                                         `}
-                                        <button class="revoke-admin-btn px-2.5 py-1 text-[11px] font-medium bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 rounded-lg transition-colors" data-id="${u.id}" data-name="${escapeHtml(fullName)}">
-                                            Revoke Admin
-                                        </button>
-                                    ` : `
-                                        <span class="text-[10px] text-zinc-500 px-2.5 py-1 bg-zinc-950 rounded-lg border border-zinc-800/80">Active User (Protected)</span>
                                     `}
                                 </div>
                             </div>
 
-                            <!-- Granular Feature Access Toggles -->
-                            <div class="mt-4 pt-4 border-t ${isSuper ? 'border-amber-500/20' : 'border-zinc-800/80'}">
-                                ${isSuper ? `
-                                    <div class="mb-3 p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-2 text-xs text-amber-200">
-                                        <span class="text-base">🛡️</span>
-                                        <span>Super Administrator: Full administrative privileges &amp; Access Control console authority. Toggle individual features below to configure live access.</span>
-                                    </div>
-                                ` : ''}
-
+                            <!-- Granular Feature Access Toggles (Standard Admins Only) -->
+                            ${isSuper ? '' : `
+                            <div class="mt-4 pt-4 border-t border-zinc-800/80">
                                 <div class="space-y-3">
                                     <!-- Master Toggle -->
                                     <div class="flex items-center justify-between p-3 bg-zinc-950/70 rounded-xl border border-zinc-800">
@@ -1152,6 +1146,7 @@ const AdminView = (() => {
                                     </div>
                                 </div>
                             </div>
+                            `}
                         </div>`;
                     }).join('')}
                 </div>
@@ -2518,22 +2513,10 @@ const AdminView = (() => {
             });
         });
 
-        // Demote Super Admin to Standard Admin
+        // Demote Super Admin to Standard Admin (Blocked - Super Admin access is permanent)
         container.querySelectorAll('.demote-superadmin-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
-                const userId = btn.dataset.id;
-                const name = btn.dataset.name || 'User';
-                if (!confirm(`Demote ${name} from Super Admin to Standard Admin?`)) return;
-
-                const res = await ICCSupabase.setAdminRole(userId, 'admin', { ...ICCSupabase.DEFAULT_ADMIN_PERMISSIONS, all: true });
-                if (res.error) {
-                    Toast.error('Failed to demote: ' + (res.error.message || res.error));
-                } else {
-                    Toast.info(`Demoted ${name} to Standard Admin.`);
-                    allUsers = await ICCSupabase.getAllProfiles();
-                    container.innerHTML = render();
-                    bindEvents(container);
-                }
+                Toast.error('Super Administrator access is permanent and cannot be demoted.');
             });
         });
 
@@ -2542,6 +2525,11 @@ const AdminView = (() => {
             btn.addEventListener('click', async () => {
                 const userId = btn.dataset.id;
                 const name = btn.dataset.name || 'User';
+                const targetUser = allUsers.find(u => u.id === userId);
+                if (targetUser && (targetUser.role === 'super_admin' || targetUser.role === 'superadmin' || targetUser.email === 'iccsocialhub@gmail.com')) {
+                    Toast.error('Super Administrator access is permanent and cannot be revoked.');
+                    return;
+                }
                 if (!confirm(`⚠️ Revoke administrator privileges for ${name}? They will become a standard member.`)) return;
 
                 const res = await ICCSupabase.setAdminRole(userId, 'member', null);
