@@ -62,6 +62,9 @@ const TeamsView = (() => {
         const existing = document.getElementById('workforce-action-modal');
         if (existing) existing.remove();
 
+        const profile = ICCSupabase.getProfile();
+        const canRemove = memberId !== profile?.id;
+
         const modalHtml = `
         <div id="workforce-action-modal" class="fixed inset-0 z-[2500] bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
             <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-4" onclick="event.stopPropagation()">
@@ -76,8 +79,8 @@ const TeamsView = (() => {
                             <span>Back</span>
                         </button>
                         <button id="close-workforce-modal-btn" class="text-zinc-500 hover:text-white p-1 rounded-lg">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
                     </div>
                 </div>
 
@@ -97,12 +100,14 @@ const TeamsView = (() => {
                     </button>
                 </form>
 
+                ${canRemove ? `
                 <div class="pt-3 border-t border-zinc-800/80">
                     <button id="workforce-remove-action-btn" class="w-full py-2 px-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2">
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         Remove Member from Team
                     </button>
                 </div>
+                ` : ''}
             </div>
         </div>`;
 
@@ -143,9 +148,11 @@ const TeamsView = (() => {
             if (roster) {
                 const tags = getMemberTags(leadId);
                 const profile = ICCSupabase.getProfile();
-                const isLeadOrAdmin = (profile?.role === 'lead' && Number(profile.team_id) === Number(leadId)) || ICCSupabase.isAdmin();
+                const isLeadMember = teamMembers.some(m => m.id === profile?.id && m.role === 'lead');
+                const isLeadUser = (profile?.role === 'lead' && Number(profile.team_id) === Number(leadId)) || isLeadMember;
+                const isLeadOrAdmin = isLeadUser || ICCSupabase.isAdmin();
                 roster.innerHTML = teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No workforce members yet — be first to join!</div>'
-                    : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, tags)).join('');
+                    : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, tags, leadId)).join('');
             }
         });
 
@@ -161,6 +168,19 @@ const TeamsView = (() => {
                 mount(c, leadId);
             }
         });
+    }
+
+    function handleMemberActionClick(e, btn) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (!btn) return;
+        const memberId = btn.dataset.id;
+        const memberName = btn.dataset.name;
+        const currentTag = btn.dataset.tag;
+        const leadId = btn.dataset.leadId || currentTeamId;
+        openMemberActionModal(memberId, memberName, currentTag, leadId);
     }
 
     function getRoboticAvatar(seed = '') {
@@ -196,18 +216,18 @@ const TeamsView = (() => {
         return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
     }
 
-    function renderWorkforceCard(m, i, isLeadOrAdmin, currentProfileId, memberTags = {}) {
+    function renderWorkforceCard(m, i, isLeadOrAdmin, currentProfileId, memberTags = {}, leadId = currentTeamId) {
         const name = m.full_name || m.username || 'Anonymous';
         const fallbackAvatar = getRoboticAvatar(m.id || m.username || name);
         const avatarSrc = m.avatar_url ? m.avatar_url : fallbackAvatar;
         const tag = memberTags[m.id] || (m.role === 'lead' ? 'Team Lead' : '');
 
         return `
-        <div class="workforce-member-item group flex flex-col items-center justify-start text-center relative select-none w-full max-w-[150px] sm:max-w-[170px]" 
+        <div class="workforce-member-item group flex flex-col items-center justify-start text-center relative select-none w-full max-w-[130px] sm:max-w-[150px]" 
              style="animation-delay:${i * 0.04}s">
             <!-- Circular Avatar ONLY (No rectangular/square borders, blends with page) -->
             <div class="open-user-profile cursor-pointer relative" data-id="${m.id}" title="View ${escapeHtml(name)}'s Profile">
-                <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden shadow-xl ring-2 ring-zinc-800/90 group-hover:ring-emerald-500/80 group-hover:scale-105 transition-all duration-300 flex items-center justify-center bg-zinc-900">
+                <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden shadow-xl ring-2 ring-zinc-800/90 group-hover:ring-emerald-500/80 group-hover:scale-105 transition-all duration-300 flex items-center justify-center bg-zinc-900">
                     <img src="${avatarSrc}" 
                          alt="${escapeHtml(name)}" 
                          class="w-full h-full object-cover rounded-full" 
@@ -216,7 +236,7 @@ const TeamsView = (() => {
             </div>
 
             <!-- Member Name -->
-            <h4 class="open-user-profile text-sm sm:text-base font-bold text-zinc-100 group-hover:text-emerald-400 transition-colors text-center truncate max-w-full mt-3 cursor-pointer leading-snug" 
+            <h4 class="open-user-profile text-xs sm:text-sm font-bold text-zinc-100 group-hover:text-emerald-400 transition-colors text-center truncate max-w-full mt-2.5 cursor-pointer leading-tight" 
                 data-id="${m.id}" 
                 title="View ${escapeHtml(name)}'s Profile">
                 ${escapeHtml(name)}${m.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}
@@ -224,19 +244,20 @@ const TeamsView = (() => {
 
             <!-- Member Tag (if present) -->
             ${tag ? `
-                <span class="text-[11px] sm:text-xs text-zinc-400 text-center font-medium mt-0.5 truncate max-w-full leading-tight block">
+                <span class="text-[10px] sm:text-[11px] text-zinc-400 text-center font-medium mt-0.5 truncate max-w-full leading-tight block">
                     ${escapeHtml(tag)}
                 </span>
             ` : ''}
 
             <!-- Subtle 3-dot Menu (Team Leader / Admin only) -->
-            ${(isLeadOrAdmin && m.id !== currentProfileId) ? `
-                <button class="member-actions-btn mt-1.5 p-1 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60 rounded-full transition-colors cursor-pointer" 
+            ${isLeadOrAdmin ? `
+                <button class="member-actions-btn mt-1.5 p-1 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-full transition-colors cursor-pointer z-10" 
                         data-id="${m.id}" 
                         data-name="${escapeHtml(name)}" 
                         data-tag="${escapeHtml(tag || '')}" 
+                        data-lead-id="${leadId || ''}"
                         title="Member options"
-                        onclick="event.stopPropagation()">
+                        onclick="TeamsView.handleMemberActionClick(event, this)">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                         <circle cx="12" cy="5" r="1.75"/>
                         <circle cx="12" cy="12" r="1.75"/>
@@ -417,96 +438,102 @@ const TeamsView = (() => {
         const profile = ICCSupabase.getProfile();
         const isMember = profile?.memberships?.includes(lead.id);
         const isPending = profile?.pending_teams?.includes(lead.id);
-        const isLeadUser = profile?.role === 'lead' && Number(profile.team_id) === Number(lead.id);
+        const isLeadMember = teamMembers.some(m => m.id === profile?.id && m.role === 'lead');
+        const isLeadUser = (profile?.role === 'lead' && Number(profile.team_id) === Number(lead.id)) || isLeadMember;
         const isLeadOrAdmin = isLeadUser || ICCSupabase.isAdmin();
         const memberTags = getMemberTags(lead.id);
 
         return `
-        <section class="min-h-screen relative pb-12" id="team-detail-section">
+        <section class="min-h-screen relative pb-16" id="team-detail-section">
             <!-- Floating Quick-Back Button: stays accessible even when scrolled down -->
             <button id="team-floating-back-btn" onclick="TeamsView.goBack(event)" class="fixed bottom-6 left-6 z-40 flex items-center gap-2 px-4 py-2.5 bg-[#17212b]/95 hover:bg-[#242f3d] text-white text-xs font-bold rounded-full border border-[#2b394a] shadow-2xl backdrop-blur-md transition-all active:scale-95 cursor-pointer group" title="Go Back">
                 <svg class="w-4 h-4 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                 <span>Back</span>
             </button>
 
-            <!-- Outer wrapper has NO overflow-hidden so the avatar can peek below freely -->
-            <div class="relative h-40 sm:h-52">
-                <!-- Background gradient clipped independently -->
-                <div class="absolute inset-0 bg-gradient-to-br ${lead.gradient} overflow-hidden">
-                    <div class="absolute inset-0 bg-zinc-950/30"></div>
+            <!-- Clean Header without Colored Banner -->
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+                <div class="flex items-center justify-between mb-4">
+                    <button id="team-back-btn" onclick="TeamsView.goBack(event)" class="flex items-center gap-1.5 px-3.5 py-2 bg-zinc-900/90 hover:bg-zinc-800 rounded-xl text-xs font-semibold text-white border border-zinc-800 transition-all cursor-pointer shadow-md active:scale-95">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                        <span>Back</span>
+                    </button>
                 </div>
-                <button id="team-back-btn" onclick="TeamsView.goBack(event)" class="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-zinc-950/70 hover:bg-zinc-900 backdrop-blur-md rounded-xl text-xs font-semibold text-white border border-white/20 transition-all cursor-pointer shadow-lg active:scale-95">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-                    <span>Back</span>
-                </button>
-                <!-- Avatar now free to overflow below the banner -->
-                <div class="absolute -bottom-12 left-1/2 -translate-x-1/2 z-10">
-                    <div class="avatar-ring"><div class="w-24 h-24 rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden ${lead.avatar_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}" ${lead.avatar_url ? `data-full-image="${lead.avatar_url}"` : ''}>
+
+                <div class="flex flex-col items-center justify-center text-center pb-8 border-b border-zinc-800/40">
+                    <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-zinc-900 ring-4 ring-zinc-800/80 shadow-2xl flex items-center justify-center overflow-hidden mb-4 ${lead.avatar_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}" ${lead.avatar_url ? `data-full-image="${lead.avatar_url}"` : ''}>
                         ${lead.avatar_url
-                ? `<img src="${lead.avatar_url}" class="w-full h-full object-cover">`
-                : `<span class="font-heading font-bold text-3xl" style="color:${lead.color}">${lead.initials}</span>`}
-                    </div></div>
-                </div>
-            </div>
-            <div class="max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-16">
-                <div class="text-center mb-8">
-                    <h1 class="font-heading font-bold text-2xl sm:text-3xl">${lead.team}</h1>
-                    <div class="flex flex-col items-center justify-center gap-1 mt-2">
+                            ? `<img src="${lead.avatar_url}" class="w-full h-full object-cover">`
+                            : `<span class="font-heading font-bold text-3xl" style="color:${lead.color || '#10b981'}">${lead.initials}</span>`}
+                    </div>
+                    <h1 class="font-heading font-bold text-2xl sm:text-3xl text-white tracking-tight">${lead.team}</h1>
+                    <div class="flex flex-wrap items-center justify-center gap-2 mt-2">
                         <span class="text-zinc-400 text-sm font-medium">Lead: <span id="lead-profile-link" class="text-emerald-400 hover:text-emerald-300 cursor-pointer underline decoration-dotted transition-colors" title="View Profile">${lead.name}${ICC_CONFIG.VERIFIED_TICK}</span></span>
-                        <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-semibold mt-1">
+                        <span class="text-zinc-600 hidden sm:inline">•</span>
+                        <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-semibold">
                             Project: <span class="${lead.project_name ? 'text-emerald-400' : 'text-zinc-500'}">${lead.project_name || 'Yet to choose'}</span>
                         </span>
                     </div>
                 </div>
+            </div>
 
-                <!-- Top Overview Grid -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div class="lg:col-span-2 space-y-6">
-                        <div><h3 class="font-heading font-semibold text-sm mb-2 text-zinc-400">About</h3><p class="text-sm text-zinc-300 leading-relaxed">${lead.bio || 'No bio provided yet.'}</p></div>
-                        <div><h3 class="font-heading font-semibold text-sm mb-2 text-zinc-400">Specialties</h3><div class="flex flex-wrap gap-2">${(lead.specialties || []).map(s => `<span class="specialty-pill px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-400">${s}</span>`).join('')}</div></div>
-                        
-                        <!-- Milestone Tracker -->
-                        ${renderMilestones(lead, isLeadOrAdmin)}
-                    </div>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <!-- Two-Column Layout on Laptop (lg:), Single-Column on Mobile/Tablet -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    
+                    <!-- Left Area: Details, Membership & Milestones (lg:col-span-7) -->
+                    <div class="lg:col-span-7 space-y-6">
+                        <!-- About & Specialties -->
+                        <div class="glass-card rounded-2xl p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl space-y-5">
+                            <div>
+                                <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-2">About</h3>
+                                <p class="text-sm text-zinc-300 leading-relaxed">${lead.bio || 'No bio provided yet.'}</p>
+                            </div>
+                            <div>
+                                <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-2">Specialties</h3>
+                                <div class="flex flex-wrap gap-2">
+                                    ${(lead.specialties || []).map(s => `<span class="specialty-pill px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-400">${s}</span>`).join('')}
+                                </div>
+                            </div>
+                        </div>
 
-                    <!-- Right Column: Membership Action Card & Pending/Lead Admin Controls -->
-                    <div class="space-y-5">
+                        <!-- Membership Action Card & Pending/Lead Admin Controls -->
                         <div class="glass-card rounded-2xl p-5 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl">
                             <h4 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-3">Membership</h4>
                             ${(() => {
-                if (!user) return `<button id="team-join-btn" class="join-btn w-full px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Join ${lead.team}</button><p class="text-[11px] text-zinc-600 mt-1.5 text-center">Sign in to join</p>`;
-                if (isMember || ICCSupabase.isAdmin()) return `
-                    <div class="flex flex-col gap-3">
-                        <div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600/15 border border-emerald-600/30 rounded-xl">
-                            <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span class="text-emerald-400 text-sm font-semibold">You're a Member</span>
-                        </div>
-                        <button id="open-team-chat-btn" class="flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-sm font-bold transition-all shadow-lg shadow-zinc-950/50 group">
-                            <svg class="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                            Open Team Chat
-                        </button>
-                    </div>`;
-                if (profile?.memberships?.length > 0 || profile?.role === 'lead') return `<div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60 w-full"><svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span class="text-zinc-500 text-sm font-semibold">Already in a Team</span></div><p class="text-[10px] text-zinc-600 mt-2 text-center">You can only be in one team at a time.</p>`;
-                if (isPending) return `
-                    <div class="flex flex-col gap-2">
-                        <div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-amber-500/15 border border-amber-500/30 rounded-xl">
-                            <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span class="text-amber-400 text-sm font-semibold">Request Pending</span>
-                        </div>
-                        <button id="team-cancel-btn" class="text-[11px] text-zinc-500 hover:text-red-400 transition-colors w-fit mx-auto underline decoration-dotted">Cancel Request</button>
-                    </div>`;
+                                if (!user) return `<button id="team-join-btn" class="join-btn w-full px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Join ${lead.team}</button><p class="text-[11px] text-zinc-600 mt-1.5 text-center">Sign in to join</p>`;
+                                if (isMember || ICCSupabase.isAdmin()) return `
+                                    <div class="flex flex-col gap-3">
+                                        <div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600/15 border border-emerald-600/30 rounded-xl">
+                                            <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <span class="text-emerald-400 text-sm font-semibold">You're a Member</span>
+                                        </div>
+                                        <button id="open-team-chat-btn" class="flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-sm font-bold transition-all shadow-lg shadow-zinc-950/50 group">
+                                            <svg class="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                                            Open Team Chat
+                                        </button>
+                                    </div>`;
+                                if (profile?.memberships?.length > 0 || profile?.role === 'lead') return `<div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60 w-full"><svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span class="text-zinc-500 text-sm font-semibold">Already in a Team</span></div><p class="text-[10px] text-zinc-600 mt-2 text-center">You can only be in one team at a time.</p>`;
+                                if (isPending) return `
+                                    <div class="flex flex-col gap-2">
+                                        <div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-amber-500/15 border border-amber-500/30 rounded-xl">
+                                            <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <span class="text-amber-400 text-sm font-semibold">Request Pending</span>
+                                        </div>
+                                        <button id="team-cancel-btn" class="text-[11px] text-zinc-500 hover:text-red-400 transition-colors w-fit mx-auto underline decoration-dotted">Cancel Request</button>
+                                    </div>`;
 
-                if (profile?.pending_teams?.length > 0) return `
-                    <div class="flex flex-col gap-1.5">
-                        <div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60">
-                            <svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span class="text-zinc-500 text-sm font-semibold">Request Pending Elsewhere</span>
-                        </div>
-                        <p class="text-[10px] text-zinc-600 mt-0.5 text-center">You already have a pending request for another team. Cancel it to apply here.</p>
-                    </div>`;
+                                if (profile?.pending_teams?.length > 0) return `
+                                    <div class="flex flex-col gap-1.5">
+                                        <div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60">
+                                            <svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <span class="text-zinc-500 text-sm font-semibold">Request Pending Elsewhere</span>
+                                        </div>
+                                        <p class="text-[10px] text-zinc-600 mt-0.5 text-center">You already have a pending request for another team. Cancel it to apply here.</p>
+                                    </div>`;
 
-                return `<button id="team-join-btn" class="join-btn w-full px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Request to Join ${lead.team}</button>`;
-            })()}
+                                return `<button id="team-join-btn" class="join-btn w-full px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Request to Join ${lead.team}</button>`;
+                            })()}
                         </div>
 
                         ${isLeadOrAdmin ? `
@@ -560,33 +587,39 @@ const TeamsView = (() => {
                             </div>
                         </div>
                         ` : ''}
-                    </div>
-                </div>
 
-                <!-- Expansive, Seamless Active Workforce Section (No square or rectangular borders, fully blends into the page) -->
-                <div class="mt-14 pt-10 border-t border-zinc-800/40 w-full">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-10">
-                        <div>
-                            <div class="flex items-center gap-3">
-                                <h3 class="font-heading font-bold text-xl sm:text-2xl text-white tracking-tight">Active Workforce</h3>
-                                <span id="team-member-count" class="px-2.5 py-0.5 bg-red-600/15 text-red-400 border border-red-500/20 rounded-full text-xs font-bold">${teamMembers.length}</span>
+                        <!-- Milestone Tracker -->
+                        ${renderMilestones(lead, isLeadOrAdmin)}
+                    </div>
+
+                    <!-- Right Area on Laptop (lg:): Active Workforce Section (lg:col-span-5) -->
+                    <div class="lg:col-span-5 w-full" id="workforce-section">
+                        <div class="glass-card rounded-2xl p-5 sm:p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl">
+                            <div class="flex items-center justify-between gap-3 mb-6 pb-4 border-b border-zinc-800/60">
+                                <div>
+                                    <div class="flex items-center gap-2.5">
+                                        <h3 class="font-heading font-bold text-lg sm:text-xl text-white tracking-tight">Active Workforce</h3>
+                                        <span id="team-member-count" class="px-2.5 py-0.5 bg-red-600/15 text-red-400 border border-red-500/20 rounded-full text-xs font-bold">${teamMembers.length}</span>
+                                    </div>
+                                    <p class="text-xs text-zinc-400 mt-1">Dedicated contributors powering ${lead.team}</p>
+                                </div>
+                                <div class="flex items-center gap-2 px-3 py-1 bg-zinc-900/80 border border-zinc-800 rounded-full flex-shrink-0">
+                                    <span class="relative flex h-2 w-2">
+                                        <span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                        <span class="relative rounded-full h-2 w-2 bg-emerald-500"></span>
+                                    </span>
+                                    <span class="text-[11px] text-zinc-400 font-medium">Live Roster</span>
+                                </div>
                             </div>
-                            <p class="text-xs text-zinc-400 mt-1">Dedicated contributors powering ${lead.team}</p>
-                        </div>
-                        <div class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900/60 border border-zinc-800/60 rounded-full w-fit">
-                            <span class="relative flex h-2 w-2">
-                                <span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span class="relative rounded-full h-2 w-2 bg-emerald-500"></span>
-                            </span>
-                            <span class="text-xs text-zinc-400 font-medium">Live Roster</span>
+
+                            <!-- Seamless circle-only grid in workforce column -->
+                            <div id="team-roster" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-y-8 gap-x-4 justify-items-center">
+                                ${teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No workforce members yet — be first to join!</div>'
+                        : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, memberTags, lead.id)).join('')}
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Clean circle-only grid utilizing full page width -->
-                    <div id="team-roster" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-10 gap-x-6 sm:gap-x-8 justify-items-center">
-                        ${teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No workforce members yet — be first to join!</div>'
-                : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, memberTags)).join('')}
-                    </div>
                 </div>
             </div>
         </section>`;
@@ -613,7 +646,9 @@ const TeamsView = (() => {
             if (!lead) { container.innerHTML = '<div class="empty-state"><p class="text-zinc-500">Team not found</p></div>'; return; }
             teamMembers = await ICCSupabase.getTeamMembers(currentTeamId);
             const profile = ICCSupabase.getProfile();
-            if ((profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) || ICCSupabase.isAdmin()) {
+            const isLeadMember = teamMembers.some(m => m.id === profile?.id && m.role === 'lead');
+            const isLeadUser = (profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) || isLeadMember;
+            if (isLeadUser || ICCSupabase.isAdmin()) {
                 pendingMembers = await ICCSupabase.getPendingMembers(currentTeamId);
             }
             container.innerHTML = renderDetail(lead);
@@ -637,10 +672,12 @@ const TeamsView = (() => {
                 const roster = document.getElementById('team-roster');
                 const count = document.getElementById('team-member-count');
                 if (roster) {
-                    const isLeadOrAdmin = (profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) || ICCSupabase.isAdmin();
+                    const isLeadMem = teamMembers.some(m => m.id === profile?.id && m.role === 'lead');
+                    const isLeadUsr = (profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) || isLeadMem;
+                    const isLeadOrAdmin = isLeadUsr || ICCSupabase.isAdmin();
                     const memberTags = getMemberTags(currentTeamId);
                     roster.innerHTML = teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No workforce members yet — be first to join!</div>'
-                        : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, memberTags)).join('');
+                        : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, memberTags, currentTeamId)).join('');
                 }
                 if (count) count.textContent = teamMembers.length;
 
@@ -786,11 +823,9 @@ const TeamsView = (() => {
         document.getElementById('team-roster')?.addEventListener('click', (e) => {
             const actionBtn = e.target.closest('.member-actions-btn');
             if (actionBtn) {
+                e.preventDefault();
                 e.stopPropagation();
-                const memberId = actionBtn.dataset.id;
-                const memberName = actionBtn.dataset.name;
-                const currentTag = actionBtn.dataset.tag;
-                openMemberActionModal(memberId, memberName, currentTag, lead.id);
+                handleMemberActionClick(e, actionBtn);
                 return;
             }
 
@@ -924,5 +959,5 @@ const TeamsView = (() => {
         if (workforceModal) workforceModal.remove();
     }
 
-    return { mount, unmount, goBack };
+    return { mount, unmount, goBack, handleMemberActionClick, openMemberActionModal };
 })();
