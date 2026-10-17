@@ -916,7 +916,7 @@ const TeamsView = (() => {
     }
 
     function unmount() {
-        if (currentTeamId) ICCSupabase.unsubscribeChannel(`team-${currentTeamId}`);
+        if (currentTeamId) ICCSupabase?.unsubscribeChannel?.(`team-${currentTeamId}`);
         currentTeamId = null; teamMembers = [];
         const floatingBtn = document.getElementById('team-floating-back-btn');
         if (floatingBtn) floatingBtn.remove();

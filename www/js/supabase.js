@@ -2302,6 +2302,7 @@ const ICCSupabase = (() => {
         subscribeToInventory, subscribeToInventoryRequests,
         subscribeToFeed, subscribeToMessages, subscribeToConversation,
         subscribeToTeam, subscribeToAllLeads, subscribeToBroadcasts, subscribeToNotifications,
+        unsubscribeChannel, cleanupAllChannels,
         getUser, getProfile, isConfigured, getClient, isAdmin, isLead, isSuperAdmin, needsOnboarding,
         getAdminPermissions, hasAdminPermission, updateAdminPermissions, setAdminRole, DEFAULT_ADMIN_PERMISSIONS
     };
