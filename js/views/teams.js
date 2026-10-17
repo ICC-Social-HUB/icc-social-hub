@@ -328,15 +328,23 @@ const TeamsView = (() => {
         const profile = ICCSupabase.getProfile();
         const userTeamId = profile?.team_id;
         return `
-        <section class="min-h-screen pt-2 pb-4 px-4" id="teams-section">
+        <section class="min-h-screen pt-2 pb-8 px-4" id="teams-section">
             <div class="max-w-5xl mx-auto">
+                <!-- Top Navigation Bar with Back Button -->
+                <div class="mb-4 flex items-center justify-between">
+                    <button id="teams-grid-back-btn" class="flex items-center gap-2 px-3.5 py-2 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer shadow-sm active:scale-95 group" title="Return to Dashboard">
+                        <svg class="w-4 h-4 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                        <span>Back to Dashboard</span>
+                    </button>
+                    <span class="text-[11px] font-medium text-zinc-500 uppercase tracking-widest hidden sm:inline">Teams & Projects</span>
+                </div>
+
                 <div class="text-center mb-8 px-2">
                     <p class="text-red-500 text-xs font-semibold tracking-widest uppercase mb-2">Core Teams</p>
                     <h1 class="font-heading font-bold text-2xl sm:text-3xl mb-2">Connect with <span class="gradient-text-static">your team</span></h1>
                     <p class="text-zinc-500 text-sm max-w-md mx-auto">Find the team that matches your passion.</p>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" id="leads-grid">
-                    ${(() => { console.log('Rendering Grid with Leads:', CORE_LEADS); return ''; })()}
                     ${CORE_LEADS.map((lead, i) => {
             const isMember = profile?.memberships?.includes(lead.id);
             const isPending = profile?.pending_teams?.includes(lead.id);
@@ -392,16 +400,22 @@ const TeamsView = (() => {
         const memberTags = getMemberTags(lead.id);
 
         return `
-        <section class="min-h-screen" id="team-detail-section">
+        <section class="min-h-screen relative pb-12" id="team-detail-section">
+            <!-- Floating Quick-Back Button: stays accessible even when scrolled down -->
+            <button id="team-floating-back-btn" class="fixed bottom-6 left-6 z-40 flex items-center gap-2 px-4 py-2.5 bg-[#17212b]/95 hover:bg-[#242f3d] text-white text-xs font-bold rounded-full border border-[#2b394a] shadow-2xl backdrop-blur-md transition-all active:scale-95 cursor-pointer group" title="Go Back">
+                <svg class="w-4 h-4 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                <span>Back</span>
+            </button>
+
             <!-- Outer wrapper has NO overflow-hidden so the avatar can peek below freely -->
             <div class="relative h-40 sm:h-52">
                 <!-- Background gradient clipped independently -->
                 <div class="absolute inset-0 bg-gradient-to-br ${lead.gradient} overflow-hidden">
                     <div class="absolute inset-0 bg-zinc-950/30"></div>
                 </div>
-                <button id="team-back-btn" class="absolute top-4 left-4 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-zinc-950/50 backdrop-blur-sm rounded-lg text-xs text-zinc-300 hover:text-white border border-white/10 transition-all">
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-                    Back
+                <button id="team-back-btn" class="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-zinc-950/70 hover:bg-zinc-900 backdrop-blur-md rounded-xl text-xs font-semibold text-white border border-white/20 transition-all cursor-pointer shadow-lg active:scale-95">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    <span>Back</span>
                 </button>
                 <!-- Avatar now free to overflow below the banner -->
                 <div class="absolute -bottom-12 left-1/2 -translate-x-1/2 z-10">
@@ -426,8 +440,8 @@ const TeamsView = (() => {
                 <!-- Top Overview Grid -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div class="lg:col-span-2 space-y-6">
-                        <div><h3 class="font-heading font-semibold text-sm mb-2 text-zinc-400">About</h3><p class="text-sm text-zinc-300 leading-relaxed">${lead.bio}</p></div>
-                        <div><h3 class="font-heading font-semibold text-sm mb-2 text-zinc-400">Specialties</h3><div class="flex flex-wrap gap-2">${lead.specialties.map(s => `<span class="specialty-pill px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-400">${s}</span>`).join('')}</div></div>
+                        <div><h3 class="font-heading font-semibold text-sm mb-2 text-zinc-400">About</h3><p class="text-sm text-zinc-300 leading-relaxed">${lead.bio || 'No bio provided yet.'}</p></div>
+                        <div><h3 class="font-heading font-semibold text-sm mb-2 text-zinc-400">Specialties</h3><div class="flex flex-wrap gap-2">${(lead.specialties || []).map(s => `<span class="specialty-pill px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-400">${s}</span>`).join('')}</div></div>
                         
                         <!-- Milestone Tracker -->
                         ${renderMilestones(lead, isLeadOrAdmin)}
@@ -560,7 +574,20 @@ const TeamsView = (() => {
         if (teamId) {
             currentTeamId = parseInt(teamId);
             container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
-            const lead = CORE_LEADS.find(l => l.id === currentTeamId);
+            await loadLeads();
+            let lead = CORE_LEADS.find(l => Number(l.id) === Number(currentTeamId));
+            if (!lead) {
+                try {
+                    const client = ICCSupabase.getClient();
+                    if (client) {
+                        const { data } = await client.from('core_leads').select('*').eq('id', currentTeamId).maybeSingle();
+                        if (data) {
+                            const staticMatch = CORE_LEADS_STATIC.find(s => s.id === data.id);
+                            lead = { ...(staticMatch || {}), ...data };
+                        }
+                    }
+                } catch (e) {}
+            }
             if (!lead) { container.innerHTML = '<div class="empty-state"><p class="text-zinc-500">Team not found</p></div>'; return; }
             teamMembers = await ICCSupabase.getTeamMembers(currentTeamId);
             const profile = ICCSupabase.getProfile();
@@ -573,12 +600,10 @@ const TeamsView = (() => {
                 // If the change is in core_leads, re-fetch all leads and re-render
                 if (payload && payload.table === 'core_leads') {
                     await loadLeads();
-                    const updatedLead = CORE_LEADS.find(l => l.id === currentTeamId);
+                    const updatedLead = CORE_LEADS.find(l => Number(l.id) === Number(currentTeamId));
                     if (updatedLead) {
                         const detailSection = document.getElementById('team-detail-section');
                         if (detailSection) {
-                            // Instead of full re-render (which breaks modal/scroll), just update the detail view
-                            // But for simplicity, we can do a full mount or just update the container
                             container.innerHTML = renderDetail(updatedLead);
                             bindDetailEvents(updatedLead);
                         }
@@ -589,7 +614,6 @@ const TeamsView = (() => {
                 teamMembers = await ICCSupabase.getTeamMembers(currentTeamId);
                 const roster = document.getElementById('team-roster');
                 const count = document.getElementById('team-member-count');
-                // ... (rest of existing logic for members)
                 if (roster) {
                     const isLeadOrAdmin = (profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) || ICCSupabase.isAdmin();
                     const memberTags = getMemberTags(currentTeamId);
@@ -602,7 +626,7 @@ const TeamsView = (() => {
                     pendingMembers = await ICCSupabase.getPendingMembers(currentTeamId);
                     const pendingContainer = document.getElementById('pending-requests-container');
                     if (pendingContainer) {
-                        const leadForPending = CORE_LEADS.find(l => l.id === currentTeamId) || lead;
+                        const leadForPending = CORE_LEADS.find(l => Number(l.id) === Number(currentTeamId)) || lead;
                         pendingContainer.innerHTML = `
                             <h3 class="font-heading font-semibold text-sm mb-3">Pending Requests (${pendingMembers.length})</h3>
                             <div class="space-y-2 max-h-48 overflow-y-auto">
@@ -646,8 +670,8 @@ const TeamsView = (() => {
                                     <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team Profile Picture (Optional)</label><input type="file" id="lead-avatar-input" accept="image/jpeg, image/png, image/webp" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
                                     <div><label class="block text-xs font-medium text-zinc-400 mb-1">Project Name</label><input type="text" id="lead-project-name" value="${leadForPending.project_name || ''}" placeholder="Yet to choose" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
                                     <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team Name</label><input type="text" id="lead-team-name" value="${leadForPending.team}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
-                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Bio</label><textarea id="lead-bio" rows="3" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${leadForPending.bio}</textarea></div>
-                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Specialties (comma-separated)</label><input type="text" id="lead-specialties" value="${leadForPending.specialties.join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Bio</label><textarea id="lead-bio" rows="3" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${leadForPending.bio || ''}</textarea></div>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Specialties (comma-separated)</label><input type="text" id="lead-specialties" value="${(leadForPending.specialties || []).join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
                                     <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold mt-2 transition-all shadow-lg shadow-emerald-600/20">Save Configuration</button>
                                 </form>
                             </div>
@@ -659,6 +683,8 @@ const TeamsView = (() => {
             });
         } else {
             currentTeamId = null;
+            container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
+            await loadLeads();
             container.innerHTML = renderGrid();
             bindGridEvents();
             ICCSupabase.subscribeToAllLeads(async () => {
@@ -673,6 +699,15 @@ const TeamsView = (() => {
     }
 
     function bindGridEvents() {
+        document.getElementById('teams-grid-back-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.hash = '#dashboard';
+            }
+        });
+
         document.querySelectorAll('.lead-card').forEach(card => {
             card.addEventListener('click', () => {
                 window.location.hash = `#teams/${card.dataset.leadId}`;
@@ -681,7 +716,16 @@ const TeamsView = (() => {
     }
 
     function bindDetailEvents(lead) {
-        document.getElementById('team-back-btn')?.addEventListener('click', () => { window.location.hash = '#teams'; });
+        const handleBack = (e) => {
+            e?.preventDefault();
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.hash = '#teams';
+            }
+        };
+        document.getElementById('team-back-btn')?.addEventListener('click', handleBack);
+        document.getElementById('team-floating-back-btn')?.addEventListener('click', handleBack);
         document.getElementById('lead-profile-link')?.addEventListener('click', () => {
             const leadMember = teamMembers.find(m => m.role === 'lead');
             if (leadMember) {
@@ -835,6 +879,10 @@ const TeamsView = (() => {
     function unmount() {
         if (currentTeamId) ICCSupabase.unsubscribeChannel(`team-${currentTeamId}`);
         currentTeamId = null; teamMembers = [];
+        const floatingBtn = document.getElementById('team-floating-back-btn');
+        if (floatingBtn) floatingBtn.remove();
+        const workforceModal = document.getElementById('workforce-action-modal');
+        if (workforceModal) workforceModal.remove();
     }
 
     return { mount, unmount };

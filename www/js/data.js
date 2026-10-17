@@ -18,12 +18,21 @@ const CORE_LEADS_STATIC = [
     { id:13, name:"Siddharth Rao", team:"Team Axis", initials:"SRo", bio:"Siddharth is the engine that keeps ICC running smoothly. Team Axis handles logistics, internal coordination, and process optimization across all teams.", specialties:["Project Management","Logistics","Process Optimization"], gradient:"from-red-500 to-rose-700", color:"#ef4444" }
 ];
 
-// Live data — mutable, updated from Supabase or fallback
-let CORE_LEADS = [...CORE_LEADS_STATIC];
+// Live data — mutable, initialized from localStorage cache if available, falling back to static
+let CORE_LEADS = (() => {
+    try {
+        const cached = localStorage.getItem('icc_leads_cache');
+        if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+    } catch (e) {}
+    return [...CORE_LEADS_STATIC];
+})();
 
 // Team ID to Lead mapping helper
 function getLeadByTeamId(teamId) {
-    return CORE_LEADS.find(l => l.id === teamId) || null;
+    return CORE_LEADS.find(l => Number(l.id) === Number(teamId)) || null;
 }
 
 function getTeamName(teamId) {
@@ -36,15 +45,42 @@ async function loadLeads() {
     try {
         const leads = await ICCSupabase.fetchLeads();
         if (leads && leads.length > 0) {
-            CORE_LEADS = leads;
-            console.log('✅ Loaded', leads.length, 'leads from Supabase');
+            CORE_LEADS = leads.map(dbLead => {
+                const staticMatch = CORE_LEADS_STATIC.find(s => s.id === dbLead.id);
+                let specialties = dbLead.specialties;
+                if (!Array.isArray(specialties)) {
+                    if (typeof specialties === 'string') {
+                        specialties = specialties.split(',').map(s => s.trim()).filter(Boolean);
+                    } else {
+                        specialties = staticMatch?.specialties || [];
+                    }
+                }
+                if (specialties.length === 0 && staticMatch?.specialties) {
+                    specialties = staticMatch.specialties;
+                }
+                let milestones = dbLead.milestones;
+                if (typeof milestones === 'string') {
+                    try { milestones = JSON.parse(milestones); } catch (e) { milestones = {}; }
+                }
+                return {
+                    ...(staticMatch || {}),
+                    ...dbLead,
+                    specialties,
+                    milestones: milestones || staticMatch?.milestones || {},
+                    gradient: dbLead.gradient || staticMatch?.gradient || 'from-red-600 to-orange-500',
+                    color: dbLead.color || staticMatch?.color || '#dc2626',
+                    initials: dbLead.initials || staticMatch?.initials || (dbLead.name ? dbLead.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'ICC')
+                };
+            });
+            try {
+                localStorage.setItem('icc_leads_cache', JSON.stringify(CORE_LEADS));
+            } catch (e) {}
+            console.log('✅ Loaded', CORE_LEADS.length, 'leads from Supabase and updated cache');
         } else {
-            CORE_LEADS = [...CORE_LEADS_STATIC];
-            console.log('📦 Using static fallback data');
+            console.log('📦 Using current cached/static leads');
         }
     } catch (e) {
-        CORE_LEADS = [...CORE_LEADS_STATIC];
-        console.log('📦 Using static fallback data (error)', e);
+        console.warn('📦 Error loading leads from Supabase, retaining current data:', e);
     }
     return CORE_LEADS;
 }

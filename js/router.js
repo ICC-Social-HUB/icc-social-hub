@@ -30,6 +30,14 @@ const Router = (() => {
         if (previousView === 'events') EventsView.unmount?.();
         if (previousView === 'eventDetail') EventDetailView.unmount?.();
 
+        // Clean up any open modals or overlays when route changes
+        const modalRoot = document.getElementById('modal-root');
+        if (modalRoot) modalRoot.innerHTML = '';
+        const workforceModal = document.getElementById('workforce-action-modal');
+        if (workforceModal) workforceModal.remove();
+        document.body.style.overflow = '';
+        if (typeof Sidebar !== 'undefined') Sidebar.close?.();
+
         // Transition
         container.classList.remove('view-enter');
         container.classList.add('view-exit');

@@ -967,10 +967,24 @@ const ICCSupabase = (() => {
 
     async function fetchLeads() {
         if (!client) return null;
-        const { data, error } = await client
-            .from('core_leads').select('*').order('sort_order', { ascending: true });
-        if (error) return null;
-        return data;
+        try {
+            const { data, error } = await client
+                .from('core_leads').select('*').order('sort_order', { ascending: true });
+            if (error) {
+                console.warn('core_leads sort_order error, trying id sort fallback:', error.message);
+                const { data: fallbackData, error: fallbackError } = await client
+                    .from('core_leads').select('*').order('id', { ascending: true });
+                if (fallbackError) {
+                    console.error('fetchLeads fallback error:', fallbackError);
+                    return null;
+                }
+                return fallbackData;
+            }
+            return data;
+        } catch (e) {
+            console.error('fetchLeads error:', e);
+            return null;
+        }
     }
 
     async function createLead(fields) {
@@ -984,6 +998,17 @@ const ICCSupabase = (() => {
         if (!client || !canUpdate) return { error: { message: 'Unauthorized' } };
         fields.updated_at = new Date().toISOString();
         
+        // Optimistically update in-memory CORE_LEADS and localStorage cache immediately
+        if (typeof CORE_LEADS !== 'undefined' && Array.isArray(CORE_LEADS)) {
+            const idx = CORE_LEADS.findIndex(l => Number(l.id) === Number(id));
+            if (idx !== -1) {
+                CORE_LEADS[idx] = { ...CORE_LEADS[idx], ...fields };
+                try {
+                    localStorage.setItem('icc_leads_cache', JSON.stringify(CORE_LEADS));
+                } catch(e) {}
+            }
+        }
+
         const { data, error } = await client.from('core_leads').update(fields).eq('id', id).select();
         return { data: data && data.length > 0 ? data[0] : null, error };
     }
@@ -2242,7 +2267,8 @@ const ICCSupabase = (() => {
     }
 
     function isLead() {
-        return currentProfile?.role === 'lead';
+        const role = (currentProfile?.role || '').toLowerCase().trim();
+        return role === 'lead';
     }
 
     function needsOnboarding() {

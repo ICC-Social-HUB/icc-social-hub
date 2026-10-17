@@ -24,10 +24,24 @@ const AndroidNavigation = (() => {
             return true;
         }
 
+        // 4. Workforce Action Modal or Progress Modal
+        if (document.getElementById('workforce-action-modal')) return true;
+        const progressModal = document.getElementById('progress-modal');
+        if (progressModal && !progressModal.classList.contains('hidden')) return true;
+
         return false;
     }
 
     function closeActiveModal() {
+        // 0. Workforce Modal or Progress Modal
+        const wfModal = document.getElementById('workforce-action-modal');
+        if (wfModal) { wfModal.remove(); return true; }
+        const progressModal = document.getElementById('progress-modal');
+        if (progressModal && !progressModal.classList.contains('hidden')) {
+            progressModal.classList.add('hidden');
+            return true;
+        }
+
         // 1. Image Viewer
         const imageViewer = document.getElementById('image-viewer-overlay');
         if (imageViewer && !imageViewer.classList.contains('hidden')) {

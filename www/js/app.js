@@ -63,17 +63,18 @@ const AppLoader = (() => {
         }
         AppLoader.updateSplash('Initializing Views...', 75);
 
-        // 3. Initialize Router & Android Hardware/WebView Navigation
-        Router.init();
-        if (typeof AndroidNavigation !== 'undefined') AndroidNavigation.init();
-
-        // 4. Load remaining data
+        // 3. Load team leads from Supabase so all views have live data immediately
         try {
             await loadLeads();
         } catch (err) {
             console.error('⚠️ Leads error:', err);
         }
-        AppLoader.updateSplash('Preparing Hub Experience...', 90);
+        AppLoader.updateSplash('Initializing Views...', 80);
+
+        // 4. Initialize Router & Android Hardware/WebView Navigation
+        Router.init();
+        if (typeof AndroidNavigation !== 'undefined') AndroidNavigation.init();
+        AppLoader.updateSplash('Preparing Hub Experience...', 95);
 
         let subscriptionsStarted = false;
         let isInitialRouteHandled = false;
