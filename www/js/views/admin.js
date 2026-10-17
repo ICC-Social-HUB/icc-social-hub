@@ -16,6 +16,10 @@ const AdminView = (() => {
     let userSearchQuery = '';
     let userSectionFilter = '';
     let userTeamFilter = '';
+    let accessSearchQuery = '';
+    let accessRoleFilter = 'all'; // 'all', 'super_admin', 'admin'
+    let appointingUserId = null;
+    let appointingUserDraft = null; // { broadcast, moderate, events, leads, users, all, isSuperAdmin }
 
     function escapeHtml(str) {
         if (!str && str !== 0) return '';
@@ -595,10 +599,44 @@ const AdminView = (() => {
         </div>`;
     }
 
+    function getAvailableTabs() {
+        const isSuper = ICCSupabase.isSuperAdmin();
+        const perms = ICCSupabase.getAdminPermissions ? ICCSupabase.getAdminPermissions() : { all: true };
+        const tabs = [];
+
+        if (isSuper || perms.broadcast) tabs.push({ id: 'broadcast', label: 'Broadcast', icon: '📢' });
+        if (isSuper || perms.leads) tabs.push({ id: 'leads', label: 'Leads', icon: '👥' });
+        if (isSuper || perms.users) tabs.push({ id: 'users', label: 'Users', icon: '📋' });
+        if (isSuper || perms.moderate) tabs.push({ id: 'moderate', label: 'Moderate', icon: '🛡️' });
+        if (isSuper || perms.events) tabs.push({ id: 'events', label: 'Events', icon: '📅' });
+        if (isSuper) tabs.push({ id: 'access_control', label: 'Access Control', icon: '🔐', badge: 'Super' });
+
+        return tabs;
+    }
+
+    function renderPermissionDenied(msg = 'You do not have permission to access this section.') {
+        return `
+        <div class="glass-card rounded-2xl p-8 text-center max-w-md mx-auto my-12 border border-zinc-800">
+            <div class="w-14 h-14 rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 flex items-center justify-center text-2xl mx-auto mb-4">
+                🔒
+            </div>
+            <h3 class="font-heading font-semibold text-lg text-white mb-2">Access Restricted</h3>
+            <p class="text-xs text-zinc-400 mb-5 leading-relaxed">${escapeHtml(msg)}</p>
+            <div class="p-3 bg-zinc-950/60 rounded-xl border border-zinc-800 text-[11px] text-zinc-500">
+                Please request a <strong class="text-amber-400">Super Administrator</strong> to grant this permission via the Access Control panel.
+            </div>
+        </div>`;
+    }
+
     function render() {
         const user = ICCSupabase.getUser();
         if (!user) return `<div class="empty-state min-h-screen"><h3 class="font-heading font-semibold text-lg">Sign In Required</h3><button onclick="AuthModal.open()" class="mt-4 px-6 py-2.5 bg-red-600 rounded-xl text-sm font-semibold">Sign In</button></div>`;
         if (!ICCSupabase.isAdmin()) return `<div class="empty-state min-h-screen"><div class="empty-state-icon"><svg class="w-7 h-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></div><h3 class="font-heading font-semibold text-lg mb-1">Access Denied</h3><p class="text-sm text-zinc-500">You don't have admin privileges.</p><a href="#feed" class="mt-4 inline-block px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm transition-all">Back to Feed</a></div>`;
+
+        const tabs = getAvailableTabs();
+        if (!tabs.some(t => t.id === activeTab)) {
+            activeTab = tabs[0]?.id || 'users';
+        }
 
         return `
         <section class="min-h-screen pt-2 pb-4 px-4" id="admin-section">
@@ -613,7 +651,13 @@ const AdminView = (() => {
                     </div>
                 </div>
                 <div class="flex gap-1 overflow-x-auto mb-4 pb-1 border-b border-zinc-800/50">
-                    ${['broadcast', 'leads', 'users', 'moderate', 'events'].map(t => `<button class="admin-tab ${activeTab === t ? 'active' : ''}" data-tab="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</button>`).join('')}
+                    ${tabs.map(t => `
+                        <button class="admin-tab flex items-center gap-1.5 ${activeTab === t.id ? 'active' : ''}" data-tab="${t.id}">
+                            <span class="text-xs">${t.icon}</span>
+                            <span>${t.label}</span>
+                            ${t.badge ? `<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">${t.badge}</span>` : ''}
+                        </button>
+                    `).join('')}
                 </div>
                 <div id="admin-content">${renderTab()}</div>
 
@@ -631,18 +675,487 @@ const AdminView = (() => {
     }
 
     function renderTab() {
+        const isSuper = ICCSupabase.isSuperAdmin();
+        const perms = ICCSupabase.getAdminPermissions ? ICCSupabase.getAdminPermissions() : { all: true };
+
+        if (activeTab === 'access_control' && !isSuper) {
+            return renderPermissionDenied('The Access Control console is exclusively reserved for Super Administrators.');
+        }
+        if (activeTab === 'broadcast' && !isSuper && !perms.broadcast && !perms.all) {
+            return renderPermissionDenied('You have not been granted access to Broadcast Alerts.');
+        }
+        if (activeTab === 'leads' && !isSuper && !perms.leads && !perms.all) {
+            return renderPermissionDenied('You have not been granted access to Core Leads management.');
+        }
+        if (activeTab === 'users' && !isSuper && !perms.users && !perms.all) {
+            return renderPermissionDenied('You have not been granted access to User Management.');
+        }
+        if (activeTab === 'moderate' && !isSuper && !perms.moderate && !perms.all) {
+            return renderPermissionDenied('You have not been granted access to Content Moderation.');
+        }
+        if (activeTab === 'events' && !isSuper && !perms.events && !perms.all) {
+            return renderPermissionDenied('You have not been granted access to Events Management.');
+        }
+
         switch (activeTab) {
             case 'broadcast': return renderBroadcast();
             case 'leads': return renderLeads();
             case 'users': return renderUsers();
             case 'moderate': return renderModerate();
             case 'events': return renderEvents();
-            default: return '';
+            case 'access_control': return renderAccessControl();
+            default: return renderUsers();
         }
+    }
+
+    function renderAccessControl() {
+        const currentUserId = ICCSupabase.getUser()?.id;
+        const allAdmins = allUsers.filter(u => u.role === 'admin' || u.role === 'super_admin' || u.role === 'superadmin');
+        const superAdminsCount = allAdmins.filter(u => u.role === 'super_admin' || u.role === 'superadmin').length;
+        const standardAdminsCount = allAdmins.length - superAdminsCount;
+
+        // Filter active admins based on role pill
+        let filteredAdmins = allAdmins;
+        if (accessRoleFilter === 'super_admin') {
+            filteredAdmins = allAdmins.filter(u => u.role === 'super_admin' || u.role === 'superadmin');
+        } else if (accessRoleFilter === 'admin') {
+            filteredAdmins = allAdmins.filter(u => u.role === 'admin');
+        }
+
+        // Search candidates to appoint
+        const query = (accessSearchQuery || '').trim().toLowerCase();
+        let searchCandidates = [];
+        if (query) {
+            searchCandidates = allUsers.filter(u => {
+                const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
+                const name = (u.full_name || (student ? student.fullName : '') || '').toLowerCase();
+                const uname = (u.username || '').toLowerCase();
+                const email = (u.email || '').toLowerCase();
+                const usn = (u.usn || (student ? student.usn : '') || '').toLowerCase();
+                return name.includes(query) || uname.includes(query) || email.includes(query) || usn.includes(query);
+            }).slice(0, 8);
+        }
+
+        const appointingUser = appointingUserId ? allUsers.find(u => u.id === appointingUserId) : null;
+
+        return `
+        <div class="space-y-6 animate-fade-in">
+            <!-- Header Banner -->
+            <div class="glass-card rounded-2xl p-5 border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-zinc-900 to-zinc-900 shadow-xl">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-11 h-11 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-xl font-bold shadow-inner">
+                            🔐
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="font-heading font-bold text-base text-white">Access Control & Role Governance</h3>
+                                <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">Super Admin Only</span>
+                            </div>
+                            <p class="text-[11px] text-zinc-400 mt-0.5">Toggle granular feature permissions, appoint new admins, and govern club privileges.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metrics Overview -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5 pt-4 border-t border-zinc-800/60">
+                    <div class="bg-zinc-950/60 rounded-xl p-3 border border-zinc-800/80">
+                        <span class="text-[10px] uppercase font-semibold text-zinc-500 tracking-wider block">Total Admins</span>
+                        <div class="flex items-baseline gap-1 mt-0.5">
+                            <span class="text-xl font-bold text-white">${allAdmins.length}</span>
+                            <span class="text-[10px] text-zinc-500">accounts</span>
+                        </div>
+                    </div>
+                    <div class="bg-amber-500/10 rounded-xl p-3 border border-amber-500/30">
+                        <span class="text-[10px] uppercase font-semibold text-amber-400 tracking-wider block">Super Admins</span>
+                        <div class="flex items-baseline gap-1 mt-0.5">
+                            <span class="text-xl font-bold text-amber-300">${superAdminsCount}</span>
+                            <span class="text-[10px] text-amber-500/80">full power</span>
+                        </div>
+                    </div>
+                    <div class="bg-blue-500/10 rounded-xl p-3 border border-blue-500/30">
+                        <span class="text-[10px] uppercase font-semibold text-blue-400 tracking-wider block">Standard Admins</span>
+                        <div class="flex items-baseline gap-1 mt-0.5">
+                            <span class="text-xl font-bold text-blue-300">${standardAdminsCount}</span>
+                            <span class="text-[10px] text-blue-400/80">custom perms</span>
+                        </div>
+                    </div>
+                    <div class="bg-zinc-950/60 rounded-xl p-3 border border-zinc-800/80">
+                        <span class="text-[10px] uppercase font-semibold text-zinc-500 tracking-wider block">Platform Users</span>
+                        <div class="flex items-baseline gap-1 mt-0.5">
+                            <span class="text-xl font-bold text-zinc-200">${allUsers.length}</span>
+                            <span class="text-[10px] text-zinc-500">registered</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 1: SEARCH & APPOINT NEW ADMIN -->
+            <div class="glass-card rounded-2xl p-5 border border-zinc-800">
+                <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                    <div>
+                        <h4 class="font-heading font-semibold text-sm text-white flex items-center gap-2">
+                            <span>🔍 Search & Appoint New Administrator</span>
+                        </h4>
+                        <p class="text-[11px] text-zinc-400">Search any registered member to grant admin privileges and choose their feature accesses.</p>
+                    </div>
+                </div>
+
+                <!-- Search Input Bar -->
+                <div class="relative mb-3">
+                    <input type="text" id="access-user-search-input" value="${escapeHtml(accessSearchQuery)}" 
+                        placeholder="Search members by full name, email address, @username, or USN..." 
+                        class="form-input w-full pl-10 pr-10 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:border-blue-500 outline-none">
+                    <svg class="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    ${accessSearchQuery ? `
+                        <button id="clear-access-search-btn" class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white p-1 text-xs">✕</button>
+                    ` : ''}
+                </div>
+
+                <!-- Appoint Configuration Card (When user clicked "+ Appoint as Admin") -->
+                ${appointingUser ? `
+                    <div class="p-4 rounded-xl border border-blue-500/40 bg-blue-500/5 mb-4 space-y-4 animate-fade-in" id="appoint-panel">
+                        <div class="flex items-center justify-between border-b border-blue-500/20 pb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-sm">
+                                    ${(appointingUser.full_name || appointingUser.username || '?').charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <h5 class="text-xs font-semibold text-white">Appointing: ${escapeHtml(appointingUser.full_name || 'Anonymous')}</h5>
+                                    <p class="text-[11px] text-zinc-400">${escapeHtml(appointingUser.email || 'No email')} · @${escapeHtml(appointingUser.username || 'user')}</p>
+                                </div>
+                            </div>
+                            <button id="cancel-appoint-btn" class="text-xs text-zinc-400 hover:text-white px-2 py-1 bg-zinc-800/80 rounded-lg transition-colors">Cancel</button>
+                        </div>
+
+                        <!-- Role Level Selector -->
+                        <div class="space-y-1.5">
+                            <label class="text-[11px] font-semibold text-zinc-300 block uppercase tracking-wider">Target Admin Role</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="flex items-center gap-2 p-2.5 bg-zinc-950/70 border ${!appointingUserDraft?.isSuperAdmin ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-800'} rounded-xl cursor-pointer">
+                                    <input type="radio" name="appoint_role" value="admin" class="accent-blue-500" ${!appointingUserDraft?.isSuperAdmin ? 'checked' : ''} id="role-admin-radio">
+                                    <div>
+                                        <span class="text-xs font-semibold text-white block">👑 Standard Admin</span>
+                                        <span class="text-[10px] text-zinc-400">Customizable feature permissions</span>
+                                    </div>
+                                </label>
+                                <label class="flex items-center gap-2 p-2.5 bg-zinc-950/70 border ${appointingUserDraft?.isSuperAdmin ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-800'} rounded-xl cursor-pointer">
+                                    <input type="radio" name="appoint_role" value="super_admin" class="accent-amber-500" ${appointingUserDraft?.isSuperAdmin ? 'checked' : ''} id="role-superadmin-radio">
+                                    <div>
+                                        <span class="text-xs font-semibold text-amber-300 block">🛡️ Super Admin</span>
+                                        <span class="text-[10px] text-zinc-400">Unrestricted system-wide access</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Granular Permissions (Only for Standard Admin) -->
+                        <div id="appoint-perms-section" class="${appointingUserDraft?.isSuperAdmin ? 'opacity-40 pointer-events-none' : ''} space-y-2.5">
+                            <div class="flex items-center justify-between">
+                                <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-wider">Granular Feature Permissions</label>
+                                <label class="inline-flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="appoint-all-toggle" class="accent-blue-500" ${appointingUserDraft?.all ? 'checked' : ''}>
+                                    <span class="text-[11px] text-zinc-300 font-medium">All Features (Full Access)</span>
+                                </label>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
+                                    <div>
+                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">📢 Broadcast Alerts</span>
+                                        <span class="text-[10px] text-zinc-500">Send push banners & alerts</span>
+                                    </div>
+                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="broadcast" ${appointingUserDraft?.broadcast ? 'checked' : ''}>
+                                </label>
+
+                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
+                                    <div>
+                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">🛡️ Moderate Content</span>
+                                        <span class="text-[10px] text-zinc-500">Delete & moderate posts</span>
+                                    </div>
+                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="moderate" ${appointingUserDraft?.moderate ? 'checked' : ''}>
+                                </label>
+
+                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
+                                    <div>
+                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">📅 Add & Manage Events</span>
+                                        <span class="text-[10px] text-zinc-500">Create, edit, delete events</span>
+                                    </div>
+                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="events" ${appointingUserDraft?.events ? 'checked' : ''}>
+                                </label>
+
+                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
+                                    <div>
+                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">👥 Core Team Leads</span>
+                                        <span class="text-[10px] text-zinc-500">Manage leads & rosters</span>
+                                    </div>
+                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="leads" ${appointingUserDraft?.leads ? 'checked' : ''}>
+                                </label>
+
+                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700 col-span-1 sm:col-span-2">
+                                    <div>
+                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">📋 User Management</span>
+                                        <span class="text-[10px] text-zinc-500">Edit member details, approvals & export roster</span>
+                                    </div>
+                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="users" ${appointingUserDraft?.users ? 'checked' : ''}>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Action Submit Button -->
+                        <div class="flex items-center gap-2 pt-2">
+                            <button id="confirm-appoint-btn" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-semibold rounded-xl text-xs transition-all shadow-lg flex items-center justify-center gap-2" data-user-id="${appointingUser.id}">
+                                <span>Confirm & Appoint Administrator</span>
+                            </button>
+                            <button id="cancel-appoint-btn-2" class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-xl text-xs transition-all">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Search Results List -->
+                ${query ? `
+                    <div class="space-y-2 mt-2">
+                        <div class="text-[11px] text-zinc-500 font-medium mb-1 flex items-center justify-between">
+                            <span>Search results for "${escapeHtml(query)}"</span>
+                            <span>${searchCandidates.length} found</span>
+                        </div>
+                        ${searchCandidates.length === 0 ? `
+                            <div class="p-6 text-center bg-zinc-950/40 rounded-xl border border-zinc-800 text-xs text-zinc-500">
+                                No users found matching "${escapeHtml(query)}"
+                            </div>
+                        ` : searchCandidates.map(u => {
+                            const isAlreadyAdmin = u.role === 'admin' || u.role === 'super_admin' || u.role === 'superadmin';
+                            const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
+                            const fullName = u.full_name || (student ? student.fullName : 'Anonymous');
+                            const usn = u.usn || (student ? student.usn : '');
+                            const section = student ? student.section : '';
+                            return `
+                            <div class="flex items-center justify-between gap-3 p-3 bg-zinc-950/70 hover:bg-zinc-900 border border-zinc-800/80 rounded-xl transition-colors">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-9 h-9 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700/60 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                        ${fullName.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <span class="text-xs font-semibold text-white truncate">${escapeHtml(fullName)}</span>
+                                            ${usn ? `<span class="text-[10px] font-mono text-zinc-400">(${escapeHtml(usn)})</span>` : ''}
+                                            ${section ? `<span class="px-1.5 py-0.2 rounded text-[9px] bg-zinc-800 text-zinc-300">Sec ${escapeHtml(section)}</span>` : ''}
+                                        </div>
+                                        <p class="text-[11px] text-zinc-400 font-mono truncate">${escapeHtml(u.email || 'No email')} · @${escapeHtml(u.username || 'user')}</p>
+                                    </div>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    ${isAlreadyAdmin ? `
+                                        <span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-zinc-800/80 text-zinc-400 border border-zinc-700/40">
+                                            ${u.role === 'super_admin' || u.role === 'superadmin' ? '🛡️ Super Admin' : '👑 Admin'}
+                                        </span>
+                                    ` : `
+                                        <button class="start-appoint-btn px-3 py-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl text-xs font-semibold transition-all shadow-sm" data-user-id="${u.id}">
+                                            + Appoint as Admin
+                                        </button>
+                                    `}
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                ` : `
+                    <div class="p-3 bg-zinc-950/40 rounded-xl border border-zinc-800/60 text-center">
+                        <p class="text-[11px] text-zinc-500">💡 Type a member's name, email, or USN above to promote them to an Administrator.</p>
+                    </div>
+                `}
+            </div>
+
+            <!-- SECTION 2: ACTIVE ADMINISTRATORS & LIVE FEATURE TOGGLES -->
+            <div class="glass-card rounded-2xl p-5 border border-zinc-800">
+                <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+                    <div>
+                        <h4 class="font-heading font-semibold text-sm text-white flex items-center gap-2">
+                            <span>🛡️ Active Administrators & Feature Access</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700">${allAdmins.length}</span>
+                        </h4>
+                        <p class="text-[11px] text-zinc-400">Toggle individual feature switches in real time. Changes take effect immediately.</p>
+                    </div>
+
+                    <!-- Role Filter Pills -->
+                    <div class="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
+                        <button class="admin-role-filter px-3 py-1 rounded-lg text-[11px] font-medium transition-all ${accessRoleFilter === 'all' ? 'bg-zinc-800 text-white font-semibold' : 'text-zinc-500 hover:text-zinc-300'}" data-filter="all">All (${allAdmins.length})</button>
+                        <button class="admin-role-filter px-3 py-1 rounded-lg text-[11px] font-medium transition-all ${accessRoleFilter === 'super_admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold' : 'text-zinc-500 hover:text-zinc-300'}" data-filter="super_admin">Super Admins (${superAdminsCount})</button>
+                        <button class="admin-role-filter px-3 py-1 rounded-lg text-[11px] font-medium transition-all ${accessRoleFilter === 'admin' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30 font-semibold' : 'text-zinc-500 hover:text-zinc-300'}" data-filter="admin">Admins (${standardAdminsCount})</button>
+                    </div>
+                </div>
+
+                <!-- Admin Cards Grid -->
+                <div class="space-y-4">
+                    ${filteredAdmins.length === 0 ? `
+                        <div class="p-8 text-center bg-zinc-950/40 rounded-xl border border-zinc-800 text-xs text-zinc-500">
+                            No administrators found matching the active filter.
+                        </div>
+                    ` : filteredAdmins.map(u => {
+                        const isMe = u.id === currentUserId;
+                        const isSuper = u.role === 'super_admin' || u.role === 'superadmin';
+                        const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
+                        const fullName = u.full_name || (student ? student.fullName : 'Anonymous');
+                        const perms = ICCSupabase.getAdminPermissions(u);
+
+                        return `
+                        <div class="p-4 rounded-2xl border ${isSuper ? 'border-amber-500/30 bg-amber-500/5' : 'border-zinc-800 bg-zinc-900/60'} transition-all" data-admin-id="${u.id}">
+                            <!-- Admin Header -->
+                            <div class="flex items-start justify-between gap-3 flex-wrap">
+                                <div class="flex items-center gap-3 min-w-0 flex-1">
+                                    <div class="w-10 h-10 rounded-full ${isSuper ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-blue-600/20 text-blue-400 border border-blue-500/30'} flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                        ${fullName.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <h5 class="text-sm font-semibold text-white break-words">${escapeHtml(fullName)}</h5>
+                                            ${isSuper ? `
+                                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">🛡️ Super Admin</span>
+                                            ` : `
+                                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40">👑 Admin</span>
+                                            `}
+                                            ${isMe ? `
+                                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">You</span>
+                                            ` : ''}
+                                        </div>
+                                        <p class="text-[11px] text-zinc-400 font-mono truncate">${escapeHtml(u.email || 'No email')} · @${escapeHtml(u.username || 'user')}</p>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="flex items-center gap-2">
+                                    ${!isMe ? `
+                                        ${isSuper ? `
+                                            <button class="demote-superadmin-btn px-2.5 py-1 text-[11px] font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-colors" data-id="${u.id}" data-name="${escapeHtml(fullName)}">
+                                                Demote to Admin
+                                            </button>
+                                        ` : `
+                                            <button class="promote-superadmin-btn px-2.5 py-1 text-[11px] font-medium bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-white border border-amber-500/30 rounded-lg transition-colors" data-id="${u.id}" data-name="${escapeHtml(fullName)}">
+                                                Promote to Super Admin
+                                            </button>
+                                        `}
+                                        <button class="revoke-admin-btn px-2.5 py-1 text-[11px] font-medium bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 rounded-lg transition-colors" data-id="${u.id}" data-name="${escapeHtml(fullName)}">
+                                            Revoke Admin
+                                        </button>
+                                    ` : `
+                                        <span class="text-[10px] text-zinc-500 px-2.5 py-1 bg-zinc-950 rounded-lg border border-zinc-800/80">Active User (Protected)</span>
+                                    `}
+                                </div>
+                            </div>
+
+                            <!-- Granular Feature Access Toggles -->
+                            <div class="mt-4 pt-4 border-t ${isSuper ? 'border-amber-500/20' : 'border-zinc-800/80'}">
+                                ${isSuper ? `
+                                    <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-2.5 text-xs text-amber-200">
+                                        <span class="text-base">🛡️</span>
+                                        <span>Super Administrators inherently possess unrestricted permissions for all dashboard modules, database mutations, and the Access Control console.</span>
+                                    </div>
+                                ` : `
+                                    <div class="space-y-3">
+                                        <!-- Master Toggle -->
+                                        <div class="flex items-center justify-between p-3 bg-zinc-950/70 rounded-xl border border-zinc-800">
+                                            <div>
+                                                <span class="text-xs font-semibold text-white block">⚡ Master Toggle: Full Access (All Features)</span>
+                                                <span class="text-[10px] text-zinc-400">Grant or remove all 5 administrator permissions simultaneously</span>
+                                            </div>
+                                            <label class="switch-container">
+                                                <input type="checkbox" class="switch-input admin-all-perm-toggle" data-user-id="${u.id}" data-name="${escapeHtml(fullName)}" ${perms.all ? 'checked' : ''}>
+                                                <span class="switch-slider"></span>
+                                            </label>
+                                        </div>
+
+                                        <!-- Individual 5 Feature Toggles -->
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                                            <!-- 1. Broadcast -->
+                                            <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
+                                                <div class="min-w-0 pr-2">
+                                                    <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">📢 Broadcast Alerts</span>
+                                                    <span class="text-[10px] text-zinc-500 block truncate">Blast app-wide alert banner</span>
+                                                </div>
+                                                <label class="switch-container flex-shrink-0">
+                                                    <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="broadcast" data-name="${escapeHtml(fullName)}" ${(perms.all || perms.broadcast) ? 'checked' : ''} ${perms.all ? 'disabled' : ''}>
+                                                    <span class="switch-slider"></span>
+                                                </label>
+                                            </div>
+
+                                            <!-- 2. Moderate -->
+                                            <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
+                                                <div class="min-w-0 pr-2">
+                                                    <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">🛡️ Moderate Content</span>
+                                                    <span class="text-[10px] text-zinc-500 block truncate">Delete posts & moderate feed</span>
+                                                </div>
+                                                <label class="switch-container flex-shrink-0">
+                                                    <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="moderate" data-name="${escapeHtml(fullName)}" ${(perms.all || perms.moderate) ? 'checked' : ''} ${perms.all ? 'disabled' : ''}>
+                                                    <span class="switch-slider"></span>
+                                                </label>
+                                            </div>
+
+                                            <!-- 3. Events -->
+                                            <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
+                                                <div class="min-w-0 pr-2">
+                                                    <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">📅 Add & Manage Events</span>
+                                                    <span class="text-[10px] text-zinc-500 block truncate">Create, edit, delete events</span>
+                                                </div>
+                                                <label class="switch-container flex-shrink-0">
+                                                    <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="events" data-name="${escapeHtml(fullName)}" ${(perms.all || perms.events) ? 'checked' : ''} ${perms.all ? 'disabled' : ''}>
+                                                    <span class="switch-slider"></span>
+                                                </label>
+                                            </div>
+
+                                            <!-- 4. Leads -->
+                                            <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
+                                                <div class="min-w-0 pr-2">
+                                                    <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">👥 Core Team Leads</span>
+                                                    <span class="text-[10px] text-zinc-500 block truncate">Appoint leads & teams</span>
+                                                </div>
+                                                <label class="switch-container flex-shrink-0">
+                                                    <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="leads" data-name="${escapeHtml(fullName)}" ${(perms.all || perms.leads) ? 'checked' : ''} ${perms.all ? 'disabled' : ''}>
+                                                    <span class="switch-slider"></span>
+                                                </label>
+                                            </div>
+
+                                            <!-- 5. Users -->
+                                            <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60 sm:col-span-2 lg:col-span-2">
+                                                <div class="min-w-0 pr-2">
+                                                    <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">📋 User Management & Roster</span>
+                                                    <span class="text-[10px] text-zinc-500 block truncate">Edit members, approve change requests & export roster Excel</span>
+                                                </div>
+                                                <label class="switch-container flex-shrink-0">
+                                                    <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="users" data-name="${escapeHtml(fullName)}" ${(perms.all || perms.users) ? 'checked' : ''} ${perms.all ? 'disabled' : ''}>
+                                                    <span class="switch-slider"></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `}
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>
+
+            <!-- Database Schema Notice & Quick Copy -->
+            <div class="p-4 bg-zinc-950/50 rounded-xl border border-zinc-800 flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-base">📋</span>
+                    <div>
+                        <span class="text-xs font-semibold text-zinc-300 block">Supabase Migration Script: access_control_schema.sql</span>
+                        <span class="text-[10px] text-zinc-500">Run this once in Supabase SQL editor to create the admin_permissions column if not already executed.</span>
+                    </div>
+                </div>
+                <button id="copy-access-sql-btn" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs font-medium transition-colors">
+                    Copy SQL Script
+                </button>
+            </div>
+        </div>`;
     }
 
     function renderBroadcast() {
         return `
+
         <div class="glass-card rounded-xl p-5">
             <h3 class="font-heading font-semibold text-sm mb-1">Broadcast Alert</h3>
             <p class="text-[11px] text-zinc-500 mb-4">Send a red alert banner to all active users</p>
@@ -1071,13 +1584,15 @@ const AdminView = (() => {
     }
 
     async function mount(container) {
-        activeTab = 'users';
         container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
         try {
             await ICCSupabase.fetchProfile();
         } catch (e) {
             console.warn('Admin mount fetchProfile error:', e);
         }
+        const allowedTabs = getAvailableTabs();
+        activeTab = allowedTabs.some(t => t.id === 'users') ? 'users' : (allowedTabs[0]?.id || 'users');
+
         pendingLeads = await ICCSupabase.getPendingLeads();
         allPosts = await ICCSupabase.getAllPosts();
         allUsers = await ICCSupabase.getAllProfiles();
@@ -1763,6 +2278,286 @@ const AdminView = (() => {
                 editingEvent = null;
                 container.innerHTML = render(); bindEvents(container);
             }
+        });
+
+        // ==================== ACCESS CONTROL LISTENERS ====================
+        const accessSearch = container.querySelector('#access-user-search-input');
+        if (accessSearch) {
+            accessSearch.addEventListener('input', e => {
+                accessSearchQuery = e.target.value;
+                const content = document.getElementById('admin-content');
+                if (content && activeTab === 'access_control') {
+                    content.innerHTML = renderTab();
+                    bindEvents(container);
+                    const newSearch = container.querySelector('#access-user-search-input');
+                    if (newSearch) {
+                        newSearch.focus();
+                        newSearch.setSelectionRange(newSearch.value.length, newSearch.value.length);
+                    }
+                }
+            });
+        }
+        container.querySelector('#clear-access-search-btn')?.addEventListener('click', () => {
+            accessSearchQuery = '';
+            container.innerHTML = render();
+            bindEvents(container);
+        });
+
+        // Role filter pills
+        container.querySelectorAll('.admin-role-filter').forEach(btn => {
+            btn.addEventListener('click', () => {
+                accessRoleFilter = btn.dataset.filter;
+                container.innerHTML = render();
+                bindEvents(container);
+            });
+        });
+
+        // Start Appointing a member as Admin
+        container.querySelectorAll('.start-appoint-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                appointingUserId = btn.dataset.userId;
+                appointingUserDraft = {
+                    broadcast: true,
+                    moderate: true,
+                    events: true,
+                    leads: true,
+                    users: true,
+                    all: true,
+                    isSuperAdmin: false
+                };
+                container.innerHTML = render();
+                bindEvents(container);
+                container.querySelector('#appoint-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+        });
+
+        // Cancel Appointing
+        container.querySelectorAll('#cancel-appoint-btn, #cancel-appoint-btn-2').forEach(btn => {
+            btn.addEventListener('click', () => {
+                appointingUserId = null;
+                appointingUserDraft = null;
+                container.innerHTML = render();
+                bindEvents(container);
+            });
+        });
+
+        // Appoint Role Radios (Standard Admin vs Super Admin)
+        container.querySelector('#role-admin-radio')?.addEventListener('change', e => {
+            if (e.target.checked && appointingUserDraft) {
+                appointingUserDraft.isSuperAdmin = false;
+                container.innerHTML = render();
+                bindEvents(container);
+            }
+        });
+        container.querySelector('#role-superadmin-radio')?.addEventListener('change', e => {
+            if (e.target.checked && appointingUserDraft) {
+                appointingUserDraft.isSuperAdmin = true;
+                appointingUserDraft.all = true;
+                container.innerHTML = render();
+                bindEvents(container);
+            }
+        });
+
+        // Appoint Master Toggle
+        container.querySelector('#appoint-all-toggle')?.addEventListener('change', e => {
+            const checked = e.target.checked;
+            if (appointingUserDraft) {
+                appointingUserDraft.all = checked;
+                appointingUserDraft.broadcast = checked;
+                appointingUserDraft.moderate = checked;
+                appointingUserDraft.events = checked;
+                appointingUserDraft.leads = checked;
+                appointingUserDraft.users = checked;
+                container.querySelectorAll('.appoint-perm-check').forEach(cb => {
+                    cb.checked = checked;
+                });
+            }
+        });
+
+        // Appoint Individual Checkboxes
+        container.querySelectorAll('.appoint-perm-check').forEach(cb => {
+            cb.addEventListener('change', e => {
+                const perm = cb.dataset.perm;
+                if (appointingUserDraft) {
+                    appointingUserDraft[perm] = e.target.checked;
+                    const allTrue = appointingUserDraft.broadcast && appointingUserDraft.moderate && appointingUserDraft.events && appointingUserDraft.leads && appointingUserDraft.users;
+                    appointingUserDraft.all = allTrue;
+                    const allToggle = container.querySelector('#appoint-all-toggle');
+                    if (allToggle) allToggle.checked = allTrue;
+                }
+            });
+        });
+
+        // Confirm Appoint Admin
+        container.querySelector('#confirm-appoint-btn')?.addEventListener('click', async () => {
+            const targetId = appointingUserId;
+            if (!targetId) return;
+            const targetUser = allUsers.find(u => u.id === targetId);
+            const targetName = targetUser?.full_name || 'User';
+            const btn = container.querySelector('#confirm-appoint-btn');
+            btn.disabled = true;
+            btn.innerHTML = 'Appointing...';
+
+            const roleToSet = appointingUserDraft.isSuperAdmin ? 'super_admin' : 'admin';
+            const permsToSet = appointingUserDraft.isSuperAdmin ? null : {
+                broadcast: !!appointingUserDraft.broadcast,
+                moderate: !!appointingUserDraft.moderate,
+                events: !!appointingUserDraft.events,
+                leads: !!appointingUserDraft.leads,
+                users: !!appointingUserDraft.users,
+                all: !!appointingUserDraft.all
+            };
+
+            const res = await ICCSupabase.setAdminRole(targetId, roleToSet, permsToSet);
+            if (res.error) {
+                Toast.error('Failed to appoint admin: ' + (res.error.message || res.error));
+                btn.disabled = false;
+                btn.innerHTML = 'Confirm & Appoint Administrator';
+            } else {
+                Toast.success(`👑 Appointed ${targetName} as ${roleToSet === 'super_admin' ? 'Super Admin' : 'Administrator'}!`);
+                appointingUserId = null;
+                appointingUserDraft = null;
+                accessSearchQuery = '';
+                allUsers = await ICCSupabase.getAllProfiles();
+                container.innerHTML = render();
+                bindEvents(container);
+            }
+        });
+
+        // Active Admins: Master Permission Toggle
+        container.querySelectorAll('.admin-all-perm-toggle').forEach(toggle => {
+            toggle.addEventListener('change', async e => {
+                const userId = toggle.dataset.userId;
+                const userName = toggle.dataset.name || 'Admin';
+                const isAll = e.target.checked;
+                
+                const targetUser = allUsers.find(u => u.id === userId);
+                const currentPerms = ICCSupabase.getAdminPermissions(targetUser);
+                const updated = {
+                    ...currentPerms,
+                    all: isAll,
+                    broadcast: isAll ? true : currentPerms.broadcast,
+                    moderate: isAll ? true : currentPerms.moderate,
+                    events: isAll ? true : currentPerms.events,
+                    leads: isAll ? true : currentPerms.leads,
+                    users: isAll ? true : currentPerms.users
+                };
+
+                const res = await ICCSupabase.updateAdminPermissions(userId, updated);
+                if (res.error) {
+                    Toast.error('Failed to update permissions: ' + (res.error.message || res.error));
+                    toggle.checked = !isAll;
+                } else {
+                    Toast.success(`Updated permissions for ${userName}`);
+                    if (targetUser) targetUser.admin_permissions = updated;
+                    container.innerHTML = render();
+                    bindEvents(container);
+                }
+            });
+        });
+
+        // Active Admins: Individual Feature Toggles
+        container.querySelectorAll('.admin-perm-toggle').forEach(toggle => {
+            toggle.addEventListener('change', async e => {
+                const userId = toggle.dataset.userId;
+                const perm = toggle.dataset.perm;
+                const userName = toggle.dataset.name || 'Admin';
+                const checked = e.target.checked;
+
+                const targetUser = allUsers.find(u => u.id === userId);
+                const currentPerms = { ...ICCSupabase.getAdminPermissions(targetUser) };
+                currentPerms[perm] = checked;
+                
+                const allFive = currentPerms.broadcast && currentPerms.moderate && currentPerms.events && currentPerms.leads && currentPerms.users;
+                currentPerms.all = allFive;
+
+                const res = await ICCSupabase.updateAdminPermissions(userId, currentPerms);
+                if (res.error) {
+                    Toast.error('Failed to update: ' + (res.error.message || res.error));
+                    toggle.checked = !checked;
+                } else {
+                    const permNames = {
+                        broadcast: 'Broadcast',
+                        moderate: 'Moderate',
+                        events: 'Events',
+                        leads: 'Leads',
+                        users: 'Users'
+                    };
+                    Toast.success(`${permNames[perm] || perm} access ${checked ? 'granted' : 'removed'} for ${userName}`);
+                    if (targetUser) targetUser.admin_permissions = currentPerms;
+                    container.innerHTML = render();
+                    bindEvents(container);
+                }
+            });
+        });
+
+        // Promote to Super Admin
+        container.querySelectorAll('.promote-superadmin-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const userId = btn.dataset.id;
+                const name = btn.dataset.name || 'User';
+                if (!confirm(`Are you sure you want to promote ${name} to Super Admin? They will receive full, unrestricted control across all dashboard features.`)) return;
+
+                const res = await ICCSupabase.setAdminRole(userId, 'super_admin');
+                if (res.error) {
+                    Toast.error('Failed to promote: ' + (res.error.message || res.error));
+                } else {
+                    Toast.success(`🛡️ Promoted ${name} to Super Admin!`);
+                    allUsers = await ICCSupabase.getAllProfiles();
+                    container.innerHTML = render();
+                    bindEvents(container);
+                }
+            });
+        });
+
+        // Demote Super Admin to Standard Admin
+        container.querySelectorAll('.demote-superadmin-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const userId = btn.dataset.id;
+                const name = btn.dataset.name || 'User';
+                if (!confirm(`Demote ${name} from Super Admin to Standard Admin?`)) return;
+
+                const res = await ICCSupabase.setAdminRole(userId, 'admin', { ...ICCSupabase.DEFAULT_ADMIN_PERMISSIONS, all: true });
+                if (res.error) {
+                    Toast.error('Failed to demote: ' + (res.error.message || res.error));
+                } else {
+                    Toast.info(`Demoted ${name} to Standard Admin.`);
+                    allUsers = await ICCSupabase.getAllProfiles();
+                    container.innerHTML = render();
+                    bindEvents(container);
+                }
+            });
+        });
+
+        // Revoke Admin Access
+        container.querySelectorAll('.revoke-admin-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const userId = btn.dataset.id;
+                const name = btn.dataset.name || 'User';
+                if (!confirm(`⚠️ Revoke administrator privileges for ${name}? They will become a standard member.`)) return;
+
+                const res = await ICCSupabase.setAdminRole(userId, 'member', null);
+                if (res.error) {
+                    Toast.error('Failed to revoke admin: ' + (res.error.message || res.error));
+                } else {
+                    Toast.info(`Revoked admin access for ${name}`);
+                    allUsers = await ICCSupabase.getAllProfiles();
+                    container.innerHTML = render();
+                    bindEvents(container);
+                }
+            });
+        });
+
+        // Copy SQL Script Button
+        container.querySelector('#copy-access-sql-btn')?.addEventListener('click', () => {
+            const sql = `-- Run this in Supabase SQL Editor:
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS admin_permissions JSONB DEFAULT '{"broadcast": true, "moderate": true, "events": true, "leads": true, "users": true}'::jsonb;
+UPDATE public.profiles SET admin_permissions = '{"broadcast": true, "moderate": true, "events": true, "leads": true, "users": true}'::jsonb WHERE role IN ('admin', 'super_admin', 'superadmin') AND (admin_permissions IS NULL OR admin_permissions = '{}'::jsonb);`;
+            navigator.clipboard.writeText(sql).then(() => {
+                Toast.success('📋 SQL migration copied to clipboard!');
+            }).catch(() => {
+                Toast.info('Please refer to access_control_schema.sql in project root');
+            });
         });
     }
 

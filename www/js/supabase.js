@@ -1116,13 +1116,192 @@ const ICCSupabase = (() => {
         return { error };
     }
 
-    // ==================== SUPER ADMIN APPROVAL WORKFLOW ====================
+    // ==================== SUPER ADMIN ACCESS CONTROL & APPROVAL WORKFLOW ====================
 
-    function isSuperAdmin() {
-        if (!currentProfile && !currentUser) return false;
-        const role = (currentProfile?.role || '').toLowerCase().trim();
+    const DEFAULT_ADMIN_PERMISSIONS = {
+        broadcast: true,
+        moderate: true,
+        events: true,
+        leads: true,
+        users: true
+    };
+
+    function isSuperAdmin(prof = currentProfile) {
+        const target = prof || currentProfile;
+        if (!target && !currentUser) return false;
+        const role = (target?.role || '').toLowerCase().trim();
         return role === 'super_admin' || role === 'superadmin';
     }
+
+    function getAdminPermissions(prof = currentProfile) {
+        const target = prof || currentProfile;
+        if (!target && !currentUser) {
+            return { broadcast: false, moderate: false, events: false, leads: false, users: false, all: false };
+        }
+        const role = (target?.role || '').toLowerCase().trim();
+        
+        // Super Admins always possess full permissions across all features
+        if (role === 'super_admin' || role === 'superadmin') {
+            return { broadcast: true, moderate: true, events: true, leads: true, users: true, all: true };
+        }
+
+        // Non-admins have no admin permissions
+        if (role !== 'admin') {
+            return { broadcast: false, moderate: false, events: false, leads: false, users: false, all: false };
+        }
+
+        // Backward compatibility: If admin_permissions is undefined/null, grant all by default
+        if (target.admin_permissions === undefined || target.admin_permissions === null) {
+            return { broadcast: true, moderate: true, events: true, leads: true, users: true, all: true };
+        }
+
+        // If stored as JSON object
+        if (typeof target.admin_permissions === 'object' && !Array.isArray(target.admin_permissions)) {
+            const p = target.admin_permissions;
+            const hasAll = !!p.all || (p.broadcast !== false && p.moderate !== false && p.events !== false && p.leads !== false && p.users !== false && p.broadcast && p.moderate && p.events && p.leads && p.users);
+            return {
+                broadcast: hasAll || !!p.broadcast,
+                moderate: hasAll || !!p.moderate,
+                events: hasAll || !!p.events,
+                leads: hasAll || !!p.leads,
+                users: hasAll || !!p.users,
+                all: hasAll
+            };
+        }
+
+        // If stored as Array
+        if (Array.isArray(target.admin_permissions)) {
+            const arr = target.admin_permissions;
+            const hasAll = arr.includes('all');
+            return {
+                broadcast: hasAll || arr.includes('broadcast'),
+                moderate: hasAll || arr.includes('moderate'),
+                events: hasAll || arr.includes('events'),
+                leads: hasAll || arr.includes('leads'),
+                users: hasAll || arr.includes('users'),
+                all: hasAll
+            };
+        }
+
+        return { broadcast: true, moderate: true, events: true, leads: true, users: true, all: true };
+    }
+
+    function hasAdminPermission(permKey, prof = currentProfile) {
+        const perms = getAdminPermissions(prof);
+        return !!(perms.all || perms[permKey]);
+    }
+
+    async function updateAdminPermissions(userId, permissions) {
+        if (!client || !isSuperAdmin()) {
+            return { error: { message: 'Unauthorized: Only Super Admins can configure feature permissions.' } };
+        }
+
+        try {
+            const cleanPermissions = {
+                broadcast: !!permissions.broadcast,
+                moderate: !!permissions.moderate,
+                events: !!permissions.events,
+                leads: !!permissions.leads,
+                users: !!permissions.users,
+                all: !!permissions.all
+            };
+
+            const { data, error } = await client.from('profiles')
+                .update({ 
+                    admin_permissions: cleanPermissions,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', userId)
+                .select()
+                .maybeSingle();
+
+            if (error) {
+                console.error('updateAdminPermissions error:', error);
+                return { error };
+            }
+
+            // Sync currentProfile cache if updating oneself
+            if (currentUser && userId === currentUser.id && currentProfile) {
+                currentProfile.admin_permissions = cleanPermissions;
+            }
+
+            // Send notification to the affected admin
+            createNotification({
+                userId: userId,
+                type: 'system',
+                actorId: currentUser.id,
+                body: 'Your administrator feature permissions were updated by a Super Admin.'
+            }).catch(e => console.warn('Could not send permission update notif:', e));
+
+            return { data, success: true };
+        } catch (err) {
+            console.error('updateAdminPermissions exception:', err);
+            return { error: err };
+        }
+    }
+
+    async function setAdminRole(userId, newRole, permissions = null) {
+        if (!client || !isSuperAdmin()) {
+            return { error: { message: 'Unauthorized: Only Super Admins can alter administrator roles.' } };
+        }
+
+        if (userId === currentUser.id && newRole !== 'super_admin' && newRole !== 'superadmin') {
+            return { error: { message: 'Safety check: You cannot demote yourself from Super Admin.' } };
+        }
+
+        try {
+            const updatePayload = {
+                role: newRole,
+                updated_at: new Date().toISOString()
+            };
+
+            if (permissions) {
+                updatePayload.admin_permissions = permissions;
+            } else if (newRole === 'admin') {
+                updatePayload.admin_permissions = { ...DEFAULT_ADMIN_PERMISSIONS, all: true };
+            } else if (newRole === 'member' || newRole === 'student') {
+                updatePayload.admin_permissions = null;
+            }
+
+            const { data, error } = await client.from('profiles')
+                .update(updatePayload)
+                .eq('id', userId)
+                .select()
+                .maybeSingle();
+
+            if (error) {
+                console.error('setAdminRole error:', error);
+                return { error };
+            }
+
+            // Sync currentProfile cache if updating oneself
+            if (currentUser && userId === currentUser.id && currentProfile) {
+                currentProfile.role = newRole;
+                if (updatePayload.admin_permissions !== undefined) {
+                    currentProfile.admin_permissions = updatePayload.admin_permissions;
+                }
+            }
+
+            // Notification to user
+            let notifBody = 'Your account role has been updated.';
+            if (newRole === 'super_admin') notifBody = '🛡️ You have been appointed as a Super Admin on ICC Hub!';
+            else if (newRole === 'admin') notifBody = '👑 You have been appointed as an Administrator on ICC Hub!';
+            else if (newRole === 'member') notifBody = 'Your administrator privileges have been removed.';
+
+            createNotification({
+                userId: userId,
+                type: 'system',
+                actorId: currentUser.id,
+                body: notifBody
+            }).catch(e => console.warn('Could not send role update notif:', e));
+
+            return { data, success: true };
+        } catch (err) {
+            console.error('setAdminRole exception:', err);
+            return { error: err };
+        }
+    }
+
 
     async function requestUserUpdate(userId, proposedFields, originalData = {}) {
         if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
@@ -2010,7 +2189,8 @@ const ICCSupabase = (() => {
         subscribeToInventory, subscribeToInventoryRequests,
         subscribeToFeed, subscribeToMessages, subscribeToConversation,
         subscribeToTeam, subscribeToAllLeads, subscribeToBroadcasts, subscribeToNotifications,
-        unsubscribeChannel, cleanupAllChannels,
-        getUser, getProfile, isConfigured, getClient, isAdmin, isLead, isSuperAdmin, needsOnboarding
+        getUser, getProfile, isConfigured, getClient, isAdmin, isLead, isSuperAdmin, needsOnboarding,
+        getAdminPermissions, hasAdminPermission, updateAdminPermissions, setAdminRole, DEFAULT_ADMIN_PERMISSIONS
     };
 })();
+
