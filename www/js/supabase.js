@@ -1162,7 +1162,7 @@ const ICCSupabase = (() => {
                 return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, all: true };
             }
 
-            // Backward compatibility for legacy 'users' key
+            // Backward compatibility for legacy 'users' key (before users_edit/users_export split)
             const legacyUsers = p.users;
             const ue = p.hasOwnProperty('users_edit') ? !!p.users_edit : (legacyUsers !== undefined ? !!legacyUsers : false);
             const ux = p.hasOwnProperty('users_export') ? !!p.users_export : (legacyUsers !== undefined ? !!legacyUsers : false);
@@ -1172,22 +1172,19 @@ const ICCSupabase = (() => {
             const e = !!p.events;
             const l = !!p.leads;
 
-            // Cleanup for bugged legacy state where master toggle was turned off but individual features remained true
-            if (p.all === false && (p.broadcast === true && p.moderate === true && p.events === true && p.leads === true && (p.users === true || (ue && ux)))) {
-                return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, all: false };
-            }
-
+            // `all` is TRUE only if explicitly stored as true OR if all 6 individual features are on.
+            // Individual feature flags are ALWAYS authoritative — never override them based on `all`.
             const allSix = (b && m && e && l && ue && ux);
-            const all = (p.all === true) || (p.all !== false && allSix);
+            const all = (p.all === true) || allSix;
 
             return {
-                broadcast: all ? true : b,
-                moderate: all ? true : m,
-                events: all ? true : e,
-                leads: all ? true : l,
-                users_edit: all ? true : ue,
-                users_export: all ? true : ux,
-                users: all ? true : (ue || ux),
+                broadcast: b,
+                moderate: m,
+                events: e,
+                leads: l,
+                users_edit: ue,
+                users_export: ux,
+                users: (ue || ux),
                 all: all
             };
         }
@@ -1228,15 +1225,24 @@ const ICCSupabase = (() => {
         }
 
         try {
+            const b = !!permissions.broadcast;
+            const m = !!permissions.moderate;
+            const ev = !!permissions.events;
+            const l = !!permissions.leads;
+            const ue = !!permissions.users_edit;
+            const ux = !!permissions.users_export;
+            // `all` is true only when ALL 6 features are enabled — always recompute, never trust caller's value
+            const computedAll = b && m && ev && l && ue && ux;
+
             const cleanPermissions = {
-                broadcast: !!permissions.broadcast,
-                moderate: !!permissions.moderate,
-                events: !!permissions.events,
-                leads: !!permissions.leads,
-                users_edit: !!permissions.users_edit,
-                users_export: !!permissions.users_export,
-                users: !!(permissions.users_edit || permissions.users_export),
-                all: !!permissions.all
+                broadcast: b,
+                moderate: m,
+                events: ev,
+                leads: l,
+                users_edit: ue,
+                users_export: ux,
+                users: ue || ux,
+                all: computedAll
             };
 
             const { data, error } = await client.from('profiles')
