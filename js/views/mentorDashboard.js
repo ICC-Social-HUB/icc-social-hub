@@ -24,6 +24,41 @@ const MentorDashboardView = (() => {
             .replace(/'/g, '&#039;');
     }
 
+    function sanitizeRichText(html) {
+        if (!html) return '';
+        const str = String(html).trim();
+        if (!str) return '';
+
+        const hasTags = /<[a-z][\s\S]*>/i.test(str);
+        if (!hasTags) {
+            return escapeHtml(str).replace(/\n/g, '<br>');
+        }
+
+        const temp = document.createElement('div');
+        temp.innerHTML = str;
+
+        const dangerous = temp.querySelectorAll('script, style, iframe, object, embed, form, input, button, textarea, meta, link');
+        dangerous.forEach(el => el.remove());
+
+        const allElements = temp.querySelectorAll('*');
+        allElements.forEach(el => {
+            for (let i = el.attributes.length - 1; i >= 0; i--) {
+                const attr = el.attributes[i];
+                const name = attr.name.toLowerCase();
+                const val = attr.value.trim().toLowerCase();
+                if (name.startsWith('on') || val.startsWith('javascript:') || val.startsWith('data:text/html')) {
+                    el.removeAttribute(attr.name);
+                }
+            }
+            if (el.tagName === 'A') {
+                el.setAttribute('target', '_blank');
+                el.setAttribute('rel', 'noopener noreferrer');
+            }
+        });
+
+        return temp.innerHTML;
+    }
+
     async function loadData() {
         isLoading = true;
         try {
@@ -368,7 +403,7 @@ const MentorDashboardView = (() => {
                     <!-- 1. Project Information -->
                     <div class="space-y-3 bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/80">
                         <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Project Overview</h4>
-                        <p class="text-xs text-zinc-200 leading-relaxed whitespace-pre-wrap">${escapeHtml(app.description)}</p>
+                        <div class="prose-clean text-xs text-zinc-200 leading-relaxed">${sanitizeRichText(app.description)}</div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs">
                             <div>
@@ -725,7 +760,7 @@ const MentorDashboardView = (() => {
                                 <span class="font-bold text-white">Application ID: <span class="font-mono">${escapeHtml(application.id)}</span></span>
                                 <span>Approved on ${application.reviewed_at ? new Date(application.reviewed_at).toLocaleDateString() : 'N/A'}</span>
                             </div>
-                            <p class="text-zinc-300 whitespace-pre-wrap">${escapeHtml(application.description)}</p>
+                            <div class="prose-clean text-xs text-zinc-300 leading-relaxed">${sanitizeRichText(application.description)}</div>
                         </div>
                     </div>
                     ` : ''}

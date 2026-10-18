@@ -305,6 +305,91 @@ const TeamsView = (() => {
     // FEATURE 1: PROJECT CREATION & APPLICATIONS
     // ==========================================
 
+    function renderRichEditorToolbar(toolbarId) {
+        return `
+        <div class="flex flex-wrap items-center gap-1 p-1.5 bg-zinc-900/95 border border-zinc-800 rounded-xl select-none" id="${toolbarId}">
+            <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs font-bold transition-colors cursor-pointer active:scale-95" data-cmd="bold" title="Bold (Ctrl+B)">
+                <b>B</b>
+            </button>
+            <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs italic font-serif transition-colors cursor-pointer active:scale-95" data-cmd="italic" title="Italic (Ctrl+I)">
+                <i>I</i>
+            </button>
+            <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs underline transition-colors cursor-pointer active:scale-95" data-cmd="underline" title="Underline (Ctrl+U)">
+                <u>U</u>
+            </button>
+            <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs line-through transition-colors cursor-pointer active:scale-95" data-cmd="strikeThrough" title="Strikethrough">
+                <s>S</s>
+            </button>
+
+            <span class="w-[1px] h-4 bg-zinc-700 mx-1"></span>
+
+            <button type="button" class="toolbar-btn px-2 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs font-semibold transition-colors cursor-pointer active:scale-95" data-cmd="formatBlock" data-val="<h3>" title="Main Heading">
+                H1
+            </button>
+            <button type="button" class="toolbar-btn px-2 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs font-semibold transition-colors cursor-pointer active:scale-95" data-cmd="formatBlock" data-val="<h4>" title="Subheading">
+                H2
+            </button>
+
+            <span class="w-[1px] h-4 bg-zinc-700 mx-1"></span>
+
+            <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs transition-colors cursor-pointer active:scale-95" data-cmd="insertUnorderedList" title="Bulleted List">
+                • List
+            </button>
+            <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs transition-colors cursor-pointer active:scale-95" data-cmd="insertOrderedList" title="Numbered List">
+                1. List
+            </button>
+
+            <span class="w-[1px] h-4 bg-zinc-700 mx-1"></span>
+
+            <button type="button" class="toolbar-btn px-2 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs transition-colors cursor-pointer active:scale-95" data-cmd="createLink" title="Insert Link">
+                🔗 Link
+            </button>
+            <button type="button" class="toolbar-btn px-2 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 rounded-md text-xs transition-colors cursor-pointer active:scale-95" data-cmd="removeFormat" title="Clear Formatting">
+                ⌫ Clear
+            </button>
+        </div>`;
+    }
+
+    function bindRichEditorToolbar(toolbarId, editorElement) {
+        const toolbar = document.getElementById(toolbarId);
+        if (!toolbar || !editorElement) return;
+
+        toolbar.querySelectorAll('.toolbar-btn').forEach(btn => {
+            btn.addEventListener('mousedown', (e) => {
+                e.preventDefault(); // Prevents editor from losing focus/selection
+            });
+
+            btn.addEventListener('click', () => {
+                const cmd = btn.dataset.cmd;
+                const val = btn.dataset.val || null;
+
+                if (cmd === 'createLink') {
+                    const url = prompt('Enter website link URL:', 'https://');
+                    if (url && url.trim()) {
+                        let validUrl = url.trim();
+                        if (!/^https?:\/\//i.test(validUrl)) {
+                            validUrl = 'https://' + validUrl;
+                        }
+                        document.execCommand('createLink', false, validUrl);
+                    }
+                } else {
+                    document.execCommand(cmd, false, val);
+                }
+                editorElement.focus();
+            });
+        });
+
+        // Rich paste handling (preserving bold, underline, lists, links)
+        editorElement.addEventListener('paste', (e) => {
+            const html = e.clipboardData?.getData('text/html');
+            if (html) {
+                e.preventDefault();
+                const cleaned = sanitizeRichText(html);
+                document.execCommand('insertHTML', false, cleaned);
+            }
+        });
+    }
+
     function openCreateProjectModal() {
         const user = ICCSupabase.getUser();
         if (!user) {
@@ -318,113 +403,188 @@ const TeamsView = (() => {
         const profile = ICCSupabase.getProfile();
 
         const modalHtml = `
-        <div id="create-project-modal" class="fixed inset-0 z-[2500] bg-zinc-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in overflow-y-auto">
-            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-xl p-5 sm:p-6 shadow-2xl space-y-5 my-auto" onclick="event.stopPropagation()">
-                <!-- Header -->
-                <div class="flex items-center justify-between pb-3.5 border-b border-zinc-800">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-900/30">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        <div id="create-project-modal" class="fixed inset-0 z-[2500] bg-zinc-950 text-white flex flex-col w-full h-full min-h-screen overflow-y-auto animate-fade-in">
+            <!-- Fullscreen Sticky Top Header -->
+            <header class="sticky top-0 z-30 w-full bg-[#17212b]/95 backdrop-blur-xl border-b border-zinc-800 px-4 sm:px-6 md:px-8 py-3 flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <button id="cancel-create-proj-btn" type="button" class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl text-xs font-semibold border border-zinc-800 transition-all cursor-pointer active:scale-95" title="Return to Projects">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                        <span class="hidden sm:inline">Back to Projects</span>
+                    </button>
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-900/30">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                         </div>
                         <div>
-                            <h3 class="font-heading font-bold text-lg text-white">Create Project Proposal</h3>
-                            <p class="text-xs text-zinc-400">Submit your project application for mentor review & approval</p>
+                            <h1 class="font-heading font-bold text-sm sm:text-base text-white">Create Project Proposal</h1>
+                            <p class="text-[11px] text-zinc-400 hidden md:block">Full proposal studio with rich text overview, custom resources & mentor approval</p>
                         </div>
                     </div>
-                    <button id="close-create-proj-modal" class="text-zinc-500 hover:text-white p-1.5 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </div>
+
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <button type="submit" form="create-project-form" id="submit-create-proj-btn" class="px-4 sm:px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-lg shadow-emerald-900/30 active:scale-95 cursor-pointer flex items-center gap-2">
+                        <span>Submit Proposal</span>
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </button>
+                    <button id="close-create-proj-modal" type="button" class="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer" title="Close Studio">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
+            </header>
 
-                <!-- Workflow Notice -->
-                <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2.5 text-xs text-amber-300">
-                    <svg class="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <!-- Fullscreen Form Body -->
+            <div class="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 md:px-8 lg:px-10 py-6 sm:py-8">
+                <!-- Workflow Alert Banner -->
+                <div class="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-start gap-3 text-xs text-amber-300">
+                    <div class="w-7 h-7 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center flex-shrink-0 text-amber-400 mt-0.5">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
                     <div>
-                        <span class="font-bold">Mentor Approval Workflow:</span> Submitting saves this as a project application with status <span class="font-bold text-amber-200">"Pending Review"</span>. Mentors will review your proposal, request changes or approve it. Once approved, the project becomes live and you automatically become the Project Lead with a generated unique project code.
+                        <span class="font-bold text-amber-200">Mentor Approval Workflow:</span> Submitting saves this proposal with status <span class="font-bold text-white underline">"Pending Review"</span>. Mentors can review your problem statement, request refinements, or approve it. Once approved, the project is published live to everyone, a unique database project code is assigned, and you become the official Project Lead.
                     </div>
                 </div>
 
-                <!-- Form -->
-                <form id="create-project-form" class="space-y-4">
-                    <!-- Project Name -->
-                    <div>
-                        <label class="block text-xs font-semibold text-zinc-300 mb-1">
-                            Project Name <span class="text-red-400">*</span>
-                        </label>
-                        <input type="text" id="cp-project-name" required placeholder="e.g. Autonomous Campus Delivery Drone" maxlength="120"
-                               class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-colors">
-                    </div>
+                <form id="create-project-form" class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        
+                        <!-- Left Column: Core Fields & Rich Text Description (lg:col-span-8) -->
+                        <div class="lg:col-span-8 space-y-6">
+                            
+                            <!-- Project Title & Team Identity Card -->
+                            <div class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 sm:p-6 space-y-4 backdrop-blur-xl">
+                                <h3 class="font-heading font-bold text-sm uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                    <span>Project & Team Identity</span>
+                                </h3>
 
-                    <!-- Team Name -->
-                    <div>
-                        <label class="block text-xs font-semibold text-zinc-300 mb-1">
-                            Team Name <span class="text-zinc-500 text-[11px]">(Optional, defaults to Project Name)</span>
-                        </label>
-                        <input type="text" id="cp-team-name" placeholder="e.g. AeroInnovators" maxlength="80"
-                               class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-colors">
-                    </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-zinc-300 mb-1.5">
+                                            Project Name <span class="text-red-400">*</span>
+                                        </label>
+                                        <input type="text" id="cp-project-name" required placeholder="e.g. Autonomous Campus Delivery Drone" maxlength="120"
+                                               class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-colors">
+                                    </div>
 
-                    <!-- Description -->
-                    <div>
-                        <label class="block text-xs font-semibold text-zinc-300 mb-1">
-                            Description & Vision <span class="text-red-400">*</span>
-                        </label>
-                        <textarea id="cp-project-desc" rows="4" required placeholder="Provide a detailed overview: problem statement, architecture, technologies, expected impact..."
-                                  class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-colors resize-none"></textarea>
-                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-zinc-300 mb-1.5">
+                                            Team Name <span class="text-zinc-500 text-[11px]">(Optional, defaults to Project Name)</span>
+                                        </label>
+                                        <input type="text" id="cp-team-name" placeholder="e.g. AeroInnovators" maxlength="80"
+                                               class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-colors">
+                                    </div>
+                                </div>
 
-                    <!-- Specialties / Domains -->
-                    <div>
-                        <label class="block text-xs font-semibold text-zinc-300 mb-1">
-                            Specialties / Key Domains <span class="text-zinc-500 text-[11px]">(Comma-separated)</span>
-                        </label>
-                        <input type="text" id="cp-specialties" placeholder="e.g. AI / ML, Robotics, Embedded C++, ROS2"
-                               class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-colors">
-                    </div>
-
-                    <!-- Links Grid -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                        <div>
-                            <label class="block text-xs font-semibold text-zinc-300 mb-1">
-                                GitHub Repository <span class="text-zinc-500 text-[11px]">(Optional)</span>
-                            </label>
-                            <input type="url" id="cp-github-url" placeholder="https://github.com/..."
-                                   class="w-full px-3.5 py-2 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-xs text-white placeholder-zinc-600 outline-none transition-colors">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-zinc-300 mb-1">
-                                Demo / YouTube Link <span class="text-zinc-500 text-[11px]">(Optional)</span>
-                            </label>
-                            <input type="url" id="cp-demo-url" placeholder="https://youtube.com/..."
-                                   class="w-full px-3.5 py-2 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-xs text-white placeholder-zinc-600 outline-none transition-colors">
-                        </div>
-                    </div>
-
-                    <!-- Applicant Lead Credit -->
-                    <div class="p-3 bg-zinc-950/70 border border-zinc-800/80 rounded-xl flex items-center justify-between">
-                        <div class="flex items-center gap-2.5 min-w-0">
-                            <div class="w-8 h-8 rounded-full bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                                ${profile?.full_name?.charAt(0) || 'U'}
+                                <div>
+                                    <label class="block text-xs font-semibold text-zinc-300 mb-1.5">
+                                        Specialties, Tech Stack & Key Domains <span class="text-zinc-500 text-[11px]">(Comma-separated)</span>
+                                    </label>
+                                    <input type="text" id="cp-specialties" placeholder="e.g. AI / ML, Computer Vision, Embedded C++, ROS2, Drone Avionics"
+                                           class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-colors">
+                                </div>
                             </div>
-                            <div class="min-w-0">
-                                <p class="text-xs font-bold text-white truncate">${escapeHtml(profile?.full_name || 'Innovator')}</p>
-                                <p class="text-[10px] text-zinc-500 truncate">${escapeHtml(profile?.email || '')}</p>
+
+                            <!-- Rich Text Description & Project Vision Card -->
+                            <div class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 sm:p-6 space-y-3.5 backdrop-blur-xl">
+                                <div class="flex items-center justify-between flex-wrap gap-2 pb-1 border-b border-zinc-800/60">
+                                    <div>
+                                        <h3 class="font-heading font-bold text-sm uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h7"/></svg>
+                                            <span>Description & Project Vision <span class="text-red-400">*</span></span>
+                                        </h3>
+                                        <p class="text-[11px] text-zinc-400 mt-0.5">Format with bold, underline, headings, lists or paste formatted text from Docs/Notion</p>
+                                    </div>
+                                    <span class="text-[10px] text-zinc-500 font-mono hidden sm:inline">Rich Format Editor</span>
+                                </div>
+
+                                <!-- Formatting Toolbar -->
+                                ${renderRichEditorToolbar('cp-desc-toolbar')}
+
+                                <!-- Contenteditable Rich Area -->
+                                <div id="cp-project-desc-editor" 
+                                     contenteditable="true" 
+                                     class="prose-clean min-h-[320px] max-h-[580px] overflow-y-auto p-4 sm:p-5 bg-zinc-950/90 border border-zinc-800 focus:border-emerald-500/60 rounded-xl text-sm text-zinc-200 outline-none focus:ring-1 focus:ring-emerald-500/40 transition-all leading-relaxed" 
+                                     placeholder="Type or paste formatted project overview: problem statement, architecture, technologies, target milestones, and expected outcome..."></div>
+
+                                <div class="flex items-center justify-between text-[11px] text-zinc-500 pt-1">
+                                    <span>Tip: Highlight text to bold (Ctrl+B), underline (Ctrl+U), or convert to bullet points.</span>
+                                </div>
                             </div>
                         </div>
-                        <span class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold">
-                            Designated Project Lead
-                        </span>
-                    </div>
 
-                    <!-- Buttons -->
-                    <div class="flex items-center justify-end gap-3 pt-2">
-                        <button type="button" id="cancel-create-proj-btn" class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer">
-                            Cancel
-                        </button>
-                        <button type="submit" id="submit-create-proj-btn" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-900/30 active:scale-95 cursor-pointer flex items-center gap-2">
-                            <span>Submit for Mentor Review</span>
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                        </button>
+                        <!-- Right Column: Links, Custom Resources & Leadership Info (lg:col-span-4) -->
+                        <div class="lg:col-span-4 space-y-6">
+                            
+                            <!-- Project Links & Custom Resources Card -->
+                            <div class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 sm:p-5 space-y-4 backdrop-blur-xl">
+                                <div class="flex items-center justify-between border-b border-zinc-800/60 pb-2.5">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                                        </div>
+                                        <h3 class="font-heading font-bold text-xs uppercase tracking-wider text-zinc-300">Links & Resources</h3>
+                                    </div>
+                                    <button type="button" id="cp-add-custom-link-btn" class="flex items-center gap-1 px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-emerald-400 hover:text-emerald-300 rounded-lg text-xs font-semibold cursor-pointer transition-colors shadow-sm active:scale-95">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                        <span>+ Add Link</span>
+                                    </button>
+                                </div>
+
+                                <!-- GitHub Field -->
+                                <div class="p-3 bg-zinc-950/70 border border-zinc-800/80 rounded-xl space-y-1.5">
+                                    <div class="flex items-center gap-2 text-xs font-semibold text-zinc-300">
+                                        <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                                        <span>GitHub Repository</span>
+                                    </div>
+                                    <input type="url" id="cp-github-url" placeholder="https://github.com/your-org/repo"
+                                           class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 focus:border-emerald-500 rounded-lg text-xs text-white placeholder-zinc-600 outline-none transition-colors">
+                                </div>
+
+                                <!-- YouTube Field -->
+                                <div class="p-3 bg-zinc-950/70 border border-zinc-800/80 rounded-xl space-y-1.5">
+                                    <div class="flex items-center gap-2 text-xs font-semibold text-zinc-300">
+                                        <svg class="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                        <span>YouTube Video / Demo</span>
+                                    </div>
+                                    <input type="url" id="cp-demo-url" placeholder="https://youtube.com/watch?v=..."
+                                           class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 focus:border-emerald-500 rounded-lg text-xs text-white placeholder-zinc-600 outline-none transition-colors">
+                                </div>
+
+                                <!-- Custom Links Dynamic List -->
+                                <div class="space-y-2 pt-1">
+                                    <span class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">Custom Links (Figma, Docs, Research Paper)</span>
+                                    <div id="cp-custom-links-container" class="space-y-2">
+                                        <!-- Dynamically added custom links -->
+                                    </div>
+                                    <p class="text-[10px] text-zinc-500 italic">Click "+ Add Link" above to attach Figma prototypes, Google Docs, Notion specs, or live deployments.</p>
+                                </div>
+                            </div>
+
+                            <!-- Designated Project Lead Dossier Card -->
+                            <div class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 sm:p-5 space-y-3.5 backdrop-blur-xl">
+                                <h3 class="font-heading font-bold text-xs uppercase tracking-wider text-zinc-400">Applicant & Leadership</h3>
+                                <div class="flex items-center gap-3 p-3 bg-zinc-950/70 border border-zinc-800/80 rounded-xl">
+                                    <div class="w-10 h-10 rounded-full bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                        ${profile?.full_name?.charAt(0) || 'U'}
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-xs font-bold text-white truncate">${escapeHtml(profile?.full_name || 'Innovator')}</p>
+                                        <p class="text-[11px] text-zinc-400 truncate">${escapeHtml(profile?.email || '')}</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-1.5 text-xs text-zinc-400 leading-relaxed bg-zinc-950/40 p-3 rounded-xl border border-zinc-800/50">
+                                    <div class="flex items-center gap-2 text-emerald-400 font-semibold">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                        <span>Designated Project Lead</span>
+                                    </div>
+                                    <p class="text-[11px] text-zinc-400">
+                                        Upon mentor review and approval, you will automatically become the Project Lead for this project with permissions to manage members, milestones, and project links.
+                                    </p>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
                 </form>
             </div>
@@ -437,14 +597,41 @@ const TeamsView = (() => {
         const close = () => modal?.remove();
         document.getElementById('close-create-proj-modal')?.addEventListener('click', close);
         document.getElementById('cancel-create-proj-btn')?.addEventListener('click', close);
-        modal?.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+        // Bind rich text toolbar
+        const descEditor = document.getElementById('cp-project-desc-editor');
+        bindRichEditorToolbar('cp-desc-toolbar', descEditor);
+
+        // Custom links handling
+        const customLinksContainer = document.getElementById('cp-custom-links-container');
+        function addCustomLinkRow(name = '', url = '') {
+            const row = document.createElement('div');
+            row.className = 'cp-custom-link-row flex items-center gap-2 p-2 bg-zinc-950 border border-zinc-800 rounded-xl animate-fade-in';
+            row.innerHTML = `
+                <input type="text" class="cp-custom-link-name form-input text-xs w-2/5 px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white" placeholder="Label (e.g. Figma)" value="${escapeHtml(name)}">
+                <input type="url" class="cp-custom-link-url form-input text-xs flex-1 px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white" placeholder="https://..." value="${escapeHtml(url)}">
+                <button type="button" class="cp-remove-link-btn p-1.5 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer" title="Remove Link">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+            `;
+            row.querySelector('.cp-remove-link-btn').addEventListener('click', () => row.remove());
+            customLinksContainer.appendChild(row);
+        }
+
+        document.getElementById('cp-add-custom-link-btn')?.addEventListener('click', () => {
+            addCustomLinkRow();
+        });
+
+        // Add 1 default empty custom link row for immediate discoverability
+        addCustomLinkRow('', '');
 
         document.getElementById('create-project-form')?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitBtn = document.getElementById('submit-create-proj-btn');
             const projectName = document.getElementById('cp-project-name')?.value.trim();
             const teamName = document.getElementById('cp-team-name')?.value.trim() || projectName;
-            const description = document.getElementById('cp-project-desc')?.value.trim();
+            const rawHtml = descEditor ? descEditor.innerHTML.trim() : '';
+            const textOnly = descEditor ? descEditor.textContent.trim() : '';
             const specialtiesRaw = document.getElementById('cp-specialties')?.value.trim();
             const githubUrl = document.getElementById('cp-github-url')?.value.trim();
             const demoUrl = document.getElementById('cp-demo-url')?.value.trim();
@@ -453,34 +640,61 @@ const TeamsView = (() => {
                 Toast.error('Please enter a project name.');
                 return;
             }
-            if (!description || description.length < 10) {
-                Toast.error('Please enter a descriptive project overview (at least 10 characters).');
+            if (!textOnly || textOnly.length < 10) {
+                Toast.error('Please enter a descriptive project overview & vision (at least 10 characters).');
+                descEditor?.focus();
                 return;
             }
 
+            const cleanHtml = sanitizeRichText(rawHtml);
             const specialties = specialtiesRaw ? specialtiesRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
-            const links = [];
-            if (githubUrl) links.push({ type: 'github', name: 'GitHub Repo', url: githubUrl });
-            if (demoUrl) links.push({ type: 'demo', name: 'Demo / Video', url: demoUrl });
+            const allLinks = [];
+
+            if (githubUrl) {
+                allLinks.push({
+                    type: 'github',
+                    name: 'GitHub Repository',
+                    url: formatExternalUrl(githubUrl)
+                });
+            }
+            if (demoUrl) {
+                allLinks.push({
+                    type: 'youtube',
+                    name: 'Demo Video',
+                    url: formatExternalUrl(demoUrl)
+                });
+            }
+
+            document.querySelectorAll('.cp-custom-link-row').forEach(row => {
+                const name = row.querySelector('.cp-custom-link-name')?.value.trim();
+                const url = row.querySelector('.cp-custom-link-url')?.value.trim();
+                if (url) {
+                    allLinks.push({
+                        type: detectLinkType(url, 'custom'),
+                        name: name || 'Project Resource',
+                        url: formatExternalUrl(url)
+                    });
+                }
+            });
 
             submitBtn.disabled = true;
             submitBtn.innerHTML = `
                 <svg class="w-4 h-4 animate-spin text-white" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
-                <span>Submitting...</span>
+                <span>Submitting Proposal...</span>
             `;
 
             const { data, error } = await ICCSupabase.createProjectApplication({
                 project_name: projectName,
                 team_name: teamName,
-                description: description,
+                description: cleanHtml,
                 specialties: specialties,
-                links: links
+                links: allLinks
             });
 
             if (error) {
                 Toast.error('Failed to submit proposal: ' + error.message);
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span>Submit for Mentor Review</span>';
+                submitBtn.innerHTML = '<span>Submit Proposal</span>';
                 return;
             }
 
@@ -688,7 +902,7 @@ const TeamsView = (() => {
                                 <span>Edit & Resubmit Proposal (Revision ${(activeApp.revision_number || 1) + 1})</span>
                             </h5>
                         </div>
-                        <form id="resubmit-app-form" class="space-y-3">
+                        <form id="resubmit-app-form" class="space-y-3.5">
                             <div>
                                 <label class="block text-xs font-semibold text-zinc-300 mb-1">Project Name *</label>
                                 <input type="text" id="rs-name" required value="${escapeHtml(activeApp.project_name)}"
@@ -700,14 +914,42 @@ const TeamsView = (() => {
                                        class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white focus:border-emerald-500 outline-none">
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-zinc-300 mb-1">Description & Vision *</label>
-                                <textarea id="rs-desc" rows="4" required class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white focus:border-emerald-500 outline-none resize-none">${escapeHtml(activeApp.description)}</textarea>
+                                <div class="flex items-center justify-between pb-1">
+                                    <label class="block text-xs font-semibold text-zinc-300">Description & Vision *</label>
+                                    <span class="text-[10px] text-zinc-500">Rich Text Formatted</span>
+                                </div>
+                                ${renderRichEditorToolbar('rs-desc-toolbar')}
+                                <div id="rs-desc-editor" contenteditable="true"
+                                     class="prose-clean min-h-[160px] max-h-[360px] overflow-y-auto p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-200 outline-none leading-relaxed mt-1">
+                                    ${sanitizeRichText(activeApp.description)}
+                                </div>
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-zinc-300 mb-1">Specialties / Tags (comma-separated)</label>
                                 <input type="text" id="rs-specialties" value="${escapeHtml(Array.isArray(activeApp.specialties) ? activeApp.specialties.join(', ') : (activeApp.specialties || ''))}"
                                        class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white focus:border-emerald-500 outline-none">
                             </div>
+
+                            <!-- Custom Links in Resubmit Form -->
+                            <div class="space-y-2 pt-1">
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-xs font-semibold text-zinc-300">Attached Links & Custom Resources</label>
+                                    <button type="button" id="rs-add-link-btn" class="text-xs text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer flex items-center gap-1">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                        <span>Add Link</span>
+                                    </button>
+                                </div>
+                                <div id="rs-custom-links-container" class="space-y-2">
+                                    ${(Array.isArray(activeApp.links) ? activeApp.links : []).map(l => `
+                                        <div class="rs-link-row flex items-center gap-2 p-1.5 bg-zinc-900 border border-zinc-800 rounded-xl">
+                                            <input type="text" class="rs-link-name text-xs w-2/5 px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white" placeholder="Label (e.g. Figma)" value="${escapeHtml(l.name || '')}">
+                                            <input type="url" class="rs-link-url text-xs flex-1 px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white" placeholder="https://..." value="${escapeHtml(l.url || '')}">
+                                            <button type="button" class="rs-remove-link-btn p-1 text-zinc-500 hover:text-red-400 rounded cursor-pointer" title="Remove"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+
                             <div>
                                 <label class="block text-xs font-semibold text-emerald-400 mb-1">Applicant Note / Explanation of Changes *</label>
                                 <textarea id="rs-note" rows="2" required placeholder="Describe what revisions and improvements you made in response to mentor comments..."
@@ -739,8 +981,8 @@ const TeamsView = (() => {
 
                         <div class="pt-2 border-t border-zinc-800/60">
                             <h6 class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">Description</h6>
-                            <div class="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap bg-zinc-900/50 p-3 rounded-xl border border-zinc-800/40">
-                                ${escapeHtml(activeApp.description)}
+                            <div class="text-xs text-zinc-300 leading-relaxed prose-clean bg-zinc-900/50 p-3.5 rounded-xl border border-zinc-800/40">
+                                ${sanitizeRichText(activeApp.description)}
                             </div>
                         </div>
 
@@ -749,6 +991,15 @@ const TeamsView = (() => {
                                 <h6 class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">Domains & Specialties</h6>
                                 <div class="flex flex-wrap gap-1.5">
                                     ${activeApp.specialties.map(s => `<span class="px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg text-[11px]">${escapeHtml(s)}</span>`).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${Array.isArray(activeApp.links) && activeApp.links.length > 0 ? `
+                            <div class="pt-2">
+                                <h6 class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">Attached Links & Resources</h6>
+                                <div class="flex flex-wrap gap-2">
+                                    ${activeApp.links.map(l => `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-emerald-500/40 text-emerald-400 rounded-lg text-xs flex items-center gap-1.5 transition-colors"><span>🔗 ${escapeHtml(l.name || l.url)}</span></a>`).join('')}
                                 </div>
                             </div>
                         ` : ''}
@@ -829,6 +1080,29 @@ const TeamsView = (() => {
                 };
             });
 
+            // Bind rich text editor for resubmission
+            const rsDescEditor = document.getElementById('rs-desc-editor');
+            bindRichEditorToolbar('rs-desc-toolbar', rsDescEditor);
+
+            // Resubmit custom links handling
+            const rsLinksContainer = document.getElementById('rs-custom-links-container');
+            document.querySelectorAll('.rs-remove-link-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => e.target.closest('.rs-link-row')?.remove());
+            });
+
+            document.getElementById('rs-add-link-btn')?.addEventListener('click', () => {
+                if (!rsLinksContainer) return;
+                const row = document.createElement('div');
+                row.className = 'rs-link-row flex items-center gap-2 p-1.5 bg-zinc-900 border border-zinc-800 rounded-xl animate-fade-in';
+                row.innerHTML = `
+                    <input type="text" class="rs-link-name text-xs w-2/5 px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white" placeholder="Label (e.g. Docs)">
+                    <input type="url" class="rs-link-url text-xs flex-1 px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white" placeholder="https://...">
+                    <button type="button" class="rs-remove-link-btn p-1 text-zinc-500 hover:text-red-400 rounded cursor-pointer" title="Remove"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                `;
+                row.querySelector('.rs-remove-link-btn').addEventListener('click', () => row.remove());
+                rsLinksContainer.appendChild(row);
+            });
+
             // Toggle resubmit form
             document.getElementById('toggle-resubmit-form-btn')?.addEventListener('click', () => {
                 const card = document.getElementById('resubmit-form-card');
@@ -841,18 +1115,38 @@ const TeamsView = (() => {
                 const btn = document.getElementById('rs-submit-btn');
                 const name = document.getElementById('rs-name')?.value.trim();
                 const team = document.getElementById('rs-team')?.value.trim();
-                const desc = document.getElementById('rs-desc')?.value.trim();
+                const rawHtml = rsDescEditor ? rsDescEditor.innerHTML.trim() : '';
+                const textOnly = rsDescEditor ? rsDescEditor.textContent.trim() : '';
                 const spec = document.getElementById('rs-specialties')?.value.trim();
                 const note = document.getElementById('rs-note')?.value.trim();
 
-                if (!name || !desc) {
-                    Toast.error('Project name and description are required.');
+                if (!name) {
+                    Toast.error('Project name is required.');
+                    return;
+                }
+                if (!textOnly || textOnly.length < 10) {
+                    Toast.error('Please enter a descriptive project overview & vision (at least 10 characters).');
+                    rsDescEditor?.focus();
                     return;
                 }
                 if (!note) {
-                    Toast.error('Please include an applicant note explaining the changes.');
+                    Toast.error('Please include an applicant note explaining the revisions.');
                     return;
                 }
+
+                const cleanHtml = sanitizeRichText(rawHtml);
+                const allLinks = [];
+                document.querySelectorAll('.rs-link-row').forEach(row => {
+                    const lName = row.querySelector('.rs-link-name')?.value.trim();
+                    const lUrl = row.querySelector('.rs-link-url')?.value.trim();
+                    if (lUrl) {
+                        allLinks.push({
+                            type: detectLinkType(lUrl, 'custom'),
+                            name: lName || 'Project Resource',
+                            url: formatExternalUrl(lUrl)
+                        });
+                    }
+                });
 
                 btn.disabled = true;
                 btn.textContent = 'Resubmitting...';
@@ -860,8 +1154,9 @@ const TeamsView = (() => {
                 const { data, error } = await ICCSupabase.resubmitProjectApplication(activeApp.id, {
                     project_name: name,
                     team_name: team || name,
-                    description: desc,
-                    specialties: spec ? spec.split(',').map(s => s.trim()).filter(Boolean) : []
+                    description: cleanHtml,
+                    specialties: spec ? spec.split(',').map(s => s.trim()).filter(Boolean) : [],
+                    links: allLinks
                 }, note);
 
                 if (error) {
