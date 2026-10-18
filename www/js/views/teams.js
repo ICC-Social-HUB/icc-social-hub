@@ -553,21 +553,16 @@ const TeamsView = (() => {
                     <div class="lg:col-span-7 xl:col-span-8 space-y-5">
                         
                         <!-- 1. Project Name & Team Name Section (Shifted to left, compact) -->
-                        <div class="flex items-start gap-4 pb-1">
+                        <div class="flex items-center gap-4 pb-1">
                             <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-zinc-900 ring-2 ring-zinc-800/80 shadow-xl flex items-center justify-center overflow-hidden flex-shrink-0 ${lead.avatar_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}" ${lead.avatar_url ? `data-full-image="${lead.avatar_url}"` : ''}>
                                 ${lead.avatar_url
                                     ? `<img src="${lead.avatar_url}" class="w-full h-full object-cover">`
                                     : `<span class="font-heading font-bold text-2xl sm:text-3xl" style="color:${lead.color || '#10b981'}">${lead.initials}</span>`}
                             </div>
                             <div class="min-w-0 flex-1 text-left">
-                                <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold tracking-wider uppercase mb-1.5">
-                                    <span>Projects Modal · Workspace</span>
-                                </div>
                                 <h1 class="font-heading font-bold text-xl sm:text-2xl lg:text-3xl text-white tracking-tight break-words leading-tight">${lead.project_name || lead.team}</h1>
-                                <div class="flex flex-wrap items-center gap-2 mt-2 text-xs">
+                                <div class="flex items-center gap-2 mt-1.5 text-xs">
                                     <span class="px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded-full font-semibold text-zinc-400">Team: <span class="text-zinc-200 font-bold">${lead.team}</span></span>
-                                    <span class="text-zinc-600 hidden sm:inline">•</span>
-                                    <span class="text-zinc-400 font-medium">Lead: <span id="lead-profile-link" class="text-emerald-400 hover:text-emerald-300 cursor-pointer underline decoration-dotted transition-colors" title="View Profile">${lead.name}${ICC_CONFIG.VERIFIED_TICK}</span></span>
                                 </div>
                             </div>
                         </div>
