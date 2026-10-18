@@ -2179,15 +2179,27 @@ const AdminView = (() => {
 
         container.querySelectorAll('.delete-user-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
-                if (!confirm('Are you sure you want to permanently delete this user? This cannot be undone.')) return;
                 const userId = btn.dataset.id;
-                btn.textContent = '...';
+                const userObj = allUsers.find(u => u.id === userId);
+                const userName = userObj ? (userObj.full_name || userObj.username || userObj.email || 'this user') : 'this user';
+                
+                if (!confirm(`Are you sure you want to permanently delete "${userName}"? This cannot be undone.`)) return;
+                
+                const origHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = `<span class="inline-block animate-pulse text-[11px] font-semibold text-red-400">Deleting...</span>`;
+                
                 const { error } = await ICCSupabase.adminDeleteUser(userId);
-                if (error) { Toast.error('Delete failed: ' + error.message); btn.textContent = 'Delete'; }
-                else {
-                    Toast.success('User deleted!');
+                if (error) {
+                    Toast.error('Delete failed: ' + (error.message || 'Unknown error'));
+                    btn.innerHTML = origHtml;
+                    btn.disabled = false;
+                } else {
+                    Toast.success('User deleted successfully!');
+                    if (editingUserId === userId) editingUserId = null;
                     allUsers = await ICCSupabase.getAllProfiles();
-                    container.innerHTML = render(); bindEvents(container);
+                    container.innerHTML = render();
+                    bindEvents(container);
                 }
             });
         });

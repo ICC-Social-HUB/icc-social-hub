@@ -383,8 +383,35 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = public
 AS $$
+DECLARE
+    v_target_role TEXT;
+    v_target_email TEXT;
 BEGIN
-    IF EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin') THEN
+    -- Verify caller is admin, super_admin, or master email
+    IF EXISTS (
+        SELECT 1 FROM public.profiles 
+        WHERE id = auth.uid() 
+        AND (role IN ('super_admin', 'superadmin', 'admin') OR email = 'iccsocialhub@gmail.com')
+    ) THEN
+        -- Prevent deleting Super Administrators
+        SELECT role, email INTO v_target_role, v_target_email FROM public.profiles WHERE id = target_user_id;
+        IF v_target_role IN ('super_admin', 'superadmin') OR v_target_email = 'iccsocialhub@gmail.com' THEN
+            RAISE EXCEPTION 'Super Administrators cannot be deleted.';
+        END IF;
+
+        -- Unlink from core_leads if assigned as team lead
+        UPDATE public.core_leads SET lead_user_id = NULL WHERE lead_user_id = target_user_id;
+
+        -- Clean up dependent records
+        DELETE FROM public.team_memberships WHERE user_id = target_user_id;
+        DELETE FROM public.team_join_data WHERE user_id = target_user_id;
+        DELETE FROM public.project_team_leads WHERE user_id = target_user_id;
+        DELETE FROM public.project_mentor_messages WHERE sender_id = target_user_id;
+        DELETE FROM public.notifications WHERE user_id = target_user_id OR actor_id = target_user_id;
+        DELETE FROM public.likes WHERE user_id = target_user_id;
+        DELETE FROM public.comments WHERE user_id = target_user_id;
+        DELETE FROM public.posts WHERE user_id = target_user_id;
+        DELETE FROM public.profiles WHERE id = target_user_id;
         DELETE FROM auth.users WHERE id = target_user_id;
     ELSE
         RAISE EXCEPTION 'Not authorized';

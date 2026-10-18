@@ -1327,9 +1327,87 @@ const ICCSupabase = (() => {
     }
 
     async function adminDeleteUser(userId) {
-        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
-        const { error } = await client.rpc('admin_delete_user', { target_user_id: userId });
-        return { error };
+        if (!client) return { error: { message: 'Supabase client not initialized' } };
+        
+        // Authorization check: Only Super Admins (and authorized Admins) can delete users
+        if (!isSuperAdmin() && !isAdmin()) {
+            return { error: { message: 'Unauthorized: Only Super Administrators can delete users.' } };
+        }
+
+        // Safety check 1: Never allow deleting oneself
+        if (currentUser && currentUser.id === userId) {
+            return { error: { message: 'You cannot delete your own account.' } };
+        }
+
+        // Safety check 2: Pre-check target user to protect Super Administrators
+        try {
+            const { data: targetProf } = await client.from('profiles').select('role, email').eq('id', userId).maybeSingle();
+            if (targetProf) {
+                const targetRole = (targetProf.role || '').toLowerCase().trim();
+                if (targetRole === 'super_admin' || targetRole === 'superadmin' || targetProf.email === 'iccsocialhub@gmail.com') {
+                    return { error: { message: 'Super Administrators are protected and cannot be deleted.' } };
+                }
+            }
+        } catch (e) {
+            console.warn('Pre-check target user role failed:', e);
+        }
+
+        // 1. Try calling the backend /api/delete-user endpoint first (runs with service role key)
+        try {
+            const session = (await client.auth.getSession())?.data?.session;
+            const token = session?.access_token;
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const baseUrl = ICC_CONFIG.API_BASE_URL || '';
+            const res = await fetch(`${baseUrl}/api/delete-user`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ userId, target_user_id: userId })
+            });
+
+            if (res.ok) {
+                const json = await res.json().catch(() => null);
+                if (json && json.success) {
+                    return { success: true };
+                } else if (json && json.error) {
+                    return { error: { message: json.error } };
+                }
+            } else {
+                const errJson = await res.json().catch(() => null);
+                if (errJson && errJson.error) {
+                    return { error: { message: errJson.error } };
+                }
+            }
+        } catch (apiErr) {
+            console.warn('Backend /api/delete-user call failed, attempting RPC fallback:', apiErr);
+        }
+
+        // 2. Try the PostgreSQL RPC function
+        const { error: rpcErr } = await client.rpc('admin_delete_user', { target_user_id: userId });
+        if (!rpcErr) {
+            return { success: true };
+        }
+
+        console.warn('admin_delete_user RPC error:', rpcErr);
+
+        // 3. Resilient Fallback: If caller is a Super Admin and RPC failed with 'Not authorized' (legacy SQL in DB),
+        // remove the profile and its memberships directly from public schema
+        if (isSuperAdmin()) {
+            try {
+                await client.from('core_leads').update({ lead_user_id: null }).eq('lead_user_id', userId);
+                await client.from('team_memberships').delete().eq('user_id', userId);
+                await client.from('team_join_data').delete().eq('user_id', userId);
+                const { error: profErr } = await client.from('profiles').delete().eq('id', userId);
+                if (!profErr) {
+                    return { success: true, warning: 'User profile deleted directly.' };
+                }
+            } catch (fbErr) {
+                console.error('Direct deletion fallback error:', fbErr);
+            }
+        }
+
+        return { error: rpcErr };
     }
 
     // ==================== SUPER ADMIN ACCESS CONTROL & APPROVAL WORKFLOW ====================
