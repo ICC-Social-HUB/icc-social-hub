@@ -31,7 +31,6 @@ const TeamsView = (() => {
     function isLeadForTeam(leadId, customLead = null, members = teamMembers) {
         const profile = ICCSupabase.getProfile();
         if (!profile) return false;
-        if (typeof ICCSupabase.isAdmin === 'function' && ICCSupabase.isAdmin()) return true;
 
         const leadNum = Number(leadId);
         if (!leadNum) return false;
@@ -215,9 +214,9 @@ const TeamsView = (() => {
             const roster = document.getElementById('team-roster');
             if (roster) {
                 const tags = getMemberTags(leadNum);
-                const isLeadOrAdmin = isLeadForTeam(leadNum, lead, teamMembers);
+                const isLead = isLeadForTeam(leadNum, lead, teamMembers);
                 roster.innerHTML = teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No workforce members yet — be first to join!</div>'
-                    : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, tags, leadNum, lead)).join('');
+                    : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLead, profile?.id, tags, leadNum, lead)).join('');
             }
         });
 
@@ -297,7 +296,7 @@ const TeamsView = (() => {
         return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
     }
 
-    function renderWorkforceCard(m, i, isLeadOrAdmin, currentProfileId, memberTags = {}, leadId = currentTeamId, lead = null) {
+    function renderWorkforceCard(m, i, isLead, currentProfileId, memberTags = {}, leadId = currentTeamId, lead = null) {
         const name = m.full_name || m.username || 'Anonymous';
         const fallbackAvatar = getRoboticAvatar(m.id || m.username || name);
         const avatarSrc = m.avatar_url ? m.avatar_url : fallbackAvatar;
@@ -350,8 +349,8 @@ const TeamsView = (() => {
                 </span>
             ` : '')}
 
-            <!-- 3-dot Menu (Only for Leader of this team or Admin) -->
-            ${isLeadOrAdmin ? `
+            <!-- 3-dot Menu (Only for Leader of this team) -->
+            ${isLead ? `
                 <button class="member-actions-btn mt-1.5 p-1 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-full transition-colors cursor-pointer z-10" 
                         data-id="${m.id}" 
                         data-name="${escapeHtml(name)}" 
@@ -381,7 +380,7 @@ const TeamsView = (() => {
         { id: 'deployment', name: 'Deployment Phase', desc: 'Final documentation and demonstration' }
     ];
 
-    function renderMilestones(lead, isLeadOrAdmin) {
+    function renderMilestones(lead, isLead) {
         const milestones = lead.milestones || {};
         const completedCount = MILESTONE_PHASES.filter(p => milestones[p.id]).length;
         const progress = (completedCount / MILESTONE_PHASES.length) * 100;
@@ -429,7 +428,7 @@ const TeamsView = (() => {
                 }).join('')}
             </div>
 
-            ${isLeadOrAdmin ? `
+            ${isLead ? `
             <button id="update-progress-btn" class="w-full mt-6 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 group">
                 <svg class="w-4 h-4 text-emerald-500 group-hover:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                 Update Project Milestones
@@ -538,9 +537,9 @@ const TeamsView = (() => {
     function renderDetail(lead) {
         const user = ICCSupabase.getUser();
         const profile = ICCSupabase.getProfile();
-        const isMember = profile?.memberships?.includes(lead.id);
-        const isPending = profile?.pending_teams?.includes(lead.id);
-        const isLeadOrAdmin = isLeadForTeam(lead.id, lead, teamMembers);
+        const isMember = profile?.memberships?.map(Number).includes(Number(lead.id));
+        const isPending = profile?.pending_teams?.map(Number).includes(Number(lead.id));
+        const isLead = isLeadForTeam(lead.id, lead, teamMembers);
         const memberTags = getMemberTags(lead.id);
 
         return `
@@ -602,11 +601,11 @@ const TeamsView = (() => {
                             <h4 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-3">Membership</h4>
                             ${(() => {
                                 if (!user) return `<button id="team-join-btn" class="join-btn w-full px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Join ${lead.team}</button><p class="text-[11px] text-zinc-600 mt-1.5 text-center">Sign in to join</p>`;
-                                if (isMember || ICCSupabase.isAdmin()) return `
+                                if (isMember || isLead) return `
                                     <div class="flex flex-col gap-3">
                                         <div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600/15 border border-emerald-600/30 rounded-xl">
                                             <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                            <span class="text-emerald-400 text-sm font-semibold">You're a Member</span>
+                                            <span class="text-emerald-400 text-sm font-semibold">${isLead ? "Team Leader" : "You're a Member"}</span>
                                         </div>
                                         <button id="open-team-chat-btn" class="flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-sm font-bold transition-all shadow-lg shadow-zinc-950/50 group">
                                             <svg class="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
@@ -636,7 +635,7 @@ const TeamsView = (() => {
                             })()}
                         </div>
 
-                        ${isLeadOrAdmin ? `
+                        ${isLead ? `
                         <div class="glass-card rounded-2xl p-4 border border-zinc-800/80 bg-zinc-950/60" id="pending-requests-container">
                             <h3 class="font-heading font-semibold text-sm mb-3">Pending Requests (${pendingMembers.length})</h3>
                             <div class="space-y-2 max-h-48 overflow-y-auto">
@@ -689,7 +688,7 @@ const TeamsView = (() => {
                         ` : ''}
 
                         <!-- Milestone Tracker -->
-                        ${renderMilestones(lead, isLeadOrAdmin)}
+                        ${renderMilestones(lead, isLead)}
                     </div>
 
                     <!-- Right Area on Laptop (lg:): Active Workforce Section (lg:col-span-5) -->
@@ -715,7 +714,7 @@ const TeamsView = (() => {
                             <!-- Seamless circle-only grid in workforce column -->
                             <div id="team-roster" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-y-8 gap-x-4 justify-items-center">
                                 ${teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No workforce members yet — be first to join!</div>'
-                        : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, memberTags, lead.id, lead)).join('')}
+                        : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLead, profile?.id, memberTags, lead.id, lead)).join('')}
                             </div>
                         </div>
                     </div>
@@ -779,8 +778,8 @@ const TeamsView = (() => {
             }
             teamMembers = sortTeamMembers(teamMembers, lead);
 
-            const isLeadOrAdmin = isLeadForTeam(currentTeamId, lead, teamMembers);
-            if (isLeadOrAdmin) {
+            const isLead = isLeadForTeam(currentTeamId, lead, teamMembers);
+            if (isLead) {
                 pendingMembers = await ICCSupabase.getPendingMembers(currentTeamId);
             }
             container.innerHTML = renderDetail(lead);
@@ -816,15 +815,15 @@ const TeamsView = (() => {
 
                 const roster = document.getElementById('team-roster');
                 const count = document.getElementById('team-member-count');
-                const isLeadOrAdminRealtime = isLeadForTeam(currentTeamId, lead, teamMembers);
+                const isLeadRealtime = isLeadForTeam(currentTeamId, lead, teamMembers);
                 if (roster) {
                     const memberTags = getMemberTags(currentTeamId);
                     roster.innerHTML = teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No workforce members yet — be first to join!</div>'
-                        : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdminRealtime, profile?.id, memberTags, currentTeamId, lead)).join('');
+                        : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadRealtime, profile?.id, memberTags, currentTeamId, lead)).join('');
                 }
                 if (count) count.textContent = teamMembers.length;
 
-                if (isLeadOrAdminRealtime) {
+                if (isLeadRealtime) {
                     pendingMembers = await ICCSupabase.getPendingMembers(currentTeamId);
                     const pendingContainer = document.getElementById('pending-requests-container');
                     if (pendingContainer) {

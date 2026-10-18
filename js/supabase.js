@@ -813,6 +813,9 @@ const ICCSupabase = (() => {
 
     async function approveMember(userId, teamId) {
         if (!client) return { error: { message: 'Not configured' } };
+        if (!isTeamLead(teamId) && !(await verifyTeamLead(teamId))) {
+            return { error: { message: 'Unauthorized: Only this team\'s leader can approve members.' } };
+        }
 
         // 0. Check if user is already in ANY team
         const { data: existing } = await client.from('team_memberships').select('team_id').eq('user_id', userId);
@@ -863,6 +866,9 @@ const ICCSupabase = (() => {
 
     async function denyMember(userId, teamId) {
         if (!client) return { error: { message: 'Not configured' } };
+        if (!isTeamLead(teamId) && !(await verifyTeamLead(teamId))) {
+            return { error: { message: 'Unauthorized: Only this team\'s leader can remove or deny members.' } };
+        }
         
         // 1. Cleanup join data
         const { error: delError } = await client.from('team_join_data').delete().eq('user_id', userId).eq('team_id', teamId);
@@ -903,9 +909,118 @@ const ICCSupabase = (() => {
         return { error };
     }
 
+    // ── TEAM ACCESS & LEADERSHIP HELPERS ──
+    function isTeamLead(teamId, customLead = null) {
+        if (!currentUser) return false;
+        const profile = currentProfile;
+        const teamNum = parseInt(teamId);
+        if (!teamNum) return false;
+
+        // Admins are intentionally NOT automatically team leads.
+        // Leadership is strictly limited to the designated team leader.
+        if (profile?.role === 'lead' && Number(profile?.team_id) === teamNum) return true;
+        if (profile?.role === 'lead' && Array.isArray(profile?.memberships) && profile.memberships.map(Number).includes(teamNum)) return true;
+
+        const leads = (typeof CORE_LEADS !== 'undefined' && Array.isArray(CORE_LEADS)) ? CORE_LEADS : [];
+        const lead = customLead || leads.find(l => Number(l.id) === teamNum);
+        if (lead) {
+            if (profile?.full_name && lead.name && profile.full_name.trim().toLowerCase() === lead.name.trim().toLowerCase()) return true;
+            if (profile?.email && lead.email && profile.email.trim().toLowerCase() === lead.email.trim().toLowerCase()) return true;
+            if (currentUser?.email && lead.email && currentUser.email.trim().toLowerCase() === lead.email.trim().toLowerCase()) return true;
+        }
+
+        return false;
+    }
+
+    async function verifyTeamLead(teamId) {
+        if (isTeamLead(teamId)) return true;
+        if (!currentUser || !client) return false;
+        const teamNum = parseInt(teamId);
+        if (!teamNum) return false;
+
+        try {
+            const { data: prof } = await client.from('profiles')
+                .select('role, team_id, full_name, email')
+                .eq('id', currentUser.id)
+                .maybeSingle();
+            if (prof) {
+                if (prof.role === 'lead' && Number(prof.team_id) === teamNum) return true;
+                const leads = (typeof CORE_LEADS !== 'undefined' && Array.isArray(CORE_LEADS)) ? CORE_LEADS : [];
+                const lead = leads.find(l => Number(l.id) === teamNum);
+                if (lead) {
+                    if (prof.full_name && lead.name && prof.full_name.trim().toLowerCase() === lead.name.trim().toLowerCase()) return true;
+                    if (prof.email && lead.email && prof.email.trim().toLowerCase() === lead.email.trim().toLowerCase()) return true;
+                }
+            }
+        } catch (e) {
+            console.error('verifyTeamLead error:', e);
+        }
+        return false;
+    }
+
+    function canAccessTeamChat(teamId) {
+        if (!currentUser) return false;
+        const profile = currentProfile;
+        const teamNum = parseInt(teamId);
+        if (!teamNum) return false;
+
+        // Members can access
+        if (Array.isArray(profile?.memberships) && profile.memberships.map(Number).includes(teamNum)) {
+            return true;
+        }
+
+        // Team leader of this specific team can access
+        if (isTeamLead(teamNum)) {
+            return true;
+        }
+
+        // Admins are NOT granted access to other teams' chats.
+        return false;
+    }
+
+    async function canUserAccessTeamChat(teamId) {
+        if (!currentUser) return false;
+        if (canAccessTeamChat(teamId)) return true;
+
+        const teamNum = parseInt(teamId);
+        if (!teamNum || !client) return false;
+
+        try {
+            // Verify database membership
+            const { data: mem } = await client.from('team_memberships')
+                .select('id')
+                .eq('user_id', currentUser.id)
+                .eq('team_id', teamNum)
+                .maybeSingle();
+            if (mem) {
+                if (currentProfile) {
+                    if (!Array.isArray(currentProfile.memberships)) currentProfile.memberships = [];
+                    if (!currentProfile.memberships.map(Number).includes(teamNum)) {
+                        currentProfile.memberships.push(teamNum);
+                    }
+                }
+                return true;
+            }
+
+            // Verify if user is leader in profiles table or core_leads
+            if (await verifyTeamLead(teamNum)) return true;
+        } catch (e) {
+            console.error('Permission check error:', e);
+        }
+
+        return false;
+    }
+
     // ── TEAM CHAT ──
     async function fetchTeamMessages(teamId, limit = 50) {
         if (!client) return [];
+        if (!canAccessTeamChat(teamId)) {
+            const allowed = await canUserAccessTeamChat(teamId);
+            if (!allowed) {
+                console.warn('Unauthorized attempt to access team chat for team:', teamId);
+                return [];
+            }
+        }
         try {
             const { data, error } = await client.from('team_messages')
                 .select('*, profiles(id, username, full_name, avatar_url, role)')
@@ -925,6 +1040,12 @@ const ICCSupabase = (() => {
 
     async function sendTeamMessage(teamId, content) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        if (!canAccessTeamChat(teamId)) {
+            const allowed = await canUserAccessTeamChat(teamId);
+            if (!allowed) {
+                return { error: { message: 'Permission denied: Only team members and the team leader can send messages in this chat.' } };
+            }
+        }
         const { data, error } = await client.from('team_messages')
             .insert({ team_id: teamId, sender_id: currentUser.id, content })
             .select('*, profiles(id, username, full_name, avatar_url, role)')
@@ -933,13 +1054,28 @@ const ICCSupabase = (() => {
     }
 
     async function deleteTeamMessage(messageId) {
-        if (!client) return { error: { message: 'Not configured' } };
-        const { error } = await client.from('team_messages').delete().eq('id', messageId);
-        return { error };
+        if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        try {
+            const { data: msg } = await client.from('team_messages').select('sender_id, team_id').eq('id', messageId).single();
+            if (!msg) return { error: { message: 'Message not found' } };
+            const isMe = msg.sender_id === currentUser.id;
+            const isLead = isTeamLead(msg.team_id) || (await verifyTeamLead(msg.team_id));
+            if (!isMe && !isLead) {
+                return { error: { message: 'Permission denied: Only the sender or team leader can delete this message.' } };
+            }
+            const { error } = await client.from('team_messages').delete().eq('id', messageId);
+            return { error };
+        } catch (err) {
+            return { error: err };
+        }
     }
 
     function subscribeToTeamChat(teamId, onEvent) {
         if (!client) return null;
+        if (!canAccessTeamChat(teamId)) {
+            console.warn('Unauthorized subscription to team chat for team:', teamId);
+            return null;
+        }
         const channelName = `team-chat-${teamId}`;
         const channel = client.channel(channelName)
             .on('postgres_changes', { 
@@ -2284,6 +2420,7 @@ const ICCSupabase = (() => {
         fetchConversations, fetchMessages, sendMessage, deleteMessage, markAsRead, getUnreadCount,
         joinTeam, cancelJoinRequest, getTeamMembers, getPendingMembers, approveMember, denyMember,
         fetchTeamMessages, sendTeamMessage, deleteTeamMessage, subscribeToTeamChat,
+        isTeamLead, canAccessTeamChat, canUserAccessTeamChat,
         fetchLeads, createLead, updateLead, deleteLead,
         approveLead, denyLead, getPendingLeads,
         createBroadcast, getActiveBroadcast, dismissBroadcast, adminDeletePost,

@@ -57,6 +57,17 @@ const TeamChatModal = (() => {
         
         const team = CORE_LEADS.find(l => l.id === parseInt(teamId));
         if (!team) return;
+
+        // Security check: Only team members and that team's leader can view or participate in team chat
+        const canAccess = typeof ICCSupabase.canAccessTeamChat === 'function' ? ICCSupabase.canAccessTeamChat(teamId) : false;
+        if (!canAccess) {
+            const canAccessAsync = typeof ICCSupabase.canUserAccessTeamChat === 'function' ? await ICCSupabase.canUserAccessTeamChat(teamId) : false;
+            if (!canAccessAsync) {
+                Toast.error('Access Restricted: Only team members and the team leader can access this chat.');
+                return;
+            }
+        }
+
         currentTeamId = teamId;
         try {
             if (!window.history.state?.modalOpen) {
@@ -160,7 +171,8 @@ const TeamChatModal = (() => {
             // Better role detection: check if they are an admin or lead
             const userRole = p.role || 'user';
             const isVerified = userRole === 'lead';
-            const canDelete = isMe || ICCSupabase.isAdmin();
+            const isLead = typeof ICCSupabase.isTeamLead === 'function' && ICCSupabase.isTeamLead(currentTeamId);
+            const canDelete = isMe || isLead;
             
             let timeStr = '';
             try { 
