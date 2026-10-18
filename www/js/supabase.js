@@ -2825,7 +2825,11 @@ const ICCSupabase = (() => {
     }
 
     async function resubmitProjectApplication(applicationId, params = {}, note = '') {
-        if (!client || !currentUser) return { error: { message: 'Sign in required.' } };
+        if (!client) return { error: { message: 'Database client not initialized.' } };
+        if (!currentUser) {
+            await getSession();
+        }
+        if (!currentUser) return { error: { message: 'Sign in required.' } };
 
         const cleanName = String(params.projectName || params.project_name || '').trim();
         const cleanDesc = String(params.description || '').trim();
@@ -2844,9 +2848,14 @@ const ICCSupabase = (() => {
                 .maybeSingle();
 
             if (fetchErr || !appData) return { error: { message: 'Application not found.' } };
-            if (appData.applicant_id !== currentUser.id) return { error: { message: 'Unauthorized.' } };
+            
+            const isApplicant = String(appData.applicant_id).toLowerCase() === String(currentUser.id).toLowerCase();
+            if (!isApplicant && !isMentor()) {
+                return { error: { message: 'Unauthorized: Only the applicant or mentor can resubmit this proposal.' } };
+            }
 
             const nextRevNumber = (appData.revision_number || 1) + 1;
+            const revNote = (note && String(note).trim()) ? String(note).trim() : 'Updated proposal based on mentor feedback.';
             const newRevision = {
                 revision: nextRevNumber,
                 submitted_at: new Date().toISOString(),
@@ -2855,58 +2864,93 @@ const ICCSupabase = (() => {
                 team_name: cleanTeam,
                 specialties: specs,
                 links: allLinks,
-                note: note ? String(note).trim() : ''
+                note: revNote
             };
 
             const existingRevs = Array.isArray(appData.revisions) ? appData.revisions : [];
             const updatedRevisions = [...existingRevs, newRevision];
 
-            const { data, error } = await client
+            // Primary update attempt with all fields
+            const updatePayload = {
+                project_name: cleanName,
+                description: cleanDesc,
+                team_name: cleanTeam,
+                specialties: specs,
+                links: allLinks,
+                status: 'Pending Review',
+                revision_number: nextRevNumber,
+                revisions: updatedRevisions,
+                updated_at: new Date().toISOString()
+            };
+
+            let updatedApp = null;
+            const { data: updateData, error: updateErr } = await client
                 .from('project_applications')
-                .update({
-                    project_name: cleanName,
-                    description: cleanDesc,
-                    team_name: cleanTeam,
-                    specialties: specs,
-                    links: allLinks,
-                    status: 'Pending Review',
-                    revision_number: nextRevNumber,
-                    revisions: updatedRevisions,
-                    updated_at: new Date().toISOString()
-                })
+                .update(updatePayload)
                 .eq('id', applicationId)
                 .select()
                 .maybeSingle();
 
-            if (error) throw error;
+            if (updateErr) {
+                console.warn('Full resubmit update failed, trying fallback payload:', updateErr);
+                // Fallback attempt: some database schemas might not have revisions or links column yet
+                const fallbackPayload = {
+                    project_name: cleanName,
+                    description: cleanDesc,
+                    team_name: cleanTeam,
+                    status: 'Pending Review',
+                    updated_at: new Date().toISOString()
+                };
+                if (specs.length > 0) fallbackPayload.specialties = specs;
 
-            // Log status history
-            const histComment = note ? `Applicant submitted revision #${nextRevNumber}: ${String(note).trim()}` : `Applicant submitted revision #${nextRevNumber} for mentor review.`;
+                const { data: fallbackData, error: fallbackErr } = await client
+                    .from('project_applications')
+                    .update(fallbackPayload)
+                    .eq('id', applicationId)
+                    .select()
+                    .maybeSingle();
+
+                if (fallbackErr) {
+                    // Try without .select() in case post-update select is restricted
+                    const { error: noSelectErr } = await client
+                        .from('project_applications')
+                        .update(fallbackPayload)
+                        .eq('id', applicationId);
+
+                    if (noSelectErr) throw noSelectErr;
+                    updatedApp = { ...appData, ...fallbackPayload, status: 'Pending Review' };
+                } else {
+                    updatedApp = fallbackData;
+                }
+            } else {
+                updatedApp = updateData;
+            }
+
+            // Log status history (safe, non-blocking)
             try {
                 await client.from('project_application_status_history').insert([{
                     application_id: applicationId,
                     changed_by: currentUser.id,
                     previous_status: 'Changes Requested',
                     new_status: 'Pending Review',
-                    comment: histComment,
+                    comment: `Revision #${nextRevNumber}: ${revNote}`,
                     created_at: new Date().toISOString()
                 }]);
             } catch (e) {
-                console.warn('History err:', e);
+                console.warn('Status history logging warning:', e);
             }
 
-            if (note && String(note).trim()) {
-                try {
-                    await client.from('project_application_comments').insert([{
-                        application_id: applicationId,
-                        author_id: currentUser.id,
-                        content: `📝 Revision Note: ${String(note).trim()}`,
-                        is_mentor_feedback: false,
-                        created_at: new Date().toISOString()
-                    }]);
-                } catch (e) {
-                    console.warn('Comment err:', e);
-                }
+            // Post applicant revision note as comment (safe, non-blocking)
+            try {
+                await client.from('project_application_comments').insert([{
+                    application_id: applicationId,
+                    author_id: currentUser.id,
+                    content: `📝 Revision #${nextRevNumber} Submitted: ${revNote}`,
+                    is_mentor_feedback: false,
+                    created_at: new Date().toISOString()
+                }]);
+            } catch (e) {
+                console.warn('Comment insert warning:', e);
             }
 
             // Notify reviewer if known
@@ -2920,7 +2964,7 @@ const ICCSupabase = (() => {
                 }).catch(e => console.warn('Reviewer notif err:', e));
             }
 
-            return { data, success: true };
+            return { data: updatedApp, success: true };
         } catch (err) {
             console.error('resubmitProjectApplication error:', err);
             return { error: err };

@@ -875,6 +875,26 @@ const TeamsView = (() => {
 
             const activeAppStatusKey = normStatus(activeApp.status);
 
+            // Extract the latest mentor change request note from status history or comments
+            const latestChangeHistory = [...history].reverse().find(h => {
+                const s = normStatus(h.new_status || h.to_status);
+                return s === 'changes_requested' && (h.comment || h.notes);
+            });
+            const latestFeedbackComment = [...comments].reverse().find(c => {
+                return c.is_mentor_feedback && (c.content || c.comment);
+            });
+            const mentorChangeComment = latestChangeHistory?.comment 
+                || latestChangeHistory?.notes 
+                || latestFeedbackComment?.content 
+                || latestFeedbackComment?.comment 
+                || activeApp.changes_requested_comment 
+                || '';
+            const mentorChangerName = latestChangeHistory?.changer?.full_name 
+                || latestFeedbackComment?.author?.full_name 
+                || (activeApp.reviewer?.full_name) 
+                || 'Mentor';
+            const mentorChangeDate = latestChangeHistory?.created_at || latestFeedbackComment?.created_at;
+
             content.innerHTML = `
             <div class="h-full flex flex-col lg:flex-row overflow-hidden">
                 <!-- Left Sidebar: Applications List (Fixed Width on Desktop) -->
@@ -905,15 +925,33 @@ const TeamsView = (() => {
                     <div class="max-w-4xl mx-auto space-y-6">
                         <!-- Status Notification Banner -->
                         ${activeAppStatusKey === 'changes_requested' ? `
-                            <div class="p-5 bg-rose-500/10 border border-rose-500/30 rounded-2xl space-y-3 text-rose-300 shadow-sm">
-                                <div class="flex items-center gap-2">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
-                                    <h4 class="font-bold text-sm text-rose-200">Mentor Requested Changes</h4>
+                            <div class="p-5 bg-rose-500/10 border border-rose-500/30 rounded-2xl space-y-4 text-rose-300 shadow-sm">
+                                <div class="flex items-center justify-between gap-3 flex-wrap">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+                                        <h4 class="font-bold text-sm text-rose-200">Mentor Requested Changes</h4>
+                                    </div>
+                                    ${mentorChangeDate ? `<span class="text-[11px] text-zinc-400 font-mono">${new Date(mentorChangeDate).toLocaleString()}</span>` : ''}
                                 </div>
-                                <p class="text-xs text-rose-300 leading-relaxed">
-                                    A mentor reviewed this proposal and requested revisions. Please check the feedback below, modify your proposal details, and click <span class="font-bold text-white underline">"Resubmit for Review"</span>.
-                                </p>
-                                <div>
+
+                                <!-- Mentor Requested Changes Description Card -->
+                                <div class="p-4 bg-zinc-950/90 border border-rose-500/40 rounded-xl space-y-2">
+                                    <div class="flex items-center justify-between flex-wrap gap-2">
+                                        <span class="text-[11px] font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                                            <svg class="w-3.5 h-3.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+                                            Mentor Feedback & Requested Modifications:
+                                        </span>
+                                        <span class="text-[11px] text-zinc-400 font-medium">Reviewer: <strong class="text-zinc-200">${escapeHtml(mentorChangerName)}</strong></span>
+                                    </div>
+                                    <div class="text-xs sm:text-sm text-zinc-100 leading-relaxed italic bg-zinc-900/80 p-3.5 rounded-xl border border-zinc-800 whitespace-pre-wrap font-sans">
+"${escapeHtml(mentorChangeComment || 'Please review mentor recommendations, revise the proposal overview, architecture, or resource links, and resubmit for review.')}"
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between flex-wrap gap-2 pt-1">
+                                    <p class="text-xs text-rose-300 leading-relaxed">
+                                        Review the feedback above, modify your proposal details in the editor below, and click <span class="font-bold text-white underline">"Resubmit for Review"</span>.
+                                    </p>
                                     <button id="toggle-resubmit-form-btn" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer inline-flex items-center gap-1.5 active:scale-95">
                                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                         <span>Edit & Resubmit Proposal</span>
@@ -1007,8 +1045,8 @@ const TeamsView = (() => {
                                 </div>
 
                                 <div>
-                                    <label class="block text-xs font-semibold text-emerald-400 mb-1.5">Applicant Note / Explanation of Changes *</label>
-                                    <textarea id="rs-note" rows="2" required placeholder="Describe what revisions and improvements you made in response to mentor comments..."
+                                    <label class="block text-xs font-semibold text-emerald-400 mb-1.5">Applicant Note / Explanation of Changes <span class="text-zinc-500 font-normal">(Optional)</span></label>
+                                    <textarea id="rs-note" rows="2" placeholder="Describe what revisions and improvements you made in response to mentor comments..."
                                               class="w-full px-3 py-2 bg-zinc-950 border border-emerald-500/40 rounded-xl text-xs text-white focus:border-emerald-500 outline-none resize-none leading-relaxed"></textarea>
                                 </div>
                                 <div class="flex items-center justify-end gap-2 pt-1">
@@ -1203,11 +1241,8 @@ const TeamsView = (() => {
                     rsDescEditor?.focus();
                     return;
                 }
-                if (!note) {
-                    Toast.error('Please include an applicant note explaining the revisions.');
-                    return;
-                }
 
+                const finalNote = note || 'Applicant updated project proposal based on mentor feedback.';
                 const cleanHtml = sanitizeRichText(rawHtml);
                 const allLinks = [];
                 document.querySelectorAll('.rs-link-row').forEach(row => {
@@ -1238,15 +1273,15 @@ const TeamsView = (() => {
                     description: cleanHtml,
                     specialties: spec ? spec.split(',').map(s => s.trim()).filter(Boolean) : [],
                     links: allLinks
-                }, note);
+                }, finalNote);
 
                 if (error) {
-                    Toast.error('Failed to resubmit: ' + error.message);
+                    Toast.error('Failed to resubmit: ' + (error.message || error));
                     btn.disabled = false;
                     btn.innerHTML = originalBtnHtml;
                 } else {
                     Toast.success('Proposal resubmitted for mentor review!');
-                    await loadApplications();
+                    await loadApplications(activeApp.id);
                 }
             });
 

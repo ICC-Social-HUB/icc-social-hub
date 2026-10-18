@@ -460,6 +460,22 @@ const MentorDashboardView = (() => {
                         </div>
                     </div>
 
+                    <!-- Existing Mentor Requested Changes Banner -->
+                    ${app.status === 'Changes Requested' ? `
+                        <div class="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl space-y-2 text-rose-300">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-rose-200 flex items-center gap-1.5 uppercase tracking-wider">
+                                    <svg class="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                    Changes Currently Requested:
+                                </span>
+                                ${([...history].reverse().find(h => (h.new_status || h.to_status) === 'Changes Requested')?.created_at) ? `<span class="text-[10px] text-zinc-400 font-mono">${new Date([...history].reverse().find(h => (h.new_status || h.to_status) === 'Changes Requested').created_at).toLocaleString()}</span>` : ''}
+                            </div>
+                            <div class="text-xs text-zinc-100 bg-zinc-950/80 p-3 rounded-xl border border-rose-500/30 italic whitespace-pre-wrap">
+                                "${escapeHtml(([...history].reverse().find(h => (h.new_status || h.to_status) === 'Changes Requested' && (h.comment || h.notes))?.comment) || ([...comments].reverse().find(c => c.is_mentor_feedback && (c.content || c.comment))?.content) || 'A mentor requested revisions on this proposal. Waiting for the applicant to resubmit.')}"
+                            </div>
+                        </div>
+                    ` : ''}
+
                     <!-- Applicant Profile Card -->
                     <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-4 flex-wrap">
                         <div class="flex items-center gap-3">
