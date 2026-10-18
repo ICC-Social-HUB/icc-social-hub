@@ -209,3 +209,255 @@ CREATE INDEX IF NOT EXISTS idx_core_leads_code ON public.core_leads(project_code
 ALTER PUBLICATION supabase_realtime ADD TABLE public.project_applications;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.project_application_comments;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.project_application_status_history;
+
+-- =========================================================================
+-- 14. Fix core_leads RLS policies (Allow Mentors, Super Admins, Admins to Insert/Update)
+-- =========================================================================
+ALTER TABLE public.core_leads ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Core leads are viewable by everyone" ON public.core_leads;
+CREATE POLICY "Core leads are viewable by everyone"
+    ON public.core_leads FOR SELECT
+    USING (true);
+
+DROP POLICY IF EXISTS "Admins and assigned leads can manage leads" ON public.core_leads;
+DROP POLICY IF EXISTS "Mentors and admins can insert core leads" ON public.core_leads;
+DROP POLICY IF EXISTS "Mentors, admins, and leads can update core leads" ON public.core_leads;
+DROP POLICY IF EXISTS "Mentors and admins can delete core leads" ON public.core_leads;
+
+-- INSERT: Mentors, Super Admins, Admins can create live projects upon approval
+CREATE POLICY "Mentors and admins can insert core leads"
+    ON public.core_leads FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid()
+              AND profiles.role IN ('mentor', 'admin', 'super_admin', 'superadmin')
+        )
+    );
+
+-- UPDATE: Mentors, Super Admins, Admins, or the assigned Lead can update
+CREATE POLICY "Mentors, admins, and leads can update core leads"
+    ON public.core_leads FOR UPDATE
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid() AND (
+                profiles.role IN ('mentor', 'admin', 'super_admin', 'superadmin') OR 
+                core_leads.lead_user_id = auth.uid() OR
+                (profiles.role = 'lead' AND profiles.team_id = core_leads.id)
+            )
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid() AND (
+                profiles.role IN ('mentor', 'admin', 'super_admin', 'superadmin') OR 
+                core_leads.lead_user_id = auth.uid() OR
+                (profiles.role = 'lead' AND profiles.team_id = core_leads.id)
+            )
+        )
+    );
+
+-- DELETE: Mentors, Super Admins, Admins can delete
+CREATE POLICY "Mentors and admins can delete core leads"
+    ON public.core_leads FOR DELETE
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid()
+              AND profiles.role IN ('mentor', 'admin', 'super_admin', 'superadmin')
+        )
+    );
+
+-- =========================================================================
+-- 15. Fix team_memberships: Support users joining multiple projects
+-- =========================================================================
+-- Drop unique constraint on user_id if it exists (allows user to be in multiple projects)
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (
+        SELECT conname
+        FROM pg_constraint
+        WHERE conrelid = 'public.team_memberships'::regclass
+          AND contype = 'u'
+    ) LOOP
+        EXECUTE 'ALTER TABLE public.team_memberships DROP CONSTRAINT ' || quote_ident(r.conname);
+    END LOOP;
+END $$;
+
+-- Update team_memberships policies for Mentors and Super Admins
+DROP POLICY IF EXISTS "Leads and admins can add members" ON public.team_memberships;
+CREATE POLICY "Leads and admins can add members"
+    ON public.team_memberships FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid() AND (
+                p.role IN ('mentor', 'admin', 'super_admin', 'superadmin') OR 
+                (p.role = 'lead' AND p.team_id = team_memberships.team_id) OR
+                auth.uid() = team_memberships.user_id
+            )
+        )
+    );
+
+DROP POLICY IF EXISTS "Leads and admins can remove members" ON public.team_memberships;
+CREATE POLICY "Leads and admins can remove members"
+    ON public.team_memberships FOR DELETE
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid() AND (
+                p.role IN ('mentor', 'admin', 'super_admin', 'superadmin') OR 
+                (p.role = 'lead' AND p.team_id = team_memberships.team_id) OR
+                auth.uid() = team_memberships.user_id
+            )
+        )
+    );
+
+-- =========================================================================
+-- 16. Database RPC Function: approve_project_application (SECURITY DEFINER)
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.approve_project_application(app_id UUID)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    app_rec RECORD;
+    applicant_rec RECORD;
+    new_code TEXT;
+    new_lead_id INT;
+    max_sort INT;
+    lead_initials TEXT;
+BEGIN
+    -- 1. Check permissions: caller must be mentor or admin
+    IF NOT EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE id = auth.uid()
+          AND role IN ('mentor', 'admin', 'super_admin', 'superadmin')
+    ) THEN
+        RETURN jsonb_build_object('error', 'Unauthorized: Only Mentors and Super Admins can approve applications.');
+    END IF;
+
+    -- 2. Fetch application
+    SELECT * INTO app_rec FROM public.project_applications WHERE id = app_id;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('error', 'Application not found.');
+    END IF;
+
+    IF app_rec.status = 'Approved' THEN
+        RETURN jsonb_build_object('error', 'Application has already been approved.', 'project_code', app_rec.project_code);
+    END IF;
+
+    -- 3. Fetch applicant profile
+    SELECT * INTO applicant_rec FROM public.profiles WHERE id = app_rec.applicant_id;
+
+    -- 4. Determine project code
+    new_code := app_rec.project_code;
+    IF new_code IS NULL OR new_code = '' THEN
+        new_code := public.generate_unique_project_code();
+    END IF;
+
+    -- 5. Calculate initials & sort order
+    lead_initials := UPPER(SUBSTRING(COALESCE(app_rec.project_name, 'PRJ') FROM 1 FOR 2));
+    SELECT COALESCE(MAX(sort_order), 13) + 1 INTO max_sort FROM public.core_leads;
+
+    -- 6. Insert new live project into core_leads
+    INSERT INTO public.core_leads (
+        name,
+        role,
+        team,
+        project_name,
+        project_code,
+        lead_user_id,
+        bio,
+        specialties,
+        links,
+        avatar_url,
+        initials,
+        gradient,
+        color,
+        milestones,
+        sort_order,
+        created_at,
+        updated_at
+    ) VALUES (
+        COALESCE(applicant_rec.full_name, applicant_rec.username, 'Project Lead'),
+        'Project Lead',
+        COALESCE(app_rec.team_name, app_rec.project_name),
+        app_rec.project_name,
+        new_code,
+        app_rec.applicant_id,
+        app_rec.description,
+        COALESCE(app_rec.specialties, '{}'),
+        COALESCE(app_rec.links, '[]'::jsonb),
+        applicant_rec.avatar_url,
+        lead_initials,
+        'from-emerald-600 to-teal-500',
+        '#10b981',
+        '{"planning": true, "design": false, "selection": false, "development": false, "programming": false, "testing": false, "optimization": false, "deployment": false}'::jsonb,
+        max_sort,
+        now(),
+        now()
+    )
+    RETURNING id INTO new_lead_id;
+
+    -- 7. Update applicant profile role to 'lead' if not super admin / admin
+    IF applicant_rec.role NOT IN ('super_admin', 'superadmin', 'admin') THEN
+        UPDATE public.profiles
+        SET role = 'lead',
+            team_id = COALESCE(team_id, new_lead_id),
+            updated_at = now()
+        WHERE id = app_rec.applicant_id;
+    END IF;
+
+    -- 8. Add to team_memberships (supports multiple project memberships)
+    INSERT INTO public.team_memberships (user_id, team_id, created_at)
+    VALUES (app_rec.applicant_id, new_lead_id, now())
+    ON CONFLICT (user_id, team_id) DO NOTHING;
+
+    -- 9. Update application status to Approved
+    UPDATE public.project_applications
+    SET status = 'Approved',
+        project_code = new_code,
+        approved_project_id = new_lead_id,
+        reviewer_id = auth.uid(),
+        reviewed_at = now(),
+        updated_at = now()
+    WHERE id = app_id;
+
+    -- 10. Record status history
+    INSERT INTO public.project_application_status_history (
+        application_id,
+        changed_by,
+        previous_status,
+        new_status,
+        comment,
+        created_at
+    ) VALUES (
+        app_id,
+        auth.uid(),
+        app_rec.status,
+        'Approved',
+        'Application reviewed and officially approved by mentor. Project published live with code: ' || new_code,
+        now()
+    );
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'project_code', new_code,
+        'approved_project_id', new_lead_id
+    );
+END;
+$$;
+

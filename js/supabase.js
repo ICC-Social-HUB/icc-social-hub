@@ -714,14 +714,17 @@ const ICCSupabase = (() => {
     async function joinTeam(teamId, summary, discTag) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
         
-        // 1. Check if already in a team or is a lead
-        if (currentProfile?.memberships?.length > 0 || currentProfile?.role === 'lead') {
-            return { error: { message: 'You are already a member or lead of a team. You cannot join multiple teams.' } };
+        // 1. Check if already in THIS specific team
+        const targetTeamNum = parseInt(teamId);
+        const memberships = Array.isArray(currentProfile?.memberships) ? currentProfile.memberships.map(Number) : [];
+        if (memberships.includes(targetTeamNum) || Number(currentProfile?.team_id) === targetTeamNum) {
+            return { error: { message: 'You are already a member or lead of this team.' } };
         }
 
-        // 2. Check if they already have a pending request elsewhere
-        if (currentProfile?.pending_teams?.length > 0) {
-            return { error: { message: 'You already have a pending request for another team. Please cancel it before applying to this one.' } };
+        // 2. Check if already pending for THIS specific team
+        const pendingTeams = Array.isArray(currentProfile?.pending_teams) ? currentProfile.pending_teams.map(Number) : [];
+        if (pendingTeams.includes(targetTeamNum)) {
+            return { error: { message: 'You already have a pending application for this team.' } };
         }
         
         // 3. (Limit removed)

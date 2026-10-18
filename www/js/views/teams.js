@@ -1893,7 +1893,6 @@ const TeamsView = (() => {
                                                     <span>Team Chat</span>
                                                 </button>
                                             </div>`;
-                                        if (profile?.memberships?.length > 0 || profile?.role === 'lead') return `<span class="inline-flex items-center gap-1.5 text-zinc-400 text-xs font-medium"><svg class="w-3.5 h-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span>In Another Project</span></span>`;
                                         if (isPending) return `
                                             <div class="inline-flex items-center gap-2">
                                                 <span class="inline-flex items-center gap-1.5 text-amber-400 text-xs font-semibold">
@@ -1902,7 +1901,6 @@ const TeamsView = (() => {
                                                 </span>
                                                 <button id="team-cancel-btn" class="text-xs text-zinc-500 hover:text-red-400 transition-colors underline decoration-dotted cursor-pointer">Cancel</button>
                                             </div>`;
-                                        if (profile?.pending_teams?.length > 0) return `<span class="inline-flex items-center gap-1.5 text-zinc-400 text-xs font-medium">Pending Elsewhere</span>`;
 
                                         return `<button id="team-join-btn" class="join-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs sm:text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/30 cursor-pointer shadow-md active:scale-95 flex-shrink-0">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>

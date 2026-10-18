@@ -417,7 +417,7 @@ const MentorDashboardView = (() => {
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                             <span class="hidden sm:inline">Request Changes</span>
                         </button>
-                        <button id="top-approve-project-btn" onclick="MentorDashboardView.approveApplication('${app.id}')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer active:scale-95 flex items-center gap-1.5">
+                        <button id="top-approve-project-btn" onclick="MentorDashboardView.showApproveConfirmModal('${app.id}')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer active:scale-95 flex items-center gap-1.5">
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                             <span>Approve Project</span>
                         </button>
@@ -706,17 +706,63 @@ const MentorDashboardView = (() => {
         }
     }
 
-    async function approveApplication(appId) {
-        if (!confirm('Are you sure you want to approve this project application? It will immediately become live in the public Projects directory with a unique project code, and the applicant will be appointed as Project Lead.')) {
-            return;
+    function showApproveConfirmModal(appId) {
+        const app = selectedAppDetail?.application || applications.find(a => a.id === appId) || {};
+        const projectName = app.project_name || 'Project Application';
+        const teamName = app.team_name || projectName;
+
+        let modalRoot = document.getElementById('mentor-approve-confirm-modal-root');
+        if (!modalRoot) {
+            modalRoot = document.createElement('div');
+            modalRoot.id = 'mentor-approve-confirm-modal-root';
+            document.body.appendChild(modalRoot);
         }
 
+        modalRoot.innerHTML = `
+        <div class="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in" onclick="if(event.target === this) MentorDashboardView.closeApproveConfirmModal()">
+            <div class="glass-card bg-zinc-950/95 border border-zinc-800 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-5 animate-scale-up" onclick="event.stopPropagation()">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="space-y-1 min-w-0 flex-1">
+                        <h3 class="font-heading font-bold text-base text-white">Approve Project Application</h3>
+                        <p class="text-xs text-zinc-400 truncate">Project: <strong class="text-white">${escapeHtml(projectName)}</strong></p>
+                    </div>
+                </div>
+
+                <div class="text-xs sm:text-sm text-zinc-300 leading-relaxed bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/60">
+                    Are you sure you want to approve this project application? It will immediately become live in the public Projects directory with a unique project code, and the applicant will be appointed as Project Lead.
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-1">
+                    <button type="button" onclick="MentorDashboardView.closeApproveConfirmModal()" class="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white font-medium text-xs transition-colors cursor-pointer">
+                        Cancel
+                    </button>
+                    <button id="modal-confirm-approve-btn" type="button" onclick="MentorDashboardView.executeApprove('${appId}')" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs transition-all shadow-lg shadow-emerald-600/20 cursor-pointer flex items-center gap-2">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        <span>Confirm Approval</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        `;
+    }
+
+    function closeApproveConfirmModal() {
+        const modalRoot = document.getElementById('mentor-approve-confirm-modal-root');
+        if (modalRoot) modalRoot.innerHTML = '';
+    }
+
+    async function executeApprove(appId) {
         if (isSubmitting) return;
         isSubmitting = true;
-        const topBtn = document.getElementById('top-approve-project-btn');
-        if (topBtn) {
-            topBtn.disabled = true;
-            topBtn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin text-white" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> <span>Approving...</span>`;
+        const confirmBtn = document.getElementById('modal-confirm-approve-btn');
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin text-white" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> <span>Approving...</span>`;
         }
 
         const res = await ICCSupabase.approveProjectApplication(appId);
@@ -724,11 +770,12 @@ const MentorDashboardView = (() => {
 
         if (res.error) {
             Toast.error('Failed to approve project: ' + (res.error.message || res.error));
-            if (topBtn) {
-                topBtn.disabled = false;
-                topBtn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> <span>Approve Project</span>`;
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> <span>Try Again</span>`;
             }
         } else {
+            closeApproveConfirmModal();
             Toast.success(`🎉 Project approved! Generated Code: ${res.projectCode}`);
             if (selectedAppDetail?.application) {
                 selectedAppDetail.application.status = 'Approved';
@@ -739,6 +786,10 @@ const MentorDashboardView = (() => {
             }
             await loadData();
         }
+    }
+
+    function approveApplication(appId) {
+        showApproveConfirmModal(appId);
     }
 
     async function openProjectAuditModal(projectId) {
@@ -1004,6 +1055,9 @@ const MentorDashboardView = (() => {
         sendComment,
         confirmRequestChanges,
         approveApplication,
+        showApproveConfirmModal,
+        closeApproveConfirmModal,
+        executeApprove,
         showRequestChangesBox
     };
 })();
