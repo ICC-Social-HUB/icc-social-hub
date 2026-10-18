@@ -2063,8 +2063,8 @@ const TeamsView = (() => {
         container.innerHTML = currentMentorMessages.map(m => {
             const isMe = m.sender_id === myId;
             const prof = m.profiles || {};
-            const senderRole = (prof.role || '').toLowerCase();
-            const isSenderMentor = senderRole === 'mentor' || Boolean(prof.is_mentor) || senderRole === 'super_admin' || senderRole === 'superadmin';
+            const senderRole = (prof.role || (isMe ? ICCSupabase.getProfile()?.role : '') || '').toLowerCase();
+            const isSenderMentor = senderRole === 'mentor' || Boolean(prof.is_mentor) || senderRole === 'super_admin' || senderRole === 'superadmin' || (isMe && isMentorUser);
             const isSenderLead = prof.id === lead.lead_user_id || senderRole === 'lead';
             const canDelete = isMe || isLead || isMentorUser || isAdminUser;
 
@@ -2106,7 +2106,7 @@ const TeamsView = (() => {
                         <!-- Author & Badges Header -->
                         <div class="flex items-center gap-1.5 mb-1 text-[11px] flex-wrap">
                             <span class="font-bold text-zinc-300 hover:text-white cursor-pointer open-user-profile inline-flex items-center" data-id="${prof.id || m.sender_id}">
-                                ${escapeHtml(prof.full_name || prof.username || 'Anonymous User')}
+                                ${escapeHtml(prof.full_name || prof.username || (isMe ? 'You' : 'Anonymous User'))}
                             </span>
                             ${isSenderMentor
                                 ? `${ICC_CONFIG.MENTOR_TICK}<span class="text-[9px] font-bold text-amber-400 uppercase tracking-wider bg-amber-500/10 px-1.5 py-0.2 rounded-full border border-amber-500/20">Mentor</span>`
@@ -2120,7 +2120,9 @@ const TeamsView = (() => {
                         <div class="relative flex items-center gap-1.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}">
                             <div class="p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed break-words shadow-md transition-all ${
                                 isMe
-                                    ? 'bg-emerald-600 text-white rounded-tr-none shadow-emerald-600/15'
+                                    ? (isSenderMentor
+                                        ? 'bg-amber-600/90 text-white rounded-tr-none shadow-amber-600/20 border border-amber-400/40 font-medium'
+                                        : 'bg-emerald-600 text-white rounded-tr-none shadow-emerald-600/15')
                                     : (isSenderMentor
                                         ? 'bg-amber-500/10 border border-amber-500/30 text-amber-100 rounded-tl-none shadow-amber-500/5'
                                         : 'bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-tl-none')
@@ -2713,9 +2715,10 @@ const TeamsView = (() => {
         </section>`;
     }
 
-    async function mount(container, teamId) {
+    async function mount(container, teamId, initialTab = 'overview') {
         if (teamId) {
             currentTeamId = parseInt(teamId);
+            currentProjectTab = initialTab || 'overview';
             container.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="spinner"></div></div>';
             await loadLeads();
             let lead = CORE_LEADS.find(l => Number(l.id) === Number(currentTeamId));

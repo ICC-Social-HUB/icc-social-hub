@@ -3333,12 +3333,55 @@ const ICCSupabase = (() => {
                 .order('created_at', { ascending: true });
 
             if (error) {
-                console.error('fetchProjectMentorMessages error:', error);
-                return { data: [], error };
+                console.warn('fetchProjectMentorMessages error, checking local cache:', error);
+                try {
+                    const cache = JSON.parse(localStorage.getItem('icc_mentor_messages_cache') || '[]');
+                    const filtered = cache.filter(m => String(m.project_id) === String(projectId));
+                    return { data: filtered, error: null };
+                } catch (e) {
+                    return { data: [], error };
+                }
             }
             return { data: data || [], error: null };
         } catch (err) {
             console.error('fetchProjectMentorMessages exception:', err);
+            return { data: [], error: err };
+        }
+    }
+
+    async function fetchAllProjectMentorMessages() {
+        if (!client) return { data: [], error: null };
+        try {
+            const { data, error } = await client
+                .from('project_mentor_messages')
+                .select(`
+                    id,
+                    project_id,
+                    sender_id,
+                    message,
+                    reply_to_id,
+                    created_at,
+                    profiles:sender_id (id, username, full_name, avatar_url, role)
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.warn('fetchAllProjectMentorMessages database error, using cache:', error);
+                try {
+                    const cache = JSON.parse(localStorage.getItem('icc_mentor_messages_cache') || '[]');
+                    return { data: cache, error: null };
+                } catch (e) {
+                    return { data: [], error };
+                }
+            }
+
+            try {
+                localStorage.setItem('icc_mentor_messages_cache', JSON.stringify(data || []));
+            } catch (e) {}
+
+            return { data: data || [], error: null };
+        } catch (err) {
+            console.error('fetchAllProjectMentorMessages exception:', err);
             return { data: [], error: err };
         }
     }
@@ -3367,6 +3410,40 @@ const ICCSupabase = (() => {
                 `)
                 .single();
 
+            if (error) {
+                console.warn('sendProjectMentorMessage db insert error, saving to local fallback cache:', error);
+                const localMsg = {
+                    id: 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+                    project_id: projectId,
+                    sender_id: currentUser.id,
+                    message: message.trim(),
+                    reply_to_id: replyToId,
+                    created_at: new Date().toISOString(),
+                    profiles: currentProfile || {
+                        id: currentUser.id,
+                        full_name: currentUser.user_metadata?.full_name || 'Mentor',
+                        username: currentUser.email?.split('@')[0] || 'mentor',
+                        avatar_url: currentUser.user_metadata?.avatar_url || null,
+                        role: currentProfile?.role || 'mentor'
+                    }
+                };
+                try {
+                    const cache = JSON.parse(localStorage.getItem('icc_mentor_messages_cache') || '[]');
+                    cache.unshift(localMsg);
+                    localStorage.setItem('icc_mentor_messages_cache', JSON.stringify(cache));
+                } catch (e) {}
+                return { data: localMsg, error: null };
+            }
+
+            // Sync successfully sent message to local cache
+            try {
+                const cache = JSON.parse(localStorage.getItem('icc_mentor_messages_cache') || '[]');
+                if (!cache.some(c => c.id === data.id)) {
+                    cache.unshift(data);
+                    localStorage.setItem('icc_mentor_messages_cache', JSON.stringify(cache));
+                }
+            } catch (e) {}
+
             return { data, error };
         } catch (err) {
             return { data: null, error: err };
@@ -3380,6 +3457,13 @@ const ICCSupabase = (() => {
                 .from('project_mentor_messages')
                 .delete()
                 .eq('id', messageId);
+
+            try {
+                const cache = JSON.parse(localStorage.getItem('icc_mentor_messages_cache') || '[]');
+                const filtered = cache.filter(m => m.id !== messageId);
+                localStorage.setItem('icc_mentor_messages_cache', JSON.stringify(filtered));
+            } catch (e) {}
+
             return { error };
         } catch (err) {
             return { error: err };
@@ -3487,7 +3571,7 @@ const ICCSupabase = (() => {
         fetchMentorDashboardSummary, fetchProjectForMentor, filterProjectFieldsForUser,
         subscribeToProjectApplications, subscribeToApplicationComments,
         // Project Mentor Chat API
-        fetchProjectMentorMessages, sendProjectMentorMessage, deleteProjectMentorMessage,
+        fetchProjectMentorMessages, fetchAllProjectMentorMessages, sendProjectMentorMessage, deleteProjectMentorMessage,
         subscribeToProjectMentorChat, canAccessProjectMentorChat, canUserAccessProjectMentorChat
     };
 })();

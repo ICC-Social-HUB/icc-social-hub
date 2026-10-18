@@ -89,8 +89,10 @@ const Router = (() => {
                 TeamsView.mount(container);
             } else if (hash.startsWith('#teams/')) {
                 previousView = 'teams';
-                const teamId = hash.split('/')[1];
-                TeamsView.mount(container, teamId);
+                const parts = hash.replace('#teams/', '').split('/');
+                const teamId = parts[0].split('?')[0];
+                const initialTab = parts[1] || (hash.includes('tab=mentor') ? 'mentor_chat' : 'overview');
+                TeamsView.mount(container, teamId, initialTab);
             } else if (hash === '#chat') {
                 previousView = 'chat';
                 ChatView.mount(container);

@@ -9,10 +9,17 @@ const MentorDashboardView = (() => {
     let summary = { pending: 0, changesRequested: 0, approved: 0, totalProjects: 0, totalApplications: 0 };
     let applications = [];
     let projects = [];
+    let mentorMessages = [];
+    let activeChatProjectId = null;
+    let activeChatMessages = [];
+    let activeChatUnsubscribe = null;
+    let activeReplyTarget = null;
+    let chatSearchQuery = '';
     let selectedAppDetail = null;
     let selectedProjectAudit = null;
     let isLoading = false;
     let isSubmitting = false;
+    let isSendingChat = false;
 
     function escapeHtml(str) {
         if (!str && str !== 0) return '';
@@ -62,15 +69,22 @@ const MentorDashboardView = (() => {
     async function loadData() {
         isLoading = true;
         try {
-            const [sumRes, appsRes, leadsRes] = await Promise.all([
+            const [sumRes, appsRes, leadsRes, msgsRes] = await Promise.all([
                 ICCSupabase.fetchMentorDashboardSummary(),
                 ICCSupabase.fetchAllProjectApplications(),
-                ICCSupabase.fetchLeads()
+                ICCSupabase.fetchLeads(),
+                typeof ICCSupabase.fetchAllProjectMentorMessages === 'function' ? ICCSupabase.fetchAllProjectMentorMessages() : { data: [] }
             ]);
 
             if (sumRes.data) summary = sumRes.data;
             if (appsRes.data) applications = appsRes.data;
             if (leadsRes) projects = leadsRes;
+            if (msgsRes?.data) mentorMessages = msgsRes.data;
+
+            if (activeChatProjectId) {
+                const chatRes = await ICCSupabase.fetchProjectMentorMessages(activeChatProjectId);
+                if (chatRes?.data) activeChatMessages = chatRes.data;
+            }
         } catch (e) {
             console.error('MentorDashboardView loadData error:', e);
             Toast.error('Could not load mentor dashboard data');
@@ -232,9 +246,9 @@ const MentorDashboardView = (() => {
             </div>
 
             <div class="flex items-center gap-2 flex-shrink-0">
-                <button onclick="MentorDashboardView.openProjectAuditModal(${project.id})" class="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-emerald-400 hover:text-emerald-300 border border-zinc-800 hover:border-emerald-500/40 rounded-xl text-xs font-semibold transition-all shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95">
+                <button onclick="MentorDashboardView.goToProjectAudit(${project.id})" class="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-emerald-400 hover:text-emerald-300 border border-zinc-800 hover:border-emerald-500/40 rounded-xl text-xs font-semibold transition-all shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95" title="Redirect to Project Page in Teams">
                     <span>360° Project Audit</span>
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                 </button>
             </div>
         </div>
@@ -277,12 +291,17 @@ const MentorDashboardView = (() => {
                 <!-- Main Tabs & Controls -->
                 <div class="glass-card rounded-2xl p-4 sm:p-5 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl space-y-4">
                     <div class="flex items-center justify-between flex-wrap gap-3 border-b border-zinc-800/60 pb-3">
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <button onclick="MentorDashboardView.setActiveTab('applications')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'applications' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25' : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'}">
                                 Project Applications (${applications.length})
                             </button>
                             <button onclick="MentorDashboardView.setActiveTab('all_projects')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'all_projects' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25' : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'}">
                                 All Live Projects (${projects.length})
+                            </button>
+                            <button onclick="MentorDashboardView.setActiveTab('mentor_chat')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${activeTab === 'mentor_chat' ? 'bg-amber-500 text-zinc-950 font-extrabold shadow-md shadow-amber-500/25' : 'bg-zinc-900 text-zinc-400 hover:text-amber-400 border border-zinc-800'}">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                                <span>Mentor Chat</span>
+                                ${mentorMessages.length > 0 ? `<span class="px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'mentor_chat' ? 'bg-zinc-950 text-amber-400 font-extrabold' : 'bg-amber-500/20 text-amber-400 font-bold'}">${mentorMessages.length}</span>` : ''}
                             </button>
                         </div>
 
@@ -316,7 +335,7 @@ const MentorDashboardView = (() => {
                             </div>
                         ` : filteredApps.map(app => renderApplicationCard(app)).join('')}
                     </div>
-                    ` : `
+                    ` : (activeTab === 'all_projects' ? `
                     <!-- All Projects List -->
                     <div class="space-y-3 pt-2">
                         ${isLoading ? `
@@ -331,7 +350,10 @@ const MentorDashboardView = (() => {
                             </div>
                         ` : filteredProjects.map(p => renderProjectRow(p)).join('')}
                     </div>
-                    `}
+                    ` : `
+                    <!-- Mentor Chat Hub Content -->
+                    ${renderMentorChatHub()}
+                    `)}
                 </div>
             </div>
 
@@ -1016,13 +1038,498 @@ const MentorDashboardView = (() => {
                 }
             });
         }
+
+        const chatFilterInput = container.querySelector('#mentor-chat-filter-input');
+        if (chatFilterInput) {
+            chatFilterInput.addEventListener('input', e => {
+                chatSearchQuery = e.target.value;
+                container.innerHTML = render();
+                bindEvents(container);
+                const newFilter = container.querySelector('#mentor-chat-filter-input');
+                if (newFilter) {
+                    newFilter.focus();
+                    newFilter.setSelectionRange(newFilter.value.length, newFilter.value.length);
+                }
+            });
+        }
+
+        const chatTextarea = container.querySelector('#mentor-dash-chat-input');
+        if (chatTextarea) {
+            chatTextarea.addEventListener('keydown', e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    const form = container.querySelector('#mentor-dash-chat-form');
+                    if (form) form.requestSubmit();
+                }
+            });
+            chatTextarea.addEventListener('input', () => {
+                chatTextarea.style.height = 'auto';
+                chatTextarea.style.height = Math.min(chatTextarea.scrollHeight, 120) + 'px';
+            });
+        }
     }
 
-    async function mount(container) {
+    /* =========================================================================
+       MENTOR CHAT HUB & DIRECT MESSAGING CONTROLLER (MENTOR DASHBOARD)
+       ========================================================================= */
+    function goToProjectAudit(projectId) {
+        window.location.hash = '#teams/' + projectId;
+    }
+
+    function goToProjectModal(projectId) {
+        window.location.hash = '#teams/' + projectId;
+    }
+
+    function getSortedChatProjects() {
+        const query = chatSearchQuery.trim().toLowerCase();
+        const list = projects.map(p => {
+            const msgs = mentorMessages.filter(m => Number(m.project_id) === Number(p.id));
+            const latestMsg = msgs[0] || null;
+            return {
+                project: p,
+                messages: msgs,
+                latestMsg: latestMsg,
+                latestTime: latestMsg ? new Date(latestMsg.created_at).getTime() : 0
+            };
+        });
+
+        // Projects with recent messages first
+        list.sort((a, b) => {
+            if (b.latestTime !== a.latestTime) {
+                return b.latestTime - a.latestTime;
+            }
+            return (a.project.project_name || a.project.team || '').localeCompare(b.project.project_name || b.project.team || '');
+        });
+
+        if (!query) return list;
+        return list.filter(item => {
+            const p = item.project;
+            const searchTarget = `${p.project_name || ''} ${p.team || ''} ${p.name || ''} ${p.project_code || ''} ${item.latestMsg?.message || ''}`.toLowerCase();
+            return searchTarget.includes(query);
+        });
+    }
+
+    function renderMentorChatHub() {
+        const chatProjects = getSortedChatProjects();
+        if (!activeChatProjectId && chatProjects.length > 0) {
+            activeChatProjectId = chatProjects[0].project.id;
+        }
+        const selectedItem = chatProjects.find(cp => Number(cp.project.id) === Number(activeChatProjectId)) || chatProjects[0];
+        const selectedProject = selectedItem ? selectedItem.project : null;
+
+        return `
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start w-full pt-1">
+            <!-- Left Column (lg:col-span-5 xl:col-span-4): Team Channels & Messages List -->
+            <div class="lg:col-span-5 xl:col-span-4 space-y-3 w-full">
+                <div class="flex items-center justify-between gap-2 px-1">
+                    <div>
+                        <h3 class="font-heading font-bold text-xs sm:text-sm text-white">Team Discussions</h3>
+                        <p class="text-[11px] text-zinc-400">All live project channels with teams</p>
+                    </div>
+                    <span class="text-[11px] px-2 py-0.5 rounded-lg font-semibold bg-zinc-900 border border-zinc-800 text-zinc-400">${chatProjects.length} Teams</span>
+                </div>
+
+                <!-- Search Channel / Message -->
+                <div class="relative w-full">
+                    <input type="text" id="mentor-chat-filter-input" value="${escapeHtml(chatSearchQuery)}" placeholder="Search team, message, code..." class="w-full pl-9 pr-3 py-2 bg-zinc-900/90 border border-zinc-800 focus:border-amber-500 rounded-xl text-xs text-white placeholder-zinc-500 outline-none transition-colors">
+                    <svg class="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+
+                <!-- Channel / Project Message Stream List -->
+                <div class="space-y-2 max-h-[640px] overflow-y-auto custom-scrollbar pr-1">
+                    ${chatProjects.length === 0 ? `
+                        <div class="p-8 text-center text-zinc-500 text-xs bg-zinc-900/30 rounded-2xl border border-dashed border-zinc-800">
+                            No matching team channels found.
+                        </div>
+                    ` : chatProjects.map(cp => {
+                        const p = cp.project;
+                        const isSelected = selectedProject && Number(p.id) === Number(selectedProject.id);
+                        const lastMsg = cp.latestMsg;
+                        const lastSender = lastMsg ? (lastMsg.profiles?.full_name || lastMsg.profiles?.username || 'Team Member') : '';
+                        const isLastMentor = lastMsg ? (lastMsg.profiles?.role === 'mentor' || Boolean(lastMsg.profiles?.is_mentor)) : false;
+                        const timeAgoStr = lastMsg ? (typeof formatTimeAgo === 'function' ? formatTimeAgo(lastMsg.created_at) : '') : '';
+
+                        return `
+                        <div onclick="MentorDashboardView.selectTeamChat(${p.id})" class="p-3.5 rounded-2xl border transition-all cursor-pointer group text-left ${isSelected ? 'bg-zinc-900/90 border-amber-500/50 ring-1 ring-amber-500/30 shadow-lg' : 'bg-zinc-950/50 border-zinc-800/80 hover:bg-zinc-900/60 hover:border-zinc-700'}">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-xs font-bold font-heading text-emerald-400 overflow-hidden flex-shrink-0 mt-0.5 shadow-inner">
+                                    ${p.avatar_url ? `<img src="${p.avatar_url}" class="w-full h-full object-cover">` : escapeHtml(p.initials || 'PRJ')}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between gap-1.5">
+                                        <!-- Clicking project name redirects to teams modal! -->
+                                        <button type="button" onclick="event.stopPropagation(); MentorDashboardView.goToProjectModal(${p.id})" class="font-heading font-bold text-xs sm:text-sm text-white hover:text-emerald-400 transition-colors truncate text-left group/pname cursor-pointer flex items-center gap-1" title="Open in Teams Modal">
+                                            <span class="truncate">${escapeHtml(p.project_name || p.team)}</span>
+                                            <svg class="w-3.5 h-3.5 text-zinc-500 group-hover/pname:text-emerald-400 transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                        </button>
+                                        <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded flex-shrink-0">${escapeHtml(p.project_code || 'PRJ')}</span>
+                                    </div>
+
+                                    <div class="text-[11px] text-zinc-400 mt-0.5 flex items-center gap-1.5">
+                                        <span>Team: <strong class="text-zinc-300">${escapeHtml(p.team)}</strong></span>
+                                        <span>·</span>
+                                        <span class="text-zinc-500">${cp.messages.length} msg${cp.messages.length === 1 ? '' : 's'}</span>
+                                    </div>
+
+                                    <!-- Message snippet -->
+                                    <div class="mt-2 text-xs flex items-center justify-between gap-2">
+                                        <div class="truncate flex-1 min-w-0">
+                                            ${lastMsg ? `
+                                                <span class="font-semibold ${isLastMentor ? 'text-amber-400' : 'text-zinc-300'}">${escapeHtml(lastSender)}:</span>
+                                                <span class="text-zinc-400 italic">${escapeHtml(lastMsg.message)}</span>
+                                            ` : `
+                                                <span class="text-zinc-500 italic text-[11px]">No messages yet · Click to chat</span>
+                                            `}
+                                        </div>
+                                        ${lastMsg ? `<span class="text-[10px] text-zinc-500 flex-shrink-0">${timeAgoStr}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+
+            <!-- Right Column (lg:col-span-7 xl:col-span-8): Active Inline Team Chat -->
+            <div class="lg:col-span-7 xl:col-span-8 w-full">
+                ${selectedProject ? renderActiveChatPanel(selectedProject) : `
+                    <div class="glass-card rounded-2xl p-12 border border-zinc-800/80 bg-zinc-950/60 text-center text-zinc-400 space-y-2">
+                        <div class="w-12 h-12 rounded-2xl bg-zinc-900 flex items-center justify-center mx-auto text-amber-400">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                        </div>
+                        <h4 class="font-heading font-bold text-white text-base">Select a Team Conversation</h4>
+                        <p class="text-xs text-zinc-400">Click on any team from the list on the left to review messages and provide mentor guidance.</p>
+                    </div>
+                `}
+            </div>
+        </div>
+        `;
+    }
+
+    function renderActiveChatPanel(selectedProject) {
+        return `
+        <div class="glass-card rounded-2xl border border-zinc-800/80 bg-zinc-950/70 overflow-hidden shadow-2xl flex flex-col h-[75vh] min-h-[550px] max-h-[850px]" id="mentor-dash-chat-wrapper">
+            <!-- Active Chat Header -->
+            <div class="p-4 sm:p-5 border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-md flex items-center justify-between gap-3 flex-shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-11 h-11 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400 font-bold overflow-hidden flex-shrink-0 shadow-sm">
+                        ${selectedProject.avatar_url ? `<img src="${selectedProject.avatar_url}" class="w-full h-full object-cover">` : escapeHtml(selectedProject.initials || 'PRJ')}
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <!-- Clicking project name redirects to teams modal! -->
+                            <button type="button" onclick="MentorDashboardView.goToProjectModal(${selectedProject.id})" class="font-heading font-bold text-sm sm:text-base text-white hover:text-emerald-400 transition-colors flex items-center gap-1.5 cursor-pointer text-left group" title="Redirect to Teams Modal">
+                                <span class="truncate">${escapeHtml(selectedProject.project_name || selectedProject.team)}</span>
+                                <span class="text-xs text-emerald-400 font-semibold group-hover:underline flex items-center gap-0.5 flex-shrink-0">
+                                    <span>(Teams Modal)</span>
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                </span>
+                            </button>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 flex-shrink-0">
+                                ${ICC_CONFIG.MENTOR_TICK}
+                                <span>Mentor Chat</span>
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-zinc-400 mt-0.5 truncate">Team: <strong class="text-zinc-200">${escapeHtml(selectedProject.team)}</strong> · Lead: <span class="text-zinc-300 font-medium">${escapeHtml(selectedProject.name)}</span> · Code: <span class="font-mono text-emerald-400">${escapeHtml(selectedProject.project_code || 'PRJ')}</span></p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <button type="button" onclick="MentorDashboardView.refreshActiveChat()" class="p-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-xl border border-zinc-800 transition-colors cursor-pointer" title="Refresh messages">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    </button>
+                    <button type="button" onclick="MentorDashboardView.goToProjectModal(${selectedProject.id})" class="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-emerald-400 hover:text-emerald-300 border border-zinc-800 hover:border-emerald-500/40 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95" title="View Full Project Page in Teams">
+                        <span>Open Teams Modal</span>
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live Messages Stream -->
+            <div id="mentor-dash-messages-container" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5 custom-scrollbar bg-zinc-950/40">
+                ${renderDashMessagesList(selectedProject)}
+            </div>
+
+            <!-- Reply Target Bar (Hidden by default) -->
+            <div id="mentor-dash-reply-bar" class="${activeReplyTarget ? '' : 'hidden'} px-4 py-2 bg-zinc-900/90 border-t border-zinc-800 flex items-center justify-between text-xs animate-slide-up">
+                <div class="flex items-center gap-2 min-w-0 pr-2">
+                    <svg class="w-3.5 h-3.5 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                    <span class="text-zinc-400 flex-shrink-0">Replying to <span id="dash-reply-target-author" class="text-white font-semibold">${escapeHtml(activeReplyTarget?.author || '')}</span>:</span>
+                    <span id="dash-reply-target-text" class="text-zinc-400 truncate italic">${escapeHtml(activeReplyTarget?.text || '')}</span>
+                </div>
+                <button type="button" onclick="MentorDashboardView.cancelReply()" class="p-1 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer" title="Cancel Reply">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- Chat Input Form -->
+            <form id="mentor-dash-chat-form" onsubmit="MentorDashboardView.handleSendChatMessage(event, ${selectedProject.id})" class="p-3 sm:p-4 bg-zinc-900/80 border-t border-zinc-800 flex items-end gap-2.5 flex-shrink-0">
+                <div class="flex-1 min-w-0 relative">
+                    <textarea id="mentor-dash-chat-input" rows="1" placeholder="Provide guidance or feedback to ${escapeHtml(selectedProject.team)} as a Mentor... (Press Enter to send)" class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 focus:border-amber-500/60 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 outline-none resize-none max-h-32 leading-relaxed transition-all"></textarea>
+                </div>
+                <button type="submit" id="mentor-dash-send-btn" class="px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-amber-500/20 active:scale-95 cursor-pointer flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50">
+                    <span>Send</span>
+                    <svg class="w-4 h-4 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </button>
+            </form>
+        </div>
+        `;
+    }
+
+    function renderDashMessagesList(selectedProject) {
+        const myUser = ICCSupabase.getUser();
+        const myId = myUser?.id;
+
+        if (!activeChatMessages || activeChatMessages.length === 0) {
+            return `
+            <div class="flex flex-col items-center justify-center py-20 text-center max-w-md mx-auto space-y-3">
+                <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mb-1 shadow-sm">
+                    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+                    </svg>
+                </div>
+                <h3 class="font-heading font-bold text-base text-white">Mentor Guidance for ${escapeHtml(selectedProject.team)}</h3>
+                <p class="text-xs text-zinc-400 leading-relaxed">
+                    No messages yet in this team channel. Send a message to initiate project guidance and review milestone progress!
+                </p>
+            </div>`;
+        }
+
+        return activeChatMessages.map(m => {
+            const isMe = m.sender_id === myId;
+            const prof = m.profiles || {};
+            const senderRole = (prof.role || (isMe ? ICCSupabase.getProfile()?.role : '') || '').toLowerCase();
+            const isSenderMentor = senderRole === 'mentor' || Boolean(prof.is_mentor) || senderRole === 'super_admin' || senderRole === 'superadmin' || isMe;
+            const isSenderLead = prof.id === selectedProject.lead_user_id || senderRole === 'lead';
+
+            let timeStr = '';
+            try {
+                timeStr = typeof formatTimeAgo === 'function' ? formatTimeAgo(m.created_at) : new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                timeStr = '';
+            }
+
+            let replyHtml = '';
+            if (m.reply_to_id) {
+                const targetMsg = activeChatMessages.find(x => x.id === m.reply_to_id);
+                if (targetMsg) {
+                    const targetAuthor = targetMsg.profiles?.full_name || targetMsg.profiles?.username || 'User';
+                    const targetIsMentor = targetMsg.profiles?.role === 'mentor';
+                    replyHtml = `
+                    <div class="mb-2 px-3 py-1.5 rounded-lg bg-zinc-950/60 border-l-2 ${targetIsMentor ? 'border-amber-400' : 'border-emerald-400'} text-[11px] text-zinc-400 flex items-center gap-1.5 truncate">
+                        <svg class="w-3 h-3 flex-shrink-0 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                        <span class="font-bold text-zinc-300">@${escapeHtml(targetAuthor)}:</span>
+                        <span class="truncate italic text-zinc-400">${escapeHtml(targetMsg.message)}</span>
+                    </div>`;
+                }
+            }
+
+            return `
+            <div class="flex ${isMe ? 'justify-end' : 'justify-start'} group/msg animate-slide-up" data-msg-id="${m.id}">
+                <div class="flex max-w-[90%] sm:max-w-[80%] ${isMe ? 'flex-row-reverse' : 'flex-row'} items-start gap-2.5">
+                    <!-- Avatar -->
+                    <div class="w-8 h-8 rounded-full bg-zinc-800 flex-shrink-0 overflow-hidden mt-0.5 border ${isSenderMentor ? 'border-amber-500/50 ring-1 ring-amber-500/30' : 'border-zinc-700'} shadow-sm">
+                        ${prof.avatar_url
+                            ? `<img src="${prof.avatar_url}" class="w-full h-full object-cover">`
+                            : `<div class="w-full h-full flex items-center justify-center text-[10px] font-bold ${isSenderMentor ? 'bg-amber-500/20 text-amber-400' : 'bg-zinc-800 text-zinc-300'}">${(prof.full_name || prof.username || '?').charAt(0).toUpperCase()}</div>`}
+                    </div>
+
+                    <!-- Bubble Container -->
+                    <div class="min-w-0 flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+                        <!-- Author & Badges Header -->
+                        <div class="flex items-center gap-1.5 mb-1 text-[11px] flex-wrap">
+                            <span class="font-bold text-zinc-300 inline-flex items-center">
+                                ${escapeHtml(prof.full_name || prof.username || (isMe ? 'You (Mentor)' : 'Team Member'))}
+                            </span>
+                            ${isSenderMentor
+                                ? `${ICC_CONFIG.MENTOR_TICK}<span class="text-[9px] font-bold text-amber-400 uppercase tracking-wider bg-amber-500/10 px-1.5 py-0.2 rounded-full border border-amber-500/20">Mentor</span>`
+                                : (isSenderLead
+                                    ? `${ICC_CONFIG.VERIFIED_TICK}<span class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider bg-emerald-500/10 px-1.5 py-0.2 rounded-full border border-emerald-500/20">Lead</span>`
+                                    : `<span class="text-[9px] text-zinc-500">Member</span>`)}
+                            <span class="text-[10px] text-zinc-500 ml-1">${timeStr}</span>
+                        </div>
+
+                        <!-- Message Box -->
+                        <div class="relative flex items-center gap-1.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}">
+                            <div class="p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed break-words shadow-md transition-all ${
+                                isMe
+                                    ? (isSenderMentor
+                                        ? 'bg-amber-600/90 text-white rounded-tr-none shadow-amber-600/20 border border-amber-400/40 font-medium'
+                                        : 'bg-emerald-600 text-white rounded-tr-none shadow-emerald-600/15')
+                                    : (isSenderMentor
+                                        ? 'bg-amber-500/10 border border-amber-500/30 text-amber-100 rounded-tl-none shadow-amber-500/5'
+                                        : 'bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-tl-none')
+                            }">
+                                ${replyHtml}
+                                <div class="whitespace-pre-wrap">${escapeHtml(m.message)}</div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="flex items-center gap-0.5 opacity-0 group-hover/msg:opacity-100 transition-opacity flex-shrink-0">
+                                <button type="button" onclick="MentorDashboardView.replyToMessage('${m.id}')" class="p-1.5 text-zinc-500 hover:text-amber-400 hover:bg-zinc-800/80 rounded-lg transition-colors cursor-pointer" title="Reply to this message">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                </button>
+                                <button type="button" onclick="MentorDashboardView.deleteMessage('${m.id}')" class="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-zinc-800/80 rounded-lg transition-colors cursor-pointer" title="Delete message">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
+        }).join('');
+    }
+
+    async function selectTeamChat(projectId) {
+        activeChatProjectId = projectId;
+        activeReplyTarget = null;
+        if (typeof activeChatUnsubscribe === 'function') {
+            activeChatUnsubscribe();
+            activeChatUnsubscribe = null;
+        }
+
+        const res = await ICCSupabase.fetchProjectMentorMessages(projectId);
+        activeChatMessages = res.data || [];
+
+        const container = document.getElementById('app');
+        if (container) {
+            container.innerHTML = render();
+            bindEvents(container);
+            scrollChatToBottom();
+        }
+
+        try {
+            activeChatUnsubscribe = ICCSupabase.subscribeToProjectMentorChat(projectId, (event) => {
+                if (event.type === 'INSERT' && event.message) {
+                    if (!activeChatMessages.some(m => m.id === event.message.id)) {
+                        activeChatMessages.push(event.message);
+                        if (!mentorMessages.some(m => m.id === event.message.id)) {
+                            mentorMessages.unshift(event.message);
+                        }
+                        updateChatMessagesDOM();
+                    }
+                } else if (event.type === 'DELETE' && event.messageId) {
+                    activeChatMessages = activeChatMessages.filter(m => m.id !== event.messageId);
+                    mentorMessages = mentorMessages.filter(m => m.id !== event.messageId);
+                    updateChatMessagesDOM();
+                }
+            });
+        } catch (e) {
+            console.warn('Realtime chat sub warning:', e);
+        }
+    }
+
+    async function refreshActiveChat() {
+        if (!activeChatProjectId) return;
+        const res = await ICCSupabase.fetchProjectMentorMessages(activeChatProjectId);
+        if (res.data) {
+            activeChatMessages = res.data;
+            updateChatMessagesDOM();
+        }
+    }
+
+    async function handleSendChatMessage(e, projectId) {
+        if (e) e.preventDefault();
+        const input = document.getElementById('mentor-dash-chat-input');
+        const sendBtn = document.getElementById('mentor-dash-send-btn');
+        if (!input || isSendingChat) return;
+
+        const text = input.value.trim();
+        if (!text) return;
+
+        isSendingChat = true;
+        if (sendBtn) sendBtn.disabled = true;
+
+        const replyToId = activeReplyTarget ? activeReplyTarget.id : null;
+        const { data, error } = await ICCSupabase.sendProjectMentorMessage(projectId, text, replyToId);
+
+        isSendingChat = false;
+        if (sendBtn) sendBtn.disabled = false;
+
+        if (error) {
+            Toast.error('Failed to send message: ' + (error.message || 'Error'));
+            return;
+        }
+
+        input.value = '';
+        input.style.height = 'auto';
+        activeReplyTarget = null;
+        const replyBar = document.getElementById('mentor-dash-reply-bar');
+        if (replyBar) replyBar.classList.add('hidden');
+
+        if (data && !activeChatMessages.some(m => m.id === data.id)) {
+            activeChatMessages.push(data);
+            if (!mentorMessages.some(m => m.id === data.id)) {
+                mentorMessages.unshift(data);
+            }
+            updateChatMessagesDOM();
+        }
+    }
+
+    function replyToMessage(messageId) {
+        const msg = activeChatMessages.find(m => m.id === messageId);
+        if (!msg) return;
+        const author = msg.profiles?.full_name || msg.profiles?.username || 'User';
+        activeReplyTarget = { id: messageId, author, text: msg.message };
+
+        const replyBar = document.getElementById('mentor-dash-reply-bar');
+        const authorEl = document.getElementById('dash-reply-target-author');
+        const textEl = document.getElementById('dash-reply-target-text');
+        const input = document.getElementById('mentor-dash-chat-input');
+
+        if (authorEl) authorEl.textContent = author;
+        if (textEl) textEl.textContent = msg.message;
+        if (replyBar) replyBar.classList.remove('hidden');
+        if (input) input.focus();
+    }
+
+    function cancelReply() {
+        activeReplyTarget = null;
+        const replyBar = document.getElementById('mentor-dash-reply-bar');
+        if (replyBar) replyBar.classList.add('hidden');
+    }
+
+    async function deleteMessage(messageId) {
+        if (!confirm('Are you sure you want to delete this message?')) return;
+        const { error } = await ICCSupabase.deleteProjectMentorMessage(messageId);
+        if (error) {
+            Toast.error('Could not delete message: ' + (error.message || 'Error'));
+            return;
+        }
+        activeChatMessages = activeChatMessages.filter(m => m.id !== messageId);
+        mentorMessages = mentorMessages.filter(m => m.id !== messageId);
+        updateChatMessagesDOM();
+        Toast.success('Message deleted');
+    }
+
+    function updateChatMessagesDOM() {
+        const streamContainer = document.getElementById('mentor-dash-messages-container');
+        const selectedItem = projects.find(p => Number(p.id) === Number(activeChatProjectId));
+        if (streamContainer && selectedItem) {
+            streamContainer.innerHTML = renderDashMessagesList(selectedItem);
+            scrollChatToBottom();
+        }
+    }
+
+    function scrollChatToBottom() {
+        const streamContainer = document.getElementById('mentor-dash-messages-container');
+        if (streamContainer) {
+            streamContainer.scrollTop = streamContainer.scrollHeight;
+        }
+    }
+
+    async function mount(container, initialTab = null) {
         if (!ICCSupabase.isMentor()) {
             Toast.error('Access restricted: Only Mentors and Super Administrators can access the Mentor Dashboard.');
             window.location.hash = '#dashboard';
             return;
+        }
+
+        if (initialTab) {
+            activeTab = initialTab;
         }
 
         container.innerHTML = `
@@ -1033,13 +1540,31 @@ const MentorDashboardView = (() => {
         `;
 
         await loadData();
+
+        // If on chat tab and have projects, select first project
+        if (activeTab === 'mentor_chat' && projects.length > 0) {
+            if (!activeChatProjectId) {
+                const sorted = getSortedChatProjects();
+                activeChatProjectId = sorted.length > 0 ? sorted[0].project.id : projects[0].id;
+            }
+            if (activeChatProjectId) {
+                const chatRes = await ICCSupabase.fetchProjectMentorMessages(activeChatProjectId);
+                if (chatRes?.data) activeChatMessages = chatRes.data;
+            }
+        }
+
         container.innerHTML = render();
         bindEvents(container);
+        if (activeTab === 'mentor_chat') scrollChatToBottom();
     }
 
     function unmount() {
         selectedAppDetail = null;
         selectedProjectAudit = null;
+        if (typeof activeChatUnsubscribe === 'function') {
+            activeChatUnsubscribe();
+            activeChatUnsubscribe = null;
+        }
     }
 
     return {
@@ -1048,6 +1573,14 @@ const MentorDashboardView = (() => {
         setActiveTab,
         setFilter,
         refresh,
+        refreshActiveChat,
+        goToProjectAudit,
+        goToProjectModal,
+        selectTeamChat,
+        handleSendChatMessage,
+        replyToMessage,
+        cancelReply,
+        deleteMessage,
         openApplicationModal,
         closeModal,
         openProjectAuditModal,
