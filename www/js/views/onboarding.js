@@ -37,6 +37,8 @@ const OnboardingView = (() => {
     }
 
     function renderStep1(defaultName) {
+        const currentProf = ICCSupabase.getProfile();
+        const isMentor = (currentProf?.role || "").toLowerCase().trim() === "mentor";
         return `
         <div class="onboarding-step glass-card rounded-xl p-6 space-y-4">
             <h2 class="font-heading font-semibold text-lg">Choose your identity</h2>
@@ -50,6 +52,7 @@ const OnboardingView = (() => {
                 <label class="block text-xs font-medium text-zinc-400 mb-1.5">Full Name</label>
                 <input type="text" id="ob-name" value="${formData.full_name || defaultName}" class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm" placeholder="Your full name">
             </div>
+            ${(!isMentor) ? `
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-medium text-zinc-400 mb-1.5">Academic Year *</label>
@@ -66,6 +69,12 @@ const OnboardingView = (() => {
                     </select>
                 </div>
             </div>
+            ` : `
+            <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-2">
+                <span class="text-base">🎓</span>
+                <p class="text-[11px] text-amber-300 font-medium">Mentor / Advisor Account (Academic Year & Branch not required)</p>
+            </div>
+            `}
             <button id="ob-next-1" class="w-full py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all">Continue</button>
         </div>`;
     }
@@ -134,7 +143,9 @@ const OnboardingView = (() => {
 
             if (!username || username.length < 3) { usernameError = 'Username must be at least 3 characters'; container.innerHTML = render(); bindEvents(container); return; }
             if (!/^[a-zA-Z0-9_]+$/.test(username)) { usernameError = 'Only letters, numbers, and underscore'; container.innerHTML = render(); bindEvents(container); return; }
-            if (!year || !branch) { usernameError = 'Please select both your Year and Branch'; container.innerHTML = render(); bindEvents(container); return; }
+            const currentProf = ICCSupabase.getProfile();
+            const isMentor = (currentProf?.role || '').toLowerCase().trim() === 'mentor';
+            if (!isMentor && (!year || !branch)) { usernameError = 'Please select both your Year and Branch'; container.innerHTML = render(); bindEvents(container); return; }
 
             const user = ICCSupabase.getUser();
             const available = await ICCSupabase.checkUsernameAvailable(username, user?.email);

@@ -32,6 +32,18 @@ const ProfileCompletionModal = (() => {
             return false;
         }
 
+        // Mentors are advisors/faculty/industry guides, not students.
+        // Super Admins are also administrative system accounts.
+        // Neither mentors nor super admins should be prompted for student Year or Branch.
+        const role = (profile.role || '').toLowerCase().trim();
+        const isMentor = role === 'mentor' || profile.is_mentor === true;
+        const isSuper = (typeof ICCSupabase.isSuperAdmin === 'function' && ICCSupabase.isSuperAdmin(profile));
+
+        if (isMentor || isSuper) {
+            close();
+            return false;
+        }
+
         // Check if year or branch is missing
         const missingYear = !profile.year || !profile.year.trim();
         const missingBranch = !profile.branch || !profile.branch.trim();
@@ -46,6 +58,15 @@ const ProfileCompletionModal = (() => {
     }
 
     function open() {
+        const profile = ICCSupabase.getProfile();
+        const role = (profile?.role || '').toLowerCase().trim();
+        const isMentor = role === 'mentor' || profile?.is_mentor === true;
+        const isSuper = (typeof ICCSupabase.isSuperAdmin === 'function' && ICCSupabase.isSuperAdmin(profile));
+        if (isMentor || isSuper) {
+            close();
+            return;
+        }
+
         if (isOpen) return;
         isOpen = true;
         mount();
