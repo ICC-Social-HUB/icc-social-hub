@@ -2515,38 +2515,34 @@ const ICCSupabase = (() => {
     }
 
     async function fetchMyProjectApplications() {
-        if (!client || !currentUser) return [];
+        if (!client || !currentUser) return { data: [], error: { message: 'Sign in required' } };
         try {
             const { data, error } = await client
                 .from('project_applications')
-                .select('*, reviewer:reviewer_id(id, full_name, role)')
+                .select('*')
                 .eq('applicant_id', currentUser.id)
                 .order('created_at', { ascending: false });
 
             if (error) {
                 console.warn('fetchMyProjectApplications error:', error);
-                return [];
+                return { data: [], error };
             }
-            return data || [];
+            return { data: data || [], success: true };
         } catch (e) {
             console.error('fetchMyProjectApplications exception:', e);
-            return [];
+            return { data: [], error: e };
         }
     }
 
     async function fetchAllProjectApplications(filterStatus = null) {
         if (!client || !isMentor()) {
-            return { error: { message: 'Unauthorized: Only Mentors and Super Admins can access all applications.' } };
+            return { error: { message: 'Unauthorized: Only Mentors and Super Admins can access all applications.' }, data: [] };
         }
 
         try {
             let query = client
                 .from('project_applications')
-                .select(`
-                    *,
-                    applicant:applicant_id(id, full_name, email, avatar_url, username, phone, usn),
-                    reviewer:reviewer_id(id, full_name, role)
-                `)
+                .select('*')
                 .order('created_at', { ascending: false });
 
             if (filterStatus && filterStatus !== 'all') {
@@ -2555,7 +2551,28 @@ const ICCSupabase = (() => {
 
             const { data, error } = await query;
             if (error) throw error;
-            return { data: data || [], success: true };
+
+            const applications = data || [];
+            if (applications.length > 0) {
+                const userIds = [...new Set([
+                    ...applications.map(a => a.applicant_id).filter(Boolean),
+                    ...applications.map(a => a.reviewer_id).filter(Boolean)
+                ])];
+
+                if (userIds.length > 0) {
+                    const { data: profs } = await client
+                        .from('profiles')
+                        .select('id, full_name, email, avatar_url, username, phone, usn, role')
+                        .in('id', userIds);
+                    const profMap = (profs || []).reduce((acc, p) => { acc[p.id] = p; return acc; }, {});
+                    applications.forEach(a => {
+                        a.applicant = profMap[a.applicant_id] || null;
+                        a.reviewer = a.reviewer_id ? (profMap[a.reviewer_id] || null) : null;
+                    });
+                }
+            }
+
+            return { data: applications, success: true };
         } catch (err) {
             console.error('fetchAllProjectApplications error:', err);
             return { error: err, data: [] };
@@ -2568,11 +2585,7 @@ const ICCSupabase = (() => {
         try {
             const { data: application, error: appErr } = await client
                 .from('project_applications')
-                .select(`
-                    *,
-                    applicant:applicant_id(id, full_name, email, avatar_url, username, phone, usn),
-                    reviewer:reviewer_id(id, full_name, role)
-                `)
+                .select('*')
                 .eq('id', applicationId)
                 .maybeSingle();
 
@@ -2586,31 +2599,75 @@ const ICCSupabase = (() => {
                 return { error: { message: 'Unauthorized: You do not have permission to view this application.' } };
             }
 
+            // Populate applicant profile
+            if (application.applicant_id) {
+                const { data: prof } = await client
+                    .from('profiles')
+                    .select('id, full_name, email, avatar_url, username, phone, usn, role')
+                    .eq('id', application.applicant_id)
+                    .maybeSingle();
+                application.applicant = prof || null;
+            }
+
+            // Populate reviewer profile
+            if (application.reviewer_id) {
+                const { data: rev } = await client
+                    .from('profiles')
+                    .select('id, full_name, role')
+                    .eq('id', application.reviewer_id)
+                    .maybeSingle();
+                application.reviewer = rev || null;
+            }
+
             // Fetch comments
             const { data: comments } = await client
                 .from('project_application_comments')
-                .select(`
-                    *,
-                    author:author_id(id, full_name, avatar_url, role)
-                `)
+                .select('*')
                 .eq('application_id', applicationId)
                 .order('created_at', { ascending: true });
+
+            const populatedComments = comments || [];
+            if (populatedComments.length > 0) {
+                const authorIds = [...new Set(populatedComments.map(c => c.author_id).filter(Boolean))];
+                if (authorIds.length > 0) {
+                    const { data: authors } = await client
+                        .from('profiles')
+                        .select('id, full_name, avatar_url, role')
+                        .in('id', authorIds);
+                    const authorMap = (authors || []).reduce((acc, a) => { acc[a.id] = a; return acc; }, {});
+                    populatedComments.forEach(c => {
+                        c.author = authorMap[c.author_id] || null;
+                    });
+                }
+            }
 
             // Fetch status history
             const { data: history } = await client
                 .from('project_application_status_history')
-                .select(`
-                    *,
-                    changer:changed_by(id, full_name, role)
-                `)
+                .select('*')
                 .eq('application_id', applicationId)
                 .order('created_at', { ascending: true });
+
+            const populatedHistory = history || [];
+            if (populatedHistory.length > 0) {
+                const changerIds = [...new Set(populatedHistory.map(h => h.changed_by).filter(Boolean))];
+                if (changerIds.length > 0) {
+                    const { data: changers } = await client
+                        .from('profiles')
+                        .select('id, full_name, role')
+                        .in('id', changerIds);
+                    const changerMap = (changers || []).reduce((acc, c) => { acc[c.id] = c; return acc; }, {});
+                    populatedHistory.forEach(h => {
+                        h.changer = changerMap[h.changed_by] || null;
+                    });
+                }
+            }
 
             return {
                 data: {
                     application,
-                    comments: comments || [],
-                    history: history || []
+                    comments: populatedComments,
+                    history: populatedHistory
                 },
                 success: true
             };

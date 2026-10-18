@@ -771,7 +771,9 @@ const TeamsView = (() => {
             const content = document.getElementById('my-apps-content');
             if (!content) return;
 
-            const { data: apps, error } = await ICCSupabase.fetchMyProjectApplications();
+            const res = await ICCSupabase.fetchMyProjectApplications();
+            const apps = Array.isArray(res) ? res : (res?.data || []);
+            const error = res?.error || null;
 
             if (error) {
                 content.innerHTML = `
@@ -824,11 +826,15 @@ const TeamsView = (() => {
                 }
             });
 
+            const normStatus = (st) => String(st || '').toLowerCase().replace(/[\s_-]+/g, '_');
             const statusBadge = (status) => {
-                if (status === 'approved') return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">✓ Approved</span>`;
-                if (status === 'changes_requested') return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">⚠️ Changes Requested</span>`;
+                const s = normStatus(status);
+                if (s === 'approved') return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">✓ Approved</span>`;
+                if (s === 'changes_requested') return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">⚠️ Changes Requested</span>`;
                 return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 animate-pulse">⏳ Pending Review</span>`;
             };
+
+            const activeAppStatusKey = normStatus(activeApp.status);
 
             content.innerHTML = `
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -855,7 +861,7 @@ const TeamsView = (() => {
                 <!-- Right Column: Active Application Details, Revisions & Comments (lg:col-span-8) -->
                 <div class="lg:col-span-8 space-y-4">
                     <!-- Status Notification Banner -->
-                    ${activeApp.status === 'changes_requested' ? `
+                    ${activeAppStatusKey === 'changes_requested' ? `
                         <div class="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl space-y-2 text-rose-300">
                             <div class="flex items-center gap-2">
                                 <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
@@ -869,7 +875,7 @@ const TeamsView = (() => {
                                 <span>Edit & Resubmit Proposal</span>
                             </button>
                         </div>
-                    ` : activeApp.status === 'approved' ? `
+                    ` : activeAppStatusKey === 'approved' ? `
                         <div class="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-between flex-wrap gap-3 text-emerald-300">
                             <div class="space-y-1">
                                 <div class="flex items-center gap-2">
@@ -897,7 +903,7 @@ const TeamsView = (() => {
                     `}
 
                     <!-- Resubmission Form (Visible when toggled or when changes requested) -->
-                    <div id="resubmit-form-card" class="${activeApp.status === 'changes_requested' ? '' : 'hidden'} p-4 bg-zinc-950/70 border border-zinc-800 rounded-2xl space-y-4">
+                    <div id="resubmit-form-card" class="${activeAppStatusKey === 'changes_requested' ? '' : 'hidden'} p-4 bg-zinc-950/70 border border-zinc-800 rounded-2xl space-y-4">
                         <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
                             <h5 class="font-bold text-sm text-white flex items-center gap-2">
                                 <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
