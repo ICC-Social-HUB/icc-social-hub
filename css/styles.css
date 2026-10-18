@@ -1507,3 +1507,75 @@ input, select, textarea { font-size: 16px !important; }
     box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
 }
 
+/* ============================================
+   RICH TEXT & FORMATTED PROSE STYLING
+   ============================================ */
+.prose-clean b, .prose-clean strong {
+    font-weight: 700;
+    color: #f4f4f5;
+}
+.prose-clean i, .prose-clean em {
+    font-style: italic;
+    color: #e4e4e7;
+}
+.prose-clean u {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: rgba(16, 185, 129, 0.6);
+}
+.prose-clean s, .prose-clean strike {
+    text-decoration: line-through;
+    opacity: 0.75;
+}
+.prose-clean h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-top: 0.85rem;
+    margin-bottom: 0.35rem;
+    letter-spacing: -0.01em;
+}
+.prose-clean h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #e4e4e7;
+    margin-top: 0.6rem;
+    margin-bottom: 0.25rem;
+}
+.prose-clean ul {
+    list-style-type: disc;
+    padding-left: 1.35rem;
+    margin: 0.5rem 0;
+}
+.prose-clean ol {
+    list-style-type: decimal;
+    padding-left: 1.35rem;
+    margin: 0.5rem 0;
+}
+.prose-clean li {
+    margin: 0.25rem 0;
+    padding-left: 0.15rem;
+}
+.prose-clean p {
+    margin-bottom: 0.5rem;
+}
+.prose-clean p:last-child {
+    margin-bottom: 0;
+}
+.prose-clean a {
+    color: #34d399;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color 0.15s ease;
+}
+.prose-clean a:hover {
+    color: #6ee7b7;
+}
+[contenteditable]:empty:before {
+    content: attr(placeholder);
+    color: #71717a;
+    pointer-events: none;
+    display: block;
+}
+
+

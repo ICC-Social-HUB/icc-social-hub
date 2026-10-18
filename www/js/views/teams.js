@@ -11,6 +11,44 @@ const TeamsView = (() => {
         return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
     }
 
+    function sanitizeRichText(html) {
+        if (!html) return '';
+        const str = String(html).trim();
+        if (!str) return '';
+
+        // If it's plain text without HTML tags, preserve line breaks
+        const hasTags = /<[a-z][\s\S]*>/i.test(str);
+        if (!hasTags) {
+            return escapeHtml(str).replace(/\n/g, '<br>');
+        }
+
+        const temp = document.createElement('div');
+        temp.innerHTML = str;
+
+        // Remove dangerous tags
+        const dangerous = temp.querySelectorAll('script, style, iframe, object, embed, form, input, button, textarea, meta, link');
+        dangerous.forEach(el => el.remove());
+
+        // Remove dangerous attributes and protocols
+        const allElements = temp.querySelectorAll('*');
+        allElements.forEach(el => {
+            for (let i = el.attributes.length - 1; i >= 0; i--) {
+                const attr = el.attributes[i];
+                const name = attr.name.toLowerCase();
+                const val = attr.value.trim().toLowerCase();
+                if (name.startsWith('on') || val.startsWith('javascript:') || val.startsWith('data:text/html')) {
+                    el.removeAttribute(attr.name);
+                }
+            }
+            if (el.tagName === 'A') {
+                el.setAttribute('target', '_blank');
+                el.setAttribute('rel', 'noopener noreferrer');
+            }
+        });
+
+        return temp.innerHTML;
+    }
+
     function getMemberTags(teamId) {
         const lead = CORE_LEADS.find(l => l.id === Number(teamId));
         let milestones = lead?.milestones || {};
@@ -568,17 +606,106 @@ const TeamsView = (() => {
                         </div>
 
                         <!-- 2. "About the Project" Section (Shifted to top, below project name and team name) -->
-                        <div class="glass-card rounded-2xl p-5 sm:p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl space-y-4">
-                            <div>
-                                <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-2">About the Project</h3>
-                                <p class="text-sm text-zinc-300 leading-relaxed">${lead.bio || 'No project description provided yet.'}</p>
-                            </div>
-                            <div>
-                                <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-2">Specialties & Tech Stack</h3>
-                                <div class="flex flex-wrap gap-2">
-                                    ${(lead.specialties || []).map(s => `<span class="specialty-pill px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-400">${s}</span>`).join('')}
+                        <div class="glass-card rounded-2xl p-5 sm:p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl space-y-4" id="about-project-card">
+                            
+                            <!-- Clean Preview Container (Default view) -->
+                            <div id="about-project-view-container" class="space-y-4">
+                                <div class="flex items-center justify-between gap-3">
+                                    <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400">About the Project</h3>
+                                    ${isLead ? `
+                                    <button id="edit-about-btn" class="flex items-center gap-1.5 px-3 py-1 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-emerald-400 border border-zinc-800 hover:border-emerald-500/40 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-sm active:scale-95" title="Edit About the Project">
+                                        <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                        </svg>
+                                        <span>Edit</span>
+                                    </button>
+                                    ` : ''}
+                                </div>
+
+                                <!-- Clean Rendered Content Display -->
+                                <div id="about-project-display" class="prose-clean text-sm text-zinc-300 leading-relaxed break-words">
+                                    ${sanitizeRichText(lead.bio) || '<span class="text-zinc-500 italic">No project description provided yet.</span>'}
+                                </div>
+
+                                <div>
+                                    <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-2">Specialties & Tech Stack</h3>
+                                    <div class="flex flex-wrap gap-2">
+                                        ${(lead.specialties || []).map(s => `<span class="specialty-pill px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-400">${s}</span>`).join('')}
+                                    </div>
                                 </div>
                             </div>
+
+                            <!-- Rich Text Editor Container (Hidden by default, shown when clicking Edit) -->
+                            ${isLead ? `
+                            <div id="about-project-editor-container" class="hidden space-y-3">
+                                <div class="flex items-center justify-between pb-2 border-b border-zinc-800/60">
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-emerald-400">Edit About Project</h3>
+                                        <span class="text-[10px] text-zinc-500 hidden sm:inline">• Formatted paste supported</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button id="cancel-about-btn" type="button" class="px-3 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-lg text-xs font-semibold border border-zinc-800 transition-colors cursor-pointer">
+                                            Cancel
+                                        </button>
+                                        <button id="save-about-btn" type="button" class="flex items-center gap-1.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-emerald-600/20 cursor-pointer">
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                            <span>Save Changes</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Formatting Toolbar -->
+                                <div class="flex flex-wrap items-center gap-1 p-1.5 bg-zinc-900/90 border border-zinc-800 rounded-xl select-none" id="rich-editor-toolbar">
+                                    <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs font-bold transition-colors cursor-pointer" data-cmd="bold" title="Bold (Ctrl+B)">
+                                        <b>B</b>
+                                    </button>
+                                    <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs italic font-serif transition-colors cursor-pointer" data-cmd="italic" title="Italic (Ctrl+I)">
+                                        <i>I</i>
+                                    </button>
+                                    <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs underline transition-colors cursor-pointer" data-cmd="underline" title="Underline (Ctrl+U)">
+                                        <u>U</u>
+                                    </button>
+                                    <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs line-through transition-colors cursor-pointer" data-cmd="strikeThrough" title="Strikethrough">
+                                        <s>S</s>
+                                    </button>
+
+                                    <span class="w-[1px] h-4 bg-zinc-700 mx-1"></span>
+
+                                    <button type="button" class="toolbar-btn px-2 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs font-semibold transition-colors cursor-pointer" data-cmd="formatBlock" data-val="<h3>" title="Heading">
+                                        H1
+                                    </button>
+                                    <button type="button" class="toolbar-btn px-2 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs font-semibold transition-colors cursor-pointer" data-cmd="formatBlock" data-val="<h4>" title="Subheading">
+                                        H2
+                                    </button>
+
+                                    <span class="w-[1px] h-4 bg-zinc-700 mx-1"></span>
+
+                                    <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs transition-colors cursor-pointer" data-cmd="insertUnorderedList" title="Bulleted List">
+                                        • List
+                                    </button>
+                                    <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs transition-colors cursor-pointer" data-cmd="insertOrderedList" title="Numbered List">
+                                        1. List
+                                    </button>
+
+                                    <span class="w-[1px] h-4 bg-zinc-700 mx-1"></span>
+
+                                    <button type="button" class="toolbar-btn px-2 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs transition-colors cursor-pointer" data-cmd="createLink" title="Insert Link">
+                                        🔗 Link
+                                    </button>
+                                    <button type="button" class="toolbar-btn px-2 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 rounded-md text-xs transition-colors cursor-pointer" data-cmd="removeFormat" title="Clear Formatting">
+                                        ⌫ Clear
+                                    </button>
+                                </div>
+
+                                <!-- Contenteditable Rich Text Area -->
+                                <div id="about-project-editor" 
+                                     contenteditable="true" 
+                                     class="prose-clean min-h-[160px] max-h-[380px] overflow-y-auto p-4 bg-zinc-950/90 border border-zinc-800 focus:border-emerald-500/60 rounded-xl text-sm text-zinc-200 outline-none focus:ring-1 focus:ring-emerald-500/40 transition-all leading-relaxed" 
+                                     placeholder="Type or paste formatted project overview...">
+                                </div>
+                                <p class="text-[10px] text-zinc-500 italic">Tip: You can select text to format, or paste formatted text directly from Google Docs, Word, or Notion.</p>
+                            </div>
+                            ` : ''}
                         </div>
 
                         <!-- 3. Project Progress Section (Below "About the Project") -->
@@ -1004,6 +1131,102 @@ const TeamsView = (() => {
                 if (userId) UserProfileModal.open(userId);
             });
         });
+
+        // About Project Rich Text Editing for Team Leaders
+        const editAboutBtn = document.getElementById('edit-about-btn');
+        const viewContainer = document.getElementById('about-project-view-container');
+        const editorContainer = document.getElementById('about-project-editor-container');
+        const aboutEditor = document.getElementById('about-project-editor');
+        const aboutDisplay = document.getElementById('about-project-display');
+        const cancelAboutBtn = document.getElementById('cancel-about-btn');
+        const saveAboutBtn = document.getElementById('save-about-btn');
+
+        if (editAboutBtn && aboutEditor && viewContainer && editorContainer) {
+            editAboutBtn.addEventListener('click', () => {
+                aboutEditor.innerHTML = lead.bio || '';
+                viewContainer.classList.add('hidden');
+                editorContainer.classList.remove('hidden');
+                aboutEditor.focus();
+            });
+
+            cancelAboutBtn?.addEventListener('click', () => {
+                editorContainer.classList.add('hidden');
+                viewContainer.classList.remove('hidden');
+            });
+
+            saveAboutBtn?.addEventListener('click', async () => {
+                const rawHtml = aboutEditor.innerHTML.trim();
+                const cleanHtml = sanitizeRichText(rawHtml);
+                saveAboutBtn.disabled = true;
+                const originalText = saveAboutBtn.innerHTML;
+                saveAboutBtn.innerHTML = `<span>Saving...</span>`;
+
+                try {
+                    const { error } = await ICCSupabase.updateLead(lead.id, { bio: cleanHtml });
+                    if (error) {
+                        Toast.error('Failed to update About Project: ' + error.message);
+                    } else {
+                        lead.bio = cleanHtml;
+                        const leadInCore = CORE_LEADS.find(l => Number(l.id) === Number(lead.id));
+                        if (leadInCore) leadInCore.bio = cleanHtml;
+
+                        // Update clean view display
+                        if (aboutDisplay) {
+                            aboutDisplay.innerHTML = cleanHtml || '<span class="text-zinc-500 italic">No project description provided yet.</span>';
+                        }
+                        // Update form textarea if open in config
+                        const leadBioInput = document.getElementById('lead-bio');
+                        if (leadBioInput) leadBioInput.value = cleanHtml;
+
+                        editorContainer.classList.add('hidden');
+                        viewContainer.classList.remove('hidden');
+                        Toast.success('About Project updated!');
+                    }
+                } catch(err) {
+                    console.error('Save error:', err);
+                    Toast.error('An unexpected error occurred while saving.');
+                } finally {
+                    saveAboutBtn.disabled = false;
+                    saveAboutBtn.innerHTML = originalText;
+                }
+            });
+
+            // Prevent toolbar buttons from clearing selection in contenteditable
+            document.querySelectorAll('#rich-editor-toolbar .toolbar-btn').forEach(btn => {
+                btn.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                });
+
+                btn.addEventListener('click', () => {
+                    const cmd = btn.dataset.cmd;
+                    const val = btn.dataset.val || null;
+
+                    if (cmd === 'createLink') {
+                        const url = prompt('Enter website link URL:', 'https://');
+                        if (url && url.trim()) {
+                            let validUrl = url.trim();
+                            if (!/^https?:\/\//i.test(validUrl)) {
+                                validUrl = 'https://' + validUrl;
+                            }
+                            document.execCommand('createLink', false, validUrl);
+                        }
+                    } else {
+                        document.execCommand(cmd, false, val);
+                    }
+                    aboutEditor.focus();
+                });
+            });
+
+            // Rich paste formatting preservation
+            aboutEditor.addEventListener('paste', (e) => {
+                const html = e.clipboardData?.getData('text/html');
+                if (html) {
+                    e.preventDefault();
+                    const cleaned = sanitizeRichText(html);
+                    document.execCommand('insertHTML', false, cleaned);
+                }
+            });
+        }
 
         // Toggle config
         document.getElementById('toggle-config-btn')?.addEventListener('click', () => {
