@@ -36,80 +36,7 @@ const ICCSupabase = (() => {
                 redirectTo: window.location.origin + window.location.pathname
             }
         });
-    
-    async function fetchUserProjects(userId) {
-        if (!userId) return [];
-        try {
-            const projectIds = new Set();
-
-            // 1. Live leads / projects
-            let allLeads = [];
-            try {
-                allLeads = await fetchLeads();
-            } catch (e) {}
-            if (!allLeads || allLeads.length === 0) {
-                allLeads = (typeof CORE_LEADS !== 'undefined' && Array.isArray(CORE_LEADS)) ? CORE_LEADS : [];
-            }
-
-            // 2. From team_memberships table
-            if (client) {
-                const { data } = await client
-                    .from('team_memberships')
-                    .select('team_id')
-                    .eq('user_id', userId);
-                (data || []).forEach(m => {
-                    if (m && m.team_id) projectIds.add(Number(m.team_id));
-                });
-            }
-
-            // 3. User profile check
-            let targetProfile = (currentProfile && currentProfile.id === userId) ? currentProfile : null;
-            if (!targetProfile) {
-                targetProfile = await fetchUserById(userId);
-            }
-            if (targetProfile?.team_id) {
-                projectIds.add(Number(targetProfile.team_id));
-            }
-
-            // 4. Also check if user is listed as team lead in allLeads
-            allLeads.forEach(l => {
-                if (l.lead_user_id === userId) {
-                    projectIds.add(Number(l.id));
-                } else if (targetProfile?.full_name && l.name && targetProfile.full_name.trim().toLowerCase() === l.name.trim().toLowerCase()) {
-                    projectIds.add(Number(l.id));
-                }
-            });
-
-            const results = [];
-            projectIds.forEach(id => {
-                const lead = allLeads.find(l => Number(l.id) === Number(id));
-                if (lead) {
-                    const isLeadOfThis = (lead.lead_user_id === userId) ||
-                        (targetProfile?.role === 'lead' && Number(targetProfile?.team_id) === Number(lead.id)) ||
-                        (targetProfile?.full_name && lead.name && targetProfile.full_name.trim().toLowerCase() === lead.name.trim().toLowerCase());
-
-                    results.push({
-                        id: lead.id,
-                        name: lead.team || lead.project_name || `Project ${lead.id}`,
-                        lead_name: lead.name,
-                        initials: lead.initials || (lead.team ? lead.team.replace(/Team\s*/i, '').slice(0, 2).toUpperCase() : 'PR'),
-                        gradient: lead.gradient || 'from-blue-600 to-indigo-600',
-                        color: lead.color || '#3390ec',
-                        specialties: Array.isArray(lead.specialties) ? lead.specialties : [],
-                        bio: lead.bio || '',
-                        is_lead: Boolean(isLeadOfThis)
-                    });
-                }
-            });
-
-            return results;
-        } catch (err) {
-            console.error('Error in fetchUserProjects:', err);
-            return [];
-        }
-    }
-
-    return { data, error };
+        return { data, error };
     }
 
     // Email OTP: send (Customized to use /api/send-auth-otp to bypass Supabase mail limits)
@@ -4515,6 +4442,79 @@ const ICCSupabase = (() => {
                 totalPages: 1,
                 availableProjects: []
             };
+        }
+    }
+
+    
+    async function fetchUserProjects(userId) {
+        if (!userId) return [];
+        try {
+            const projectIds = new Set();
+
+            // 1. Live leads / projects
+            let allLeads = [];
+            try {
+                allLeads = await fetchLeads();
+            } catch (e) {}
+            if (!allLeads || allLeads.length === 0) {
+                allLeads = (typeof CORE_LEADS !== 'undefined' && Array.isArray(CORE_LEADS)) ? CORE_LEADS : [];
+            }
+
+            // 2. From team_memberships table
+            if (client) {
+                const { data } = await client
+                    .from('team_memberships')
+                    .select('team_id')
+                    .eq('user_id', userId);
+                (data || []).forEach(m => {
+                    if (m && m.team_id) projectIds.add(Number(m.team_id));
+                });
+            }
+
+            // 3. User profile check
+            let targetProfile = (currentProfile && currentProfile.id === userId) ? currentProfile : null;
+            if (!targetProfile) {
+                targetProfile = await fetchUserById(userId);
+            }
+            if (targetProfile?.team_id) {
+                projectIds.add(Number(targetProfile.team_id));
+            }
+
+            // 4. Also check if user is listed as team lead in allLeads
+            allLeads.forEach(l => {
+                if (l.lead_user_id === userId) {
+                    projectIds.add(Number(l.id));
+                } else if (targetProfile?.full_name && l.name && targetProfile.full_name.trim().toLowerCase() === l.name.trim().toLowerCase()) {
+                    projectIds.add(Number(l.id));
+                }
+            });
+
+            const results = [];
+            projectIds.forEach(id => {
+                const lead = allLeads.find(l => Number(l.id) === Number(id));
+                if (lead) {
+                    const isLeadOfThis = (lead.lead_user_id === userId) ||
+                        (targetProfile?.role === 'lead' && Number(targetProfile?.team_id) === Number(lead.id)) ||
+                        (targetProfile?.full_name && lead.name && targetProfile.full_name.trim().toLowerCase() === lead.name.trim().toLowerCase());
+
+                    results.push({
+                        id: lead.id,
+                        name: lead.team || lead.project_name || `Project ${lead.id}`,
+                        lead_name: lead.name,
+                        initials: lead.initials || (lead.team ? lead.team.replace(/Team\s*/i, '').slice(0, 2).toUpperCase() : 'PR'),
+                        gradient: lead.gradient || 'from-blue-600 to-indigo-600',
+                        color: lead.color || '#3390ec',
+                        specialties: Array.isArray(lead.specialties) ? lead.specialties : [],
+                        bio: lead.bio || '',
+                        is_lead: Boolean(isLeadOfThis)
+                    });
+                }
+            });
+
+            return results;
+        } catch (err) {
+            console.error('Error in fetchUserProjects:', err);
+            return [];
         }
     }
 
