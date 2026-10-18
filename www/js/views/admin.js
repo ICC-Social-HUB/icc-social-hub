@@ -805,9 +805,9 @@ const AdminView = (() => {
                 <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
                     <div>
                         <h4 class="font-heading font-semibold text-sm text-white flex items-center gap-2">
-                            <span>🔍 Search & Appoint New Administrator</span>
+                            <span>🛡️ Search & Appoint Administrators & Mentors</span>
                         </h4>
-                        <p class="text-[11px] text-zinc-400">Search any registered member to grant admin privileges and choose their feature accesses.</p>
+                        <p class="text-[11px] text-zinc-400">Search any registered member to grant Mentor, Administrator, or Super Admin privileges.</p>
                     </div>
                 </div>
 
@@ -931,10 +931,10 @@ const AdminView = (() => {
 
                         <!-- Action Submit Button -->
                         <div class="flex items-center gap-2 pt-2">
-                            <button id="confirm-appoint-btn" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-semibold rounded-xl text-xs transition-all shadow-lg flex items-center justify-center gap-2" data-user-id="${appointingUser.id}">
-                                <span>Confirm & Appoint Administrator</span>
+                            <button id="confirm-appoint-btn" class="flex-1 py-2.5 ${appointingUserDraft?.targetRole === 'mentor' ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold shadow-amber-500/20' : (appointingUserDraft?.targetRole === 'super_admin' ? 'bg-amber-600 hover:bg-amber-500 text-white font-semibold shadow-amber-600/20' : 'bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-blue-600/20')} active:scale-95 rounded-xl text-xs transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer" data-user-id="${appointingUser.id}">
+                                <span>${appointingUserDraft?.targetRole === 'mentor' ? '🎓 Confirm & Appoint Mentor' : (appointingUserDraft?.targetRole === 'super_admin' ? '🛡️ Confirm & Appoint Super Admin' : '👑 Confirm & Appoint Administrator')}</span>
                             </button>
-                            <button id="cancel-appoint-btn-2" class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-xl text-xs transition-all">
+                            <button id="cancel-appoint-btn-2" class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-xl text-xs transition-all cursor-pointer">
                                 Cancel
                             </button>
                         </div>
@@ -953,7 +953,7 @@ const AdminView = (() => {
                                 No users found matching "${escapeHtml(query)}"
                             </div>
                         ` : searchCandidates.map(u => {
-                            const isAlreadyAdmin = u.role === 'admin' || u.role === 'super_admin' || u.role === 'superadmin';
+                            const isAlreadyAssigned = u.role === 'admin' || u.role === 'super_admin' || u.role === 'superadmin' || u.role === 'mentor';
                             const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
                             const fullName = u.full_name || (student ? student.fullName : 'Anonymous');
                             const usn = u.usn || (student ? student.usn : '');
@@ -973,14 +973,26 @@ const AdminView = (() => {
                                         <p class="text-[11px] text-zinc-400 font-mono truncate">${escapeHtml(u.email || 'No email')} · @${escapeHtml(u.username || 'user')}</p>
                                     </div>
                                 </div>
-                                <div class="flex-shrink-0">
-                                    ${isAlreadyAdmin ? `
-                                        <span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold ${u.role === 'mentor' ? 'bg-emerald-500/15 text-emerald-300' : (u.role === 'super_admin' || u.role === 'superadmin' ? 'bg-amber-500/15 text-amber-300' : 'bg-blue-500/15 text-blue-300')}">
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    ${isAlreadyAssigned ? `
+                                        <span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold ${u.role === 'mentor' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : (u.role === 'super_admin' || u.role === 'superadmin' ? 'bg-amber-500/15 text-amber-300' : 'bg-blue-500/15 text-blue-300')}">
                                             ${u.role === 'super_admin' || u.role === 'superadmin' ? '🛡️ Super Admin' : (u.role === 'mentor' ? '🎓 Mentor' : '👑 Admin')}
                                         </span>
+                                        ${u.role === 'mentor' ? `
+                                            <button class="revoke-mentor-btn px-2.5 py-1 text-[10px] font-semibold bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 rounded-lg transition-colors cursor-pointer" data-id="${u.id}" data-name="${escapeHtml(fullName)}">
+                                                Revoke
+                                            </button>
+                                        ` : (u.role !== 'super_admin' && u.role !== 'superadmin' ? `
+                                            <button class="start-appoint-btn px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg text-[10px] font-semibold transition-all cursor-pointer" data-user-id="${u.id}" data-target-role="mentor">
+                                                Change
+                                            </button>
+                                        ` : '')}
                                     ` : `
-                                        <button class="start-appoint-btn px-3 py-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl text-xs font-semibold transition-all shadow-sm" data-user-id="${u.id}">
-                                            + Appoint Role
+                                        <button class="start-appoint-btn px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold active:scale-95 rounded-xl text-xs transition-all shadow-sm cursor-pointer flex items-center gap-1" data-user-id="${u.id}" data-target-role="mentor">
+                                            <span>🎓 Assign Mentor</span>
+                                        </button>
+                                        <button class="start-appoint-btn px-3 py-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl text-xs font-semibold transition-all shadow-sm cursor-pointer" data-user-id="${u.id}" data-target-role="admin">
+                                            + Admin
                                         </button>
                                     `}
                                 </div>
@@ -1542,11 +1554,23 @@ const AdminView = (() => {
                                             </div>
                                             <span class="absolute -top-2 left-2 px-1 bg-zinc-900 text-[9px] text-zinc-500 uppercase tracking-wider">Auth Username</span>
                                         </div>
+                                        ${isSuper ? `
+                                        <div class="relative pt-0.5">
+                                            <select class="user-role-select w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-white focus:border-amber-500 outline-none">
+                                                <option value="member" ${(!u.role || u.role === 'member') ? 'selected' : ''}>Regular Member</option>
+                                                <option value="mentor" ${u.role === 'mentor' ? 'selected' : ''}>🎓 Mentor (Project Audit & Guidance)</option>
+                                                <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>👑 Administrator</option>
+                                                <option value="super_admin" ${u.role === 'super_admin' || u.role === 'superadmin' ? 'selected' : ''}>🛡️ Super Admin</option>
+                                            </select>
+                                            <span class="absolute -top-1.5 left-2 px-1 bg-zinc-900 text-[9px] text-zinc-500 uppercase tracking-wider">Role</span>
+                                        </div>
+                                        ` : ''}
                                     </div>
                                 ` : `
                                     <div class="flex-1 min-w-0">
                                         <div class="flex flex-wrap items-center gap-2">
                                             <h4 class="text-sm font-semibold text-white break-words">${escapeHtml(fullName || 'Anonymous')}</h4>
+                                            ${u.role === 'mentor' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 inline-flex items-center gap-1">${ICC_CONFIG.MENTOR_TICK} Mentor</span>` : (u.role === 'super_admin' || u.role === 'superadmin' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-300">🛡️ Super Admin</span>` : (u.role === 'admin' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/15 text-blue-300">👑 Admin</span>` : (u.role === 'lead' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-400">Lead</span>` : '')))}
                                             ${isVerified ? `<span class="text-[9px] font-bold uppercase tracking-wider text-emerald-400">Excel Verified</span>` : `<span class="text-[9px] font-bold uppercase tracking-wider text-red-400">Unverified</span>`}
                                             ${isManuallyUpdated ? `<span class="text-[9px] font-bold uppercase tracking-wider text-blue-400">Manually Updated</span>` : ''}
                                             ${(() => {
@@ -1563,11 +1587,25 @@ const AdminView = (() => {
                                 `}
                             </div>
                             
-                            ${canRequestEdit && !isEditing ? `
-                                <button class="edit-user-btn p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-all" data-id="${u.id}" title="${isSuper ? 'Edit user details (Direct)' : 'Request edit for user details'}">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                                </button>
-                            ` : ''}
+                            <div class="flex items-center gap-1.5 flex-shrink-0">
+                                ${isSuper && !isEditing && u.id !== currentUserId && u.role !== 'super_admin' && u.role !== 'superadmin' ? `
+                                    ${u.role === 'mentor' ? `
+                                        <button class="quick-revoke-mentor-btn px-2.5 py-1.5 text-[11px] font-bold bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 rounded-xl transition-all cursor-pointer flex items-center gap-1 active:scale-95 shadow-sm" data-id="${u.id}" data-name="${escapeHtml(fullName)}" title="Revoke Mentor Role">
+                                            <span>✕ Revoke Mentor</span>
+                                        </button>
+                                    ` : `
+                                        <button class="quick-assign-mentor-btn px-2.5 py-1.5 text-[11px] font-bold bg-amber-500/15 hover:bg-amber-500 text-amber-400 hover:text-zinc-950 border border-amber-500/30 rounded-xl transition-all cursor-pointer flex items-center gap-1 active:scale-95 shadow-sm" data-id="${u.id}" data-name="${escapeHtml(fullName)}" title="Assign as Mentor">
+                                            <span>🎓 Assign Mentor</span>
+                                        </button>
+                                    `}
+                                ` : ''}
+
+                                ${canRequestEdit && !isEditing ? `
+                                    <button class="edit-user-btn p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-all cursor-pointer" data-id="${u.id}" title="${isSuper ? 'Edit user details (Direct)' : 'Request edit for user details'}">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                    </button>
+                                ` : ''}
+                            </div>
                         </div>
 
                         <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 border-t border-zinc-800/50 pt-4">
@@ -1907,13 +1945,31 @@ const AdminView = (() => {
                 const isSuper = ICCSupabase.isSuperAdmin();
 
                 if (isSuper) {
+                    const roleSelect = card.querySelector('.user-role-select');
+                    if (roleSelect) {
+                        const newRole = roleSelect.value;
+                        const currentRole = targetUser?.role || 'member';
+                        if (newRole !== currentRole) {
+                            if (newRole === 'mentor') {
+                                await ICCSupabase.setMentorRole(userId, true);
+                            } else if (currentRole === 'mentor' && newRole !== 'mentor') {
+                                await ICCSupabase.setMentorRole(userId, false);
+                                if (newRole !== 'member') {
+                                    await ICCSupabase.setAdminRole(userId, newRole);
+                                }
+                            } else {
+                                await ICCSupabase.setAdminRole(userId, newRole);
+                            }
+                        }
+                    }
+
                     const { error } = await ICCSupabase.adminUpdateUser(userId, fields);
                     if (error) {
                         Toast.error('Failed to update user: ' + error.message);
                         btn.innerHTML = originalText;
                         btn.disabled = false;
                     } else {
-                        Toast.success('User profile updated directly (Super Admin)!');
+                        Toast.success('User profile & role updated directly (Super Admin)!');
                         editingUserId = null;
                         allUsers = await ICCSupabase.getAllProfiles();
                         pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
@@ -1987,6 +2043,51 @@ const AdminView = (() => {
                         pendingEditRequests = await ICCSupabase.fetchUserEditRequests('pending');
                         container.innerHTML = render(); bindEvents(container);
                     }
+                }
+            });
+        });
+
+        // Quick Assign Mentor from Users Directory
+        container.querySelectorAll('.quick-assign-mentor-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const userId = btn.dataset.id;
+                const name = btn.dataset.name || 'User';
+                btn.disabled = true;
+                btn.innerHTML = 'Assigning...';
+                const res = await ICCSupabase.setMentorRole(userId, true);
+                if (res?.error) {
+                    Toast.error('Failed to assign mentor: ' + (res.error.message || res.error));
+                    btn.disabled = false;
+                    btn.innerHTML = '🎓 Assign Mentor';
+                } else {
+                    Toast.success(`🎓 Appointed ${name} as Mentor!`);
+                    allUsers = await ICCSupabase.getAllProfiles();
+                    container.innerHTML = render();
+                    bindEvents(container);
+                }
+            });
+        });
+
+        // Quick Revoke Mentor from Users Directory
+        container.querySelectorAll('.quick-revoke-mentor-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const userId = btn.dataset.id;
+                const name = btn.dataset.name || 'User';
+                if (!confirm(`Are you sure you want to revoke Mentor status for ${name}?`)) return;
+                btn.disabled = true;
+                btn.innerHTML = 'Revoking...';
+                const res = await ICCSupabase.setMentorRole(userId, false);
+                if (res?.error) {
+                    Toast.error('Failed to revoke mentor: ' + (res.error.message || res.error));
+                    btn.disabled = false;
+                    btn.innerHTML = '✕ Revoke Mentor';
+                } else {
+                    Toast.success(`Mentor role removed for ${name}`);
+                    allUsers = await ICCSupabase.getAllProfiles();
+                    container.innerHTML = render();
+                    bindEvents(container);
                 }
             });
         });
@@ -2326,17 +2427,18 @@ const AdminView = (() => {
         container.querySelectorAll('.start-appoint-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 appointingUserId = btn.dataset.userId;
+                const targetRole = btn.dataset.targetRole || 'admin';
                 appointingUserDraft = {
-                    targetRole: 'admin',
-                    broadcast: true,
-                    moderate: true,
-                    events: true,
-                    leads: true,
-                    users_edit: true,
-                    users_export: true,
-                    users: true,
-                    all: true,
-                    isSuperAdmin: false
+                    targetRole: targetRole,
+                    broadcast: targetRole === 'admin',
+                    moderate: targetRole === 'admin',
+                    events: targetRole === 'admin',
+                    leads: targetRole === 'admin',
+                    users_edit: targetRole === 'admin',
+                    users_export: targetRole === 'admin',
+                    users: targetRole === 'admin',
+                    all: targetRole === 'admin',
+                    isSuperAdmin: targetRole === 'super_admin'
                 };
                 container.innerHTML = render();
                 bindEvents(container);

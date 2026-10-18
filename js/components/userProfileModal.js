@@ -202,6 +202,34 @@ const UserProfileModal = (() => {
                     </div>` : ''}
                 </div>` : ''}
 
+                <!-- Super Admin Controls (Assign/Revoke Mentor) -->
+                ${(typeof ICCSupabase.isSuperAdmin === 'function' && ICCSupabase.isSuperAdmin() && !isMe) ? `
+                <div class="glass-card rounded-2xl p-4 border border-amber-500/30 bg-amber-500/5 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                            <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Super Admin Controls</span>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${profile.role === 'mentor' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : (profile.role === 'super_admin' ? 'bg-amber-500/20 text-amber-300' : (profile.role === 'admin' ? 'bg-blue-500/20 text-blue-400' : 'bg-zinc-800 text-zinc-400'))}">
+                            Role: ${profile.role === 'mentor' ? '🎓 Mentor' : (profile.role === 'super_admin' ? '🛡️ Super Admin' : (profile.role === 'admin' ? '👑 Admin' : 'Member'))}
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2 pt-1">
+                        ${profile.role !== 'mentor' ? `
+                            <button id="modal-assign-mentor-btn" class="flex-1 py-2.5 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold rounded-xl text-xs transition-all shadow-md shadow-amber-500/20 active:scale-95 cursor-pointer flex items-center justify-center gap-1.5">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+                                <span>Assign as Mentor</span>
+                            </button>
+                        ` : `
+                            <button id="modal-revoke-mentor-btn" class="flex-1 py-2.5 px-4 bg-red-500/15 hover:bg-red-500 text-red-400 hover:text-white font-bold border border-red-500/30 rounded-xl text-xs transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                <span>Revoke Mentor Status</span>
+                            </button>
+                        `}
+                    </div>
+                </div>
+                ` : ''}
+
                 <!-- Direct Action Button -->
                 ${!isMe ? `
                 <button id="user-msg-btn" class="w-full py-3.5 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-semibold rounded-2xl shadow-xl shadow-red-900/20 transition-all flex items-center justify-center gap-2" data-user-id="${profile.id}">
@@ -265,6 +293,40 @@ const UserProfileModal = (() => {
         });
         document.querySelectorAll('.user-profile-post-thumb').forEach(thumb => {
             thumb.addEventListener('click', () => close());
+        });
+
+        // Super Admin Mentor Controls
+        document.getElementById('modal-assign-mentor-btn')?.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            btn.disabled = true;
+            btn.innerHTML = 'Assigning...';
+            const res = await ICCSupabase.setMentorRole(profile.id, true);
+            if (res?.error) {
+                Toast.error('Failed to assign mentor: ' + (res.error.message || res.error));
+                btn.disabled = false;
+                btn.innerHTML = 'Assign as Mentor';
+            } else {
+                Toast.success(`🎓 Appointed ${profile.full_name || profile.username || 'user'} as Mentor!`);
+                profile.role = 'mentor';
+                mount();
+            }
+        });
+
+        document.getElementById('modal-revoke-mentor-btn')?.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            if (!confirm(`Are you sure you want to revoke Mentor status for ${profile.full_name || profile.username || 'this user'}?`)) return;
+            btn.disabled = true;
+            btn.innerHTML = 'Revoking...';
+            const res = await ICCSupabase.setMentorRole(profile.id, false);
+            if (res?.error) {
+                Toast.error('Failed to revoke mentor: ' + (res.error.message || res.error));
+                btn.disabled = false;
+                btn.innerHTML = 'Revoke Mentor Status';
+            } else {
+                Toast.success(`Mentor role revoked for ${profile.full_name || profile.username || 'user'}`);
+                profile.role = 'member';
+                mount();
+            }
         });
     }
 
