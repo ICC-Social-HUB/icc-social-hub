@@ -2174,7 +2174,7 @@ const TeamsView = (() => {
                     isDanger: true,
                     onConfirm: async () => {
                         btn.disabled = true;
-                        const { error } = await ICCSupabase.deleteProjectMentorMessage(msgId);
+                        const { error } = await ICCSupabase.deleteProjectMentorMessage(msgId, lead.id);
                         if (error) {
                             Toast.error('Failed to delete message: ' + (error.message || 'Unknown error'));
                             btn.disabled = false;
@@ -2299,7 +2299,11 @@ const TeamsView = (() => {
     function renderDetail(lead) {
         const user = ICCSupabase.getUser();
         const profile = ICCSupabase.getProfile();
-        const isMember = profile?.memberships?.map(Number).includes(Number(lead.id));
+        const isMember = Boolean(
+            (Array.isArray(profile?.memberships) && profile.memberships.map(Number).includes(Number(lead.id))) ||
+            (profile?.team_id && Number(profile.team_id) === Number(lead.id)) ||
+            (user && Array.isArray(teamMembers) && teamMembers.some(m => String(m.id) === String(user.id)))
+        );
         const isPending = profile?.pending_teams?.map(Number).includes(Number(lead.id));
         const isLead = isLeadForTeam(lead.id, lead, teamMembers);
         const canSeeCode = Boolean(lead.project_code && (isLead || isMember || ICCSupabase.isMentor() || ICCSupabase.isAdmin()));
@@ -2940,7 +2944,12 @@ const TeamsView = (() => {
 
         const isLead = isLeadForTeam(lead.id, lead, teamMembers);
         const profile = ICCSupabase.getProfile();
-        const isMember = profile?.memberships?.map(Number).includes(Number(lead.id));
+        const user = ICCSupabase.getUser();
+        const isMember = Boolean(
+            (Array.isArray(profile?.memberships) && profile.memberships.map(Number).includes(Number(lead.id))) ||
+            (profile?.team_id && Number(profile.team_id) === Number(lead.id)) ||
+            (user && Array.isArray(teamMembers) && teamMembers.some(m => String(m.id) === String(user.id)))
+        );
 
         // Tab Switchers (Overview vs Mentor Chat)
         const overviewTabBtn = document.getElementById('project-tab-overview-btn');

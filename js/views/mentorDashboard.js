@@ -1494,7 +1494,7 @@ const MentorDashboardView = (() => {
 
     async function deleteMessage(messageId) {
         if (!confirm('Are you sure you want to delete this message?')) return;
-        const { error } = await ICCSupabase.deleteProjectMentorMessage(messageId);
+        const { error } = await ICCSupabase.deleteProjectMentorMessage(messageId, activeChatProjectId);
         if (error) {
             Toast.error('Could not delete message: ' + (error.message || 'Error'));
             return;

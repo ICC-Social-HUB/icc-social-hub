@@ -979,6 +979,11 @@ const ICCSupabase = (() => {
             return true;
         }
 
+        // Direct profile team_id
+        if (profile?.team_id && Number(profile.team_id) === teamNum) {
+            return true;
+        }
+
         // Team leader of this specific team can access
         if (isTeamLead(teamNum)) {
             return true;
@@ -3410,6 +3415,8 @@ const ICCSupabase = (() => {
                 `)
                 .single();
 
+            let finalMsg = data;
+
             if (error) {
                 console.warn('sendProjectMentorMessage db insert error, saving to local fallback cache:', error);
                 const localMsg = {
@@ -3427,30 +3434,43 @@ const ICCSupabase = (() => {
                         role: currentProfile?.role || 'mentor'
                     }
                 };
+                finalMsg = localMsg;
                 try {
                     const cache = JSON.parse(localStorage.getItem('icc_mentor_messages_cache') || '[]');
                     cache.unshift(localMsg);
                     localStorage.setItem('icc_mentor_messages_cache', JSON.stringify(cache));
                 } catch (e) {}
-                return { data: localMsg, error: null };
+            } else {
+                // Sync successfully sent message to local cache
+                try {
+                    const cache = JSON.parse(localStorage.getItem('icc_mentor_messages_cache') || '[]');
+                    if (!cache.some(c => c.id === data.id)) {
+                        cache.unshift(data);
+                        localStorage.setItem('icc_mentor_messages_cache', JSON.stringify(cache));
+                    }
+                } catch (e) {}
             }
 
-            // Sync successfully sent message to local cache
+            // Broadcast message across active channel so connected team members receive it immediately
             try {
-                const cache = JSON.parse(localStorage.getItem('icc_mentor_messages_cache') || '[]');
-                if (!cache.some(c => c.id === data.id)) {
-                    cache.unshift(data);
-                    localStorage.setItem('icc_mentor_messages_cache', JSON.stringify(cache));
-                }
-            } catch (e) {}
+                const channelName = `project-mentor-chat-${projectId}`;
+                const ch = client.channel(channelName);
+                ch.send({
+                    type: 'broadcast',
+                    event: 'mentor_chat_msg',
+                    payload: { type: 'INSERT', message: finalMsg }
+                });
+            } catch (bErr) {
+                console.warn('Broadcast send warning:', bErr);
+            }
 
-            return { data, error };
+            return { data: finalMsg, error: null };
         } catch (err) {
             return { data: null, error: err };
         }
     }
 
-    async function deleteProjectMentorMessage(messageId) {
+    async function deleteProjectMentorMessage(messageId, projectId = null) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
         try {
             const { error } = await client
@@ -3463,6 +3483,18 @@ const ICCSupabase = (() => {
                 const filtered = cache.filter(m => m.id !== messageId);
                 localStorage.setItem('icc_mentor_messages_cache', JSON.stringify(filtered));
             } catch (e) {}
+
+            if (projectId) {
+                try {
+                    const channelName = `project-mentor-chat-${projectId}`;
+                    const ch = client.channel(channelName);
+                    ch.send({
+                        type: 'broadcast',
+                        event: 'mentor_chat_msg',
+                        payload: { type: 'DELETE', messageId: messageId }
+                    });
+                } catch (bErr) {}
+            }
 
             return { error };
         } catch (err) {
@@ -3492,6 +3524,15 @@ const ICCSupabase = (() => {
                     if (onEvent) onEvent({ type: 'INSERT', message: { ...payload.new, profiles: senderProfile } });
                 } else if (payload.eventType === 'DELETE') {
                     if (onEvent) onEvent({ type: 'DELETE', messageId: payload.old.id });
+                }
+            })
+            .on('broadcast', { event: 'mentor_chat_msg' }, (payload) => {
+                if (!onEvent || !payload?.payload) return;
+                const p = payload.payload;
+                if (p.type === 'INSERT' && p.message) {
+                    onEvent({ type: 'INSERT', message: p.message });
+                } else if (p.type === 'DELETE' && p.messageId) {
+                    onEvent({ type: 'DELETE', messageId: p.messageId });
                 }
             })
             .subscribe();
