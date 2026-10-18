@@ -153,15 +153,15 @@ const MentorDashboardView = (() => {
 
     function renderStatusPill(status) {
         if (status === 'Pending Review') {
-            return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>Pending Review</span>`;
+            return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>Pending Review</span>`;
         }
         if (status === 'Changes Requested') {
-            return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-orange-500/15 text-orange-300 border border-orange-500/30">⚠️ Changes Requested</span>`;
+            return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">⚠️ Changes Requested</span>`;
         }
         if (status === 'Approved') {
-            return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">✓ Approved</span>`;
+            return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">✓ Approved</span>`;
         }
-        return `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-400">${escapeHtml(status)}</span>`;
+        return `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-400 border border-zinc-700">${escapeHtml(status)}</span>`;
     }
 
     function renderApplicationCard(app) {
@@ -343,17 +343,24 @@ const MentorDashboardView = (() => {
         `;
     }
 
+    function showRequestChangesBox() {
+        const box = document.getElementById('request-changes-box');
+        if (box) {
+            box.classList.remove('hidden');
+            box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('changes-comment-input')?.focus();
+        }
+    }
+
     async function openApplicationModal(appId) {
         const root = document.getElementById('mentor-app-modal-root');
         if (!root) return;
 
         root.innerHTML = `
-        <div class="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md">
-            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-zoom-in">
-                <div class="p-4 border-b border-zinc-800 flex items-center justify-center text-zinc-400 text-sm gap-2">
-                    <div class="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span>Loading application review...</span>
-                </div>
+        <div class="fixed inset-0 z-[2500] bg-zinc-950 text-white w-full h-full min-h-screen flex flex-col items-center justify-center animate-fade-in" id="mentor-modal-backdrop">
+            <div class="flex flex-col items-center gap-3">
+                <div class="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                <p class="text-xs text-zinc-400 font-medium">Loading Application Review Dossier...</p>
             </div>
         </div>
         `;
@@ -373,187 +380,238 @@ const MentorDashboardView = (() => {
         const root = document.getElementById('mentor-app-modal-root');
         if (!root || !selectedAppDetail) return;
 
-        const { application: app, comments, history } = selectedAppDetail;
+        const { application: app, comments = [], history = [] } = selectedAppDetail;
         const applicant = app.applicant || {};
         const isApproved = app.status === 'Approved';
         const revisions = Array.isArray(app.revisions) ? app.revisions : [];
 
         root.innerHTML = `
-        <div class="fixed inset-0 z-[150] flex items-center justify-center p-2.5 sm:p-4 bg-black/80 backdrop-blur-md" id="mentor-modal-backdrop">
-            <div class="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl animate-zoom-in overflow-hidden" onclick="event.stopPropagation()">
-                
-                <!-- Header -->
-                <div class="p-4 sm:p-5 border-b border-zinc-800 flex items-center justify-between gap-3 bg-zinc-900/60">
-                    <div class="min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <h3 class="font-heading font-bold text-lg text-white break-words">${escapeHtml(app.project_name)}</h3>
-                            ${renderStatusPill(app.status)}
-                            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-900 border border-zinc-800 text-zinc-400">Revision #${app.revision_number || 1}</span>
+        <div class="fixed inset-0 z-[2500] bg-zinc-950 text-white w-full h-full min-h-screen flex flex-col overflow-hidden animate-fade-in" id="mentor-modal-backdrop">
+            <!-- Full Width Top Navigation Bar (h-16) -->
+            <header class="h-16 px-4 sm:px-6 md:px-8 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between flex-shrink-0 z-20">
+                <div class="flex items-center gap-3 min-w-0">
+                    <button onclick="MentorDashboardView.closeModal()" type="button" class="flex items-center gap-2 px-3.5 py-1.5 text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 shadow-sm" title="Back to Review Queue">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                        <span>Back</span>
+                    </button>
+                    <div class="h-5 w-px bg-zinc-800 hidden sm:block"></div>
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-emerald-400 flex-shrink-0">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         </div>
-                        <p class="text-xs text-zinc-400 mt-0.5">Applicant: <strong class="text-white">${escapeHtml(applicant.full_name || 'Applicant')}</strong> (${escapeHtml(applicant.email || 'No email')})</p>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h1 class="font-heading font-bold text-sm sm:text-base text-white truncate max-w-xs sm:max-w-md">${escapeHtml(app.project_name)}</h1>
+                                ${renderStatusPill(app.status)}
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-zinc-800 text-zinc-400 border border-zinc-700">Rev #${app.revision_number || 1}</span>
+                            </div>
+                            <p class="text-[11px] text-zinc-400 truncate">Applicant: <strong class="text-zinc-200">${escapeHtml(applicant.full_name || 'Applicant')}</strong> (${escapeHtml(applicant.email || '')})</p>
+                        </div>
                     </div>
-                    <button onclick="MentorDashboardView.closeModal()" class="p-2 hover:bg-zinc-800 rounded-xl transition-colors text-zinc-400 hover:text-white cursor-pointer">
+                </div>
+
+                <!-- Top Navigation Actions -->
+                <div class="flex items-center gap-2.5 flex-shrink-0">
+                    ${!isApproved ? `
+                        <button id="top-request-changes-btn" onclick="MentorDashboardView.showRequestChangesBox()" class="px-3.5 py-2 bg-rose-600/15 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                            <span class="hidden sm:inline">Request Changes</span>
+                        </button>
+                        <button id="top-approve-project-btn" onclick="MentorDashboardView.approveApplication('${app.id}')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer active:scale-95 flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            <span>Approve Project</span>
+                        </button>
+                    ` : `
+                        <div class="px-3.5 py-1.5 bg-zinc-900 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-bold flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                            <span>Live (Code: ${escapeHtml(app.project_code || '')})</span>
+                        </div>
+                    `}
+                    <button onclick="MentorDashboardView.closeModal()" class="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors cursor-pointer" title="Close Page">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
+            </header>
 
-                <!-- Modal Body (Scrollable) -->
-                <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            <!-- 2-Column Full Screen Body -->
+            <div class="flex-1 h-[calc(100vh-64px)] grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+                
+                <!-- Left Column: Applicant & Proposal Dossier (lg:col-span-7) -->
+                <div class="lg:col-span-7 h-full overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 border-b lg:border-b-0 lg:border-r border-zinc-800 bg-zinc-950">
                     
-                    <!-- 1. Project Information -->
-                    <div class="space-y-3 bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/80">
-                        <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Project Overview</h4>
-                        <div class="prose-clean text-xs text-zinc-200 leading-relaxed">${sanitizeRichText(app.description)}</div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs">
-                            <div>
-                                <span class="text-zinc-500 block text-[10px] uppercase font-semibold">Team Name</span>
-                                <span class="text-white font-medium">${escapeHtml(app.team_name || 'Individual / Same as Project')}</span>
-                            </div>
-                            <div>
-                                <span class="text-zinc-500 block text-[10px] uppercase font-semibold">Project Code</span>
-                                <span class="font-mono ${app.project_code ? 'text-emerald-400 font-bold' : 'text-zinc-500'}">${escapeHtml(app.project_code || 'Generated upon mentor approval')}</span>
-                            </div>
+                    <!-- Changes Request Form Card (Appears at top of dossier when toggled) -->
+                    <div id="request-changes-box" class="hidden p-5 rounded-2xl border border-rose-500/40 bg-zinc-900 space-y-3 animate-fade-in shadow-xl">
+                        <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+                            <h3 class="text-xs font-bold text-rose-400 flex items-center gap-2 uppercase tracking-wider">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                <span>Specify Required Changes & Revisions</span>
+                            </h3>
+                            <button onclick="document.getElementById('request-changes-box').classList.add('hidden')" class="text-xs text-zinc-400 hover:text-white cursor-pointer">Cancel</button>
                         </div>
-
-                        ${Array.isArray(app.specialties) && app.specialties.length > 0 ? `
-                        <div class="pt-2">
-                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold mb-1">Tech Stack & Specialties</span>
-                            <div class="flex items-center gap-1.5 flex-wrap">
-                                ${app.specialties.map(s => `<span class="px-2 py-0.5 rounded text-[10px] bg-zinc-900 border border-zinc-800 text-emerald-400">${escapeHtml(s)}</span>`).join('')}
-                            </div>
-                        </div>
-                        ` : ''}
-
-                        ${Array.isArray(app.links) && app.links.length > 0 ? `
-                        <div class="pt-2">
-                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold mb-1">Attached Links & Resources</span>
-                            <div class="space-y-1">
-                                ${app.links.map(l => `<a href="${escapeHtml(l.url)}" target="_blank" class="text-xs text-emerald-400 hover:underline block truncate">🔗 ${escapeHtml(l.name || l.url)} (${escapeHtml(l.url)})</a>`).join('')}
-                            </div>
-                        </div>
-                        ` : ''}
-                    </div>
-
-                    <!-- 2. Revisions History -->
-                    ${revisions.length > 1 ? `
-                    <div class="space-y-2">
-                        <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center justify-between">
-                            <span>Revision History (${revisions.length} submissions)</span>
-                        </h4>
-                        <div class="space-y-2 max-h-40 overflow-y-auto pr-1">
-                            ${revisions.map((rev, idx) => `
-                            <div class="p-2.5 bg-zinc-900/50 rounded-xl border border-zinc-800/80 text-xs space-y-1">
-                                <div class="flex items-center justify-between text-zinc-400 text-[10px]">
-                                    <span class="font-bold text-white">Revision #${rev.revision || (idx + 1)}</span>
-                                    <span>${rev.submitted_at ? new Date(rev.submitted_at).toLocaleString() : ''}</span>
-                                </div>
-                                <p class="text-zinc-300 line-clamp-1 italic">"${escapeHtml(rev.description || '')}"</p>
-                            </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    ` : ''}
-
-                    <!-- 3. Status Transition History -->
-                    ${history.length > 0 ? `
-                    <div class="space-y-2">
-                        <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Status History</h4>
-                        <div class="space-y-2 max-h-36 overflow-y-auto pr-1">
-                            ${history.map(h => `
-                            <div class="flex items-center justify-between p-2 rounded-xl bg-zinc-900/30 border border-zinc-800/60 text-xs">
-                                <div>
-                                    <span class="font-semibold text-white">${escapeHtml(h.changer?.full_name || 'System')}</span>
-                                    <span class="text-zinc-400">changed status to</span>
-                                    <span class="font-bold text-emerald-400">${escapeHtml(h.new_status)}</span>
-                                    ${h.comment ? `<p class="text-[11px] text-zinc-400 italic mt-0.5">"${escapeHtml(h.comment)}"</p>` : ''}
-                                </div>
-                                <span class="text-[10px] text-zinc-500">${h.created_at ? new Date(h.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                            </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    ` : ''}
-
-                    <!-- 4. Interactive Mentor-Applicant Comment Thread -->
-                    <div class="space-y-3 pt-2 border-t border-zinc-800/80">
-                        <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center justify-between">
-                            <span>Discussion & Feedback Thread (${comments.length})</span>
-                            <span class="text-[10px] text-zinc-500 font-normal">Direct channel between applicant & mentors</span>
-                        </h4>
-
-                        <div class="space-y-2.5 max-h-48 overflow-y-auto pr-1" id="mentor-comment-thread">
-                            ${comments.length === 0 ? `
-                                <div class="p-4 text-center bg-zinc-900/20 rounded-xl text-xs text-zinc-500">
-                                    No comments yet. Write guidance or requested changes below.
-                                </div>
-                            ` : comments.map(c => {
-                                const isFeedback = c.is_mentor_feedback;
-                                const isAuthorMe = c.author_id === ICCSupabase.getUser()?.id;
-                                return `
-                                <div class="p-3 rounded-xl border ${isFeedback ? 'border-amber-500/30 bg-amber-500/5' : 'border-zinc-800 bg-zinc-900/50'} text-xs space-y-1">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="font-bold ${isFeedback ? 'text-amber-400' : 'text-white'}">${escapeHtml(c.author?.full_name || 'User')}</span>
-                                            ${isFeedback ? `<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300">Mentor</span>` : ''}
-                                            ${isAuthorMe ? `<span class="text-[10px] text-zinc-500">(You)</span>` : ''}
-                                        </div>
-                                        <span class="text-[10px] text-zinc-500">${c.created_at ? new Date(c.created_at).toLocaleString() : ''}</span>
-                                    </div>
-                                    <p class="text-zinc-200 leading-relaxed whitespace-pre-wrap">${escapeHtml(c.content)}</p>
-                                </div>
-                                `;
-                            }).join('')}
-                        </div>
-
-                        <!-- Post Reply Input -->
-                        <div class="flex items-center gap-2 pt-1">
-                            <input type="text" id="mentor-reply-input" placeholder="Type a message or review note..." class="flex-1 px-3 py-2 bg-zinc-900 border border-zinc-800 focus:border-emerald-500 rounded-xl text-xs text-white placeholder-zinc-500 outline-none">
-                            <button onclick="MentorDashboardView.sendComment('${app.id}')" class="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer">
-                                Reply
+                        <p class="text-xs text-zinc-300">Explain clearly what improvements the applicant must make before approval. This will transition status to "Changes Requested" and notify the applicant to resubmit.</p>
+                        <textarea id="changes-comment-input" rows="4" placeholder="Detail the requested changes: technical architecture clarifications, repo link requirements, security considerations..." class="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-rose-500 rounded-xl text-xs text-white placeholder-zinc-500 outline-none resize-none leading-relaxed"></textarea>
+                        <div class="flex justify-end gap-2 pt-1">
+                            <button type="button" onclick="document.getElementById('request-changes-box').classList.add('hidden')" class="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-semibold cursor-pointer">
+                                Dismiss
+                            </button>
+                            <button id="submit-changes-btn" onclick="MentorDashboardView.confirmRequestChanges('${app.id}')" class="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5">
+                                <span>Submit Request for Changes</span>
                             </button>
                         </div>
                     </div>
 
-                    <!-- 5. Changes Requested Input Box (Shown if Request Changes button clicked) -->
-                    <div id="request-changes-box" class="hidden p-4 rounded-xl border border-orange-500/40 bg-orange-500/5 space-y-3 animate-fade-in">
-                        <div class="flex items-center justify-between">
-                            <h5 class="text-xs font-bold text-orange-400 flex items-center gap-1.5">
-                                <span>⚠️ Specify Required Changes (Mandatory)</span>
-                            </h5>
-                            <button onclick="document.getElementById('request-changes-box').classList.add('hidden')" class="text-xs text-zinc-400 hover:text-white">Cancel</button>
+                    <!-- Applicant Profile Card -->
+                    <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-4 flex-wrap">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-zinc-800 border border-zinc-700 text-white font-bold text-base flex items-center justify-center flex-shrink-0">
+                                ${(applicant.full_name || 'A').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-sm text-white">${escapeHtml(applicant.full_name || 'Applicant')}</h3>
+                                <p class="text-xs text-zinc-400">${escapeHtml(applicant.email || 'No email provided')}</p>
+                                <span class="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-800 text-zinc-300 border border-zinc-700 mt-1 capitalize">${escapeHtml(applicant.role || 'Member')}</span>
+                            </div>
                         </div>
-                        <p class="text-[11px] text-zinc-400">Describe exactly what the applicant needs to modify. The status will transition to "Changes Requested" and they will be prompted to edit and resubmit.</p>
-                        <textarea id="changes-comment-input" rows="3" placeholder="Explain the necessary updates (e.g. clarify technical architecture, provide repository link)..." class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 focus:border-orange-500 rounded-xl text-xs text-white placeholder-zinc-500 outline-none resize-none"></textarea>
-                        <button onclick="MentorDashboardView.confirmRequestChanges('${app.id}')" class="w-full py-2.5 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-98 cursor-pointer">
-                            Submit Request for Changes
-                        </button>
+                        <div class="text-right text-xs text-zinc-400 space-y-0.5">
+                            <p class="text-[11px] text-zinc-500">Submitted On</p>
+                            <p class="font-medium text-white">${app.created_at ? new Date(app.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently'}</p>
+                        </div>
                     </div>
 
-                </div>
+                    <!-- Project Proposal Card -->
+                    <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 sm:p-6 space-y-5">
+                        <div class="flex items-start justify-between gap-3 border-b border-zinc-800 pb-3">
+                            <div>
+                                <h2 class="font-heading font-bold text-lg text-white">${escapeHtml(app.project_name)}</h2>
+                                <p class="text-xs text-zinc-400 mt-0.5">Team Name: <span class="text-zinc-200 font-semibold">${escapeHtml(app.team_name || app.project_name)}</span></p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[10px] text-zinc-500 block">Unique Project Code</span>
+                                <span class="font-mono text-xs ${app.project_code ? 'text-emerald-400 font-bold' : 'text-zinc-500'}">${escapeHtml(app.project_code || 'Assigned upon approval')}</span>
+                            </div>
+                        </div>
 
-                <!-- Footer Actions -->
-                <div class="p-4 border-t border-zinc-800 bg-zinc-900/60 flex items-center justify-between gap-3 flex-wrap">
-                    <button onclick="MentorDashboardView.closeModal()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-semibold transition-all">
-                        Close
-                    </button>
+                        <!-- Description -->
+                        <div class="space-y-2">
+                            <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Description & Project Vision</h3>
+                            <div class="prose-clean text-xs sm:text-sm text-zinc-200 leading-relaxed bg-zinc-950/70 p-4 rounded-xl border border-zinc-800/80">
+                                ${sanitizeRichText(app.description)}
+                            </div>
+                        </div>
 
-                    ${!isApproved ? `
-                    <div class="flex items-center gap-2">
-                        <button onclick="document.getElementById('request-changes-box').classList.remove('hidden'); document.getElementById('changes-comment-input')?.focus();" class="px-4 py-2 bg-orange-600/20 hover:bg-orange-600 text-orange-300 hover:text-white border border-orange-500/40 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95">
-                            ⚠️ Request Changes
-                        </button>
-                        <button onclick="MentorDashboardView.approveApplication('${app.id}')" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-600/25 cursor-pointer active:scale-95 flex items-center gap-1.5">
-                            <span>✓ Approve Project</span>
-                        </button>
+                        <!-- Tech Stack / Specialties -->
+                        ${Array.isArray(app.specialties) && app.specialties.length > 0 ? `
+                            <div class="space-y-2 pt-2 border-t border-zinc-800/60">
+                                <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Tech Stack & Domains</h3>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    ${app.specialties.map(s => `<span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-800 border border-zinc-700 text-zinc-200">${escapeHtml(s)}</span>`).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <!-- Attached Links -->
+                        ${Array.isArray(app.links) && app.links.length > 0 ? `
+                            <div class="space-y-2 pt-2 border-t border-zinc-800/60">
+                                <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Attached Links & Resources</h3>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    ${app.links.map(l => `
+                                        <a href="${escapeHtml(l.url)}" target="_blank" rel="noopener noreferrer" class="p-2.5 bg-zinc-950/70 hover:bg-zinc-800/70 border border-zinc-800 hover:border-emerald-500/40 rounded-xl flex items-center justify-between text-xs text-emerald-400 transition-colors group">
+                                            <span class="truncate font-medium flex items-center gap-1.5">🔗 ${escapeHtml(l.name || l.url)}</span>
+                                            <svg class="w-3.5 h-3.5 text-zinc-500 group-hover:text-emerald-400 transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                        </a>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>
-                    ` : `
-                    <span class="text-xs font-semibold text-emerald-400 flex items-center gap-1">
-                        ✓ Live Project Activated (Code: ${escapeHtml(app.project_code || '')})
-                    </span>
-                    `}
+
+                    <!-- Revision History -->
+                    ${revisions.length > 1 ? `
+                        <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 sm:p-5 space-y-3">
+                            <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Revision History (${revisions.length} iterations)</h3>
+                            <div class="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+                                ${revisions.map((rev, idx) => `
+                                    <div class="p-3 bg-zinc-950/70 rounded-xl border border-zinc-800 text-xs space-y-1">
+                                        <div class="flex items-center justify-between text-zinc-400 text-[11px]">
+                                            <span class="font-bold text-white">Revision #${rev.revision || (idx + 1)}</span>
+                                            <span>${rev.submitted_at ? new Date(rev.submitted_at).toLocaleString() : ''}</span>
+                                        </div>
+                                        <p class="text-zinc-300 italic line-clamp-2">"${escapeHtml(rev.description || '')}"</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
                 </div>
 
+                <!-- Right Column: Discussion Thread & Audit Trail (lg:col-span-5) -->
+                <div class="lg:col-span-5 h-full flex flex-col bg-zinc-900/30 overflow-hidden">
+                    
+                    <!-- Discussion Header -->
+                    <div class="p-4 border-b border-zinc-800 bg-zinc-900/60 flex items-center justify-between flex-shrink-0">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2.5 h-2.5 rounded-full bg-emerald-400"></div>
+                            <h3 class="font-bold text-xs uppercase tracking-wider text-white">Discussion Thread</h3>
+                        </div>
+                        <span id="mentor-comments-count-pill" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 border border-zinc-700 text-zinc-300">
+                            ${comments.length} message${comments.length === 1 ? '' : 's'}
+                        </span>
+                    </div>
+
+                    <!-- Scrollable Comments Thread -->
+                    <div id="mentor-comment-thread" class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
+                        ${comments.length === 0 ? `
+                            <div class="p-6 text-center bg-zinc-900/20 rounded-xl text-xs text-zinc-500 italic">
+                                No comments yet. Write guidance, clarifications, or requested changes below.
+                            </div>
+                        ` : comments.map(c => {
+                            const isFeedback = c.is_mentor_feedback;
+                            const isAuthorMe = c.author_id === ICCSupabase.getUser()?.id;
+                            const authorName = c.author?.full_name || 'Applicant';
+                            const roleBadge = isFeedback ? '🎓 Mentor' : 'Applicant';
+                            return `
+                            <div class="p-3.5 rounded-xl border ${isFeedback ? 'border-emerald-500/30 bg-emerald-950/20' : 'border-zinc-800 bg-zinc-950/70'} text-xs space-y-1.5">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold ${isFeedback ? 'text-emerald-400' : 'text-white'}">${escapeHtml(authorName)}</span>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isFeedback ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">${roleBadge}</span>
+                                        ${isAuthorMe ? `<span class="text-[10px] text-zinc-500">(You)</span>` : ''}
+                                    </div>
+                                    <span class="text-[10px] text-zinc-500">${c.created_at ? new Date(c.created_at).toLocaleString() : ''}</span>
+                                </div>
+                                <p class="text-zinc-200 leading-relaxed whitespace-pre-wrap">${escapeHtml(c.content || c.comment || '')}</p>
+                            </div>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <!-- Reply Box at bottom with Visual Feedback -->
+                    <div class="p-4 border-t border-zinc-800 bg-zinc-900/70 flex-shrink-0 space-y-2">
+                        <div class="flex items-end gap-2">
+                            <textarea id="mentor-reply-input" rows="2" placeholder="Write feedback or guidance for the applicant..." class="flex-1 px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-xs text-white placeholder-zinc-500 outline-none resize-none leading-relaxed transition-colors"></textarea>
+                            <button id="mentor-send-reply-btn" onclick="MentorDashboardView.sendComment('${app.id}')" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5 flex-shrink-0">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                                <span>Send</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Status History Audit at bottom -->
+                    ${history.length > 0 ? `
+                        <div class="border-t border-zinc-800 bg-zinc-900/50 p-3.5 flex-shrink-0 max-h-36 overflow-y-auto">
+                            <h4 class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Audit Trail</h4>
+                            <div class="space-y-1.5 text-[11px]">
+                                ${history.map(h => `
+                                    <div class="flex items-center justify-between text-zinc-400 py-1 border-b border-zinc-800/40 last:border-0">
+                                        <span class="text-zinc-300"><strong class="text-white">${escapeHtml(h.changer?.full_name || 'System')}</strong> → <span class="text-emerald-400 font-semibold">${escapeHtml(h.new_status)}</span></span>
+                                        <span class="text-[10px] text-zinc-500">${h.created_at ? new Date(h.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                </div>
             </div>
         </div>
         `;
@@ -561,19 +619,31 @@ const MentorDashboardView = (() => {
 
     async function sendComment(appId) {
         const input = document.getElementById('mentor-reply-input');
+        const btn = document.getElementById('mentor-send-reply-btn');
         if (!input) return;
         const val = input.value.trim();
         if (!val) return;
 
         input.disabled = true;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin text-white" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> <span>Sending...</span>`;
+        }
+
         const res = await ICCSupabase.addApplicationComment(appId, val, true);
         input.disabled = false;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> <span>Send</span>`;
+        }
 
         if (res.error) {
             Toast.error('Could not post comment: ' + res.error.message);
         } else {
+            Toast.success('Reply sent to applicant');
             input.value = '';
             if (selectedAppDetail) {
+                if (!Array.isArray(selectedAppDetail.comments)) selectedAppDetail.comments = [];
                 selectedAppDetail.comments.push(res.data);
                 renderApplicationModalContent();
                 const thread = document.getElementById('mentor-comment-thread');
@@ -584,6 +654,7 @@ const MentorDashboardView = (() => {
 
     async function confirmRequestChanges(appId) {
         const input = document.getElementById('changes-comment-input');
+        const btn = document.getElementById('submit-changes-btn');
         const comment = input ? input.value.trim() : '';
         if (!comment) {
             Toast.error('Please write an explanation for the requested changes.');
@@ -593,17 +664,29 @@ const MentorDashboardView = (() => {
 
         if (isSubmitting) return;
         isSubmitting = true;
-        Toast.info('Submitting changes request...');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin text-white" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> <span>Submitting...</span>`;
+        }
 
         const res = await ICCSupabase.requestApplicationChanges(appId, comment);
         isSubmitting = false;
 
         if (res.error) {
             Toast.error('Failed to request changes: ' + (res.error.message || res.error));
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `<span>Submit Request for Changes</span>`;
+            }
         } else {
             Toast.success('⚠️ Status updated to "Changes Requested". Applicant notified.');
-            closeModal();
-            await refresh();
+            if (selectedAppDetail?.application) {
+                selectedAppDetail.application.status = 'Changes Requested';
+                renderApplicationModalContent();
+            } else {
+                closeModal();
+            }
+            await loadData();
         }
     }
 
@@ -614,17 +697,31 @@ const MentorDashboardView = (() => {
 
         if (isSubmitting) return;
         isSubmitting = true;
-        Toast.info('Approving application and generating project code...');
+        const topBtn = document.getElementById('top-approve-project-btn');
+        if (topBtn) {
+            topBtn.disabled = true;
+            topBtn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin text-white" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> <span>Approving...</span>`;
+        }
 
         const res = await ICCSupabase.approveProjectApplication(appId);
         isSubmitting = false;
 
         if (res.error) {
             Toast.error('Failed to approve project: ' + (res.error.message || res.error));
+            if (topBtn) {
+                topBtn.disabled = false;
+                topBtn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> <span>Approve Project</span>`;
+            }
         } else {
             Toast.success(`🎉 Project approved! Generated Code: ${res.projectCode}`);
-            closeModal();
-            await refresh();
+            if (selectedAppDetail?.application) {
+                selectedAppDetail.application.status = 'Approved';
+                selectedAppDetail.application.project_code = res.projectCode;
+                renderApplicationModalContent();
+            } else {
+                closeModal();
+            }
+            await loadData();
         }
     }
 
@@ -890,6 +987,7 @@ const MentorDashboardView = (() => {
         closeAuditModal,
         sendComment,
         confirmRequestChanges,
-        approveApplication
+        approveApplication,
+        showRequestChangesBox
     };
 })();

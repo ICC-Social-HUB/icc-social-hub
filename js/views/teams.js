@@ -412,7 +412,7 @@ const TeamsView = (() => {
                         <span class="hidden sm:inline">Back to Projects</span>
                     </button>
                     <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-900/30">
+                        <div class="w-8 h-8 rounded-xl bg-emerald-600 border border-emerald-500/30 flex items-center justify-center text-white shadow-md">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                         </div>
                         <div>
@@ -423,7 +423,7 @@ const TeamsView = (() => {
                 </div>
 
                 <div class="flex items-center gap-2 sm:gap-3">
-                    <button type="submit" form="create-project-form" id="submit-create-proj-btn" class="px-4 sm:px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-lg shadow-emerald-900/30 active:scale-95 cursor-pointer flex items-center gap-2">
+                    <button type="submit" form="create-project-form" id="submit-create-proj-btn" class="px-4 sm:px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-2">
                         <span>Submit Proposal</span>
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                     </button>
@@ -718,41 +718,43 @@ const TeamsView = (() => {
 
         // Create base modal wrapper with loading state
         const modalHtml = `
-        <div id="my-applications-modal" class="fixed inset-0 z-[2500] bg-zinc-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in overflow-y-auto">
-            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto" onclick="event.stopPropagation()">
-                <!-- Modal Header -->
-                <div class="p-3.5 sm:p-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900 flex-shrink-0">
-                    <div class="flex items-center gap-2 sm:gap-3">
-                        <button id="back-my-apps-btn" class="flex items-center gap-1.5 px-3 py-1.5 text-zinc-300 hover:text-white bg-zinc-800/80 hover:bg-zinc-700/80 border border-zinc-700/80 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 shadow-sm" title="Back to Projects">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                            <span>Back</span>
-                        </button>
-                        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 flex-shrink-0">
+        <div id="my-applications-modal" class="fixed inset-0 z-[2500] bg-zinc-950 text-white w-full h-full min-h-screen flex flex-col overflow-hidden animate-fade-in">
+            <!-- Full Width Top Navigation Bar -->
+            <header class="h-16 px-4 sm:px-6 md:px-8 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between flex-shrink-0 z-20">
+                <div class="flex items-center gap-3 min-w-0">
+                    <button id="back-my-apps-btn" type="button" class="flex items-center gap-2 px-3.5 py-1.5 text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 shadow-sm" title="Back to Projects Directory">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                        <span>Back</span>
+                    </button>
+                    <div class="h-5 w-px bg-zinc-800 hidden sm:block"></div>
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-emerald-400 flex-shrink-0">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         </div>
                         <div class="min-w-0">
-                            <h3 class="font-heading font-bold text-base sm:text-lg text-white truncate">My Project Applications</h3>
-                            <p class="text-[11px] sm:text-xs text-zinc-400 truncate">Track approval status, mentor feedback & revisions</p>
+                            <h1 class="font-heading font-bold text-base sm:text-lg text-white leading-tight truncate">My Project Applications</h1>
+                            <p class="text-[11px] text-zinc-400 hidden sm:block truncate">Track approval status, mentor feedback & revisions</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2 flex-shrink-0">
-                        <button id="my-apps-new-btn" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer">
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                            <span class="hidden sm:inline">New Proposal</span>
-                        </button>
-                        <button id="close-my-apps-modal" class="text-zinc-500 hover:text-white p-2 rounded-xl hover:bg-zinc-800 transition-colors cursor-pointer" title="Close">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                        </button>
-                    </div>
                 </div>
+                <div class="flex items-center gap-2.5 flex-shrink-0">
+                    <button id="my-apps-new-btn" type="button" class="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        <span class="hidden sm:inline">New Proposal</span>
+                    </button>
+                    <button id="close-my-apps-modal" type="button" class="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors cursor-pointer" title="Close Page">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </header>
 
-                <!-- Modal Body -->
-                <div id="my-apps-content" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-                    <div class="flex items-center justify-center py-12">
-                        <div class="spinner"></div>
-                    </div>
+            <!-- Fullscreen Studio Content Area -->
+            <main id="my-apps-content" class="flex-1 h-[calc(100vh-64px)] overflow-hidden">
+                <div class="flex flex-col items-center justify-center h-full text-zinc-500 text-sm gap-3">
+                    <div class="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p class="text-xs text-zinc-400">Loading your project proposals...</p>
                 </div>
-            </div>
+            </main>
         </div>
         `;
 
@@ -801,12 +803,16 @@ const TeamsView = (() => {
             const res = await ICCSupabase.fetchMyProjectApplications();
             const apps = Array.isArray(res) ? res : (res?.data || []);
             const error = res?.error || null;
-
             if (error) {
                 content.innerHTML = `
-                    <div class="p-6 text-center text-red-400 bg-red-500/10 rounded-2xl border border-red-500/20">
-                        <p class="font-bold text-sm">Failed to load applications</p>
-                        <p class="text-xs text-red-300 mt-1">${escapeHtml(error.message)}</p>
+                    <div class="flex items-center justify-center h-full p-6">
+                        <div class="max-w-md w-full p-6 text-center text-rose-400 bg-rose-500/10 rounded-2xl border border-rose-500/20 space-y-2">
+                            <p class="font-bold text-sm">Failed to load applications</p>
+                            <p class="text-xs text-rose-300">${escapeHtml(error.message)}</p>
+                            <button onclick="document.getElementById('back-my-apps-btn')?.click()" class="mt-3 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-semibold">
+                                Return to Projects
+                            </button>
+                        </div>
                     </div>
                 `;
                 return;
@@ -814,13 +820,15 @@ const TeamsView = (() => {
 
             if (!apps || apps.length === 0) {
                 content.innerHTML = `
-                    <div class="text-center py-12 px-4 space-y-3">
-                        <div class="w-16 h-16 rounded-2xl bg-zinc-800/80 border border-zinc-700/50 flex items-center justify-center text-zinc-500 mx-auto">
+                    <div class="flex flex-col items-center justify-center h-full text-center px-4 space-y-4">
+                        <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500">
                             <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                         </div>
-                        <h4 class="font-bold text-white text-base">No Applications Yet</h4>
-                        <p class="text-xs text-zinc-400 max-w-sm mx-auto">You have not submitted any project applications. Submit your innovation project proposal to get reviewed by mentors.</p>
-                        <button onclick="document.getElementById('my-apps-new-btn')?.click()" class="mt-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer">
+                        <div class="space-y-1">
+                            <h4 class="font-bold text-white text-base">No Applications Yet</h4>
+                            <p class="text-xs text-zinc-400 max-w-sm">You have not submitted any project applications. Submit your innovation project proposal to get reviewed by mentors.</p>
+                        </div>
+                        <button onclick="document.getElementById('my-apps-new-btn')?.click()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer">
                             + Create First Project Proposal
                         </button>
                     </div>
@@ -860,266 +868,276 @@ const TeamsView = (() => {
             const normStatus = (st) => String(st || '').toLowerCase().replace(/[\s_-]+/g, '_');
             const statusBadge = (status) => {
                 const s = normStatus(status);
-                if (s === 'approved') return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">✓ Approved</span>`;
-                if (s === 'changes_requested') return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">⚠️ Changes Requested</span>`;
-                return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 animate-pulse">⏳ Pending Review</span>`;
+                if (s === 'approved') return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">✓ Approved</span>`;
+                if (s === 'changes_requested') return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">⚠️ Changes Requested</span>`;
+                return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block mr-1 animate-pulse"></span>Pending Review</span>`;
             };
 
             const activeAppStatusKey = normStatus(activeApp.status);
 
             content.innerHTML = `
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                <!-- Left Column: Applications List (lg:col-span-4) -->
-                <div class="lg:col-span-4 space-y-2.5">
-                    <h4 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-1">Submissions (${apps.length})</h4>
-                    <div class="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+            <div class="h-full flex flex-col lg:flex-row overflow-hidden">
+                <!-- Left Sidebar: Applications List (Fixed Width on Desktop) -->
+                <aside class="w-full lg:w-80 xl:w-96 border-b lg:border-b-0 lg:border-r border-zinc-800 bg-zinc-900/40 flex flex-col flex-shrink-0 h-64 lg:h-full overflow-hidden">
+                    <div class="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/60 flex-shrink-0">
+                        <h2 class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Submissions (${apps.length})</h2>
+                        <span class="text-[11px] text-zinc-500">Select to inspect</span>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-3 space-y-2">
                         ${apps.map(app => `
-                            <div class="app-item-card p-3 rounded-xl border transition-all cursor-pointer ${app.id === activeApp.id ? 'bg-zinc-800/80 border-emerald-500/50 shadow-md' : 'bg-zinc-950/60 border-zinc-800/80 hover:bg-zinc-800/40'}" data-app-id="${app.id}">
+                            <div class="app-item-card p-3.5 rounded-xl border transition-all cursor-pointer ${app.id === activeApp.id ? 'bg-zinc-800 border-zinc-700 shadow-md ring-1 ring-emerald-500/30' : 'bg-zinc-900/60 border-zinc-800/80 hover:bg-zinc-800/40'}" data-app-id="${app.id}">
                                 <div class="flex items-start justify-between gap-2">
-                                    <h5 class="font-bold text-sm text-white truncate flex-1">${escapeHtml(app.project_name)}</h5>
+                                    <h3 class="font-bold text-sm text-white truncate flex-1">${escapeHtml(app.project_name)}</h3>
                                     ${statusBadge(app.status)}
                                 </div>
                                 <p class="text-[11px] text-zinc-400 truncate mt-1">Team: <span class="text-zinc-300 font-medium">${escapeHtml(app.team_name || app.project_name)}</span></p>
-                                <div class="flex items-center justify-between text-[10px] text-zinc-500 mt-2 pt-2 border-t border-zinc-800/50">
-                                    <span>Rev ${app.revision_number || 1}</span>
+                                <div class="flex items-center justify-between text-[10px] text-zinc-500 mt-2.5 pt-2 border-t border-zinc-800/50">
+                                    <span class="font-mono">Rev #${app.revision_number || 1}</span>
                                     <span>${new Date(app.created_at).toLocaleDateString()}</span>
                                 </div>
                             </div>
                         `).join('')}
                     </div>
-                </div>
+                </aside>
 
-                <!-- Right Column: Active Application Details, Revisions & Comments (lg:col-span-8) -->
-                <div class="lg:col-span-8 space-y-4">
-                    <!-- Status Notification Banner -->
-                    ${activeAppStatusKey === 'changes_requested' ? `
-                        <div class="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl space-y-2 text-rose-300">
-                            <div class="flex items-center gap-2">
-                                <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
-                                <h5 class="font-bold text-sm text-rose-200">Mentor Requested Changes</h5>
-                            </div>
-                            <p class="text-xs text-rose-300 leading-relaxed">
-                                A mentor reviewed this proposal and requested revisions. Please check the feedback below, edit your proposal, and click <span class="font-bold text-white underline">"Resubmit for Review"</span>.
-                            </p>
-                            <button id="toggle-resubmit-form-btn" class="mt-2 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer inline-flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                                <span>Edit & Resubmit Proposal</span>
-                            </button>
-                        </div>
-                    ` : activeAppStatusKey === 'approved' ? `
-                        <div class="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-between flex-wrap gap-3 text-emerald-300">
-                            <div class="space-y-1">
+                <!-- Right Main Dossier: Active Application, Revisions & Comments -->
+                <section class="flex-1 h-full overflow-y-auto p-4 sm:p-6 lg:p-8 bg-zinc-950">
+                    <div class="max-w-4xl mx-auto space-y-6">
+                        <!-- Status Notification Banner -->
+                        ${activeAppStatusKey === 'changes_requested' ? `
+                            <div class="p-5 bg-rose-500/10 border border-rose-500/30 rounded-2xl space-y-3 text-rose-300 shadow-sm">
                                 <div class="flex items-center gap-2">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-                                    <h5 class="font-bold text-sm text-emerald-200">Project Approved & Live!</h5>
+                                    <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+                                    <h4 class="font-bold text-sm text-rose-200">Mentor Requested Changes</h4>
                                 </div>
-                                <p class="text-xs text-emerald-300">
-                                    Congratulations! Your project is now published in the public directory with you as Project Lead.
+                                <p class="text-xs text-rose-300 leading-relaxed">
+                                    A mentor reviewed this proposal and requested revisions. Please check the feedback below, modify your proposal details, and click <span class="font-bold text-white underline">"Resubmit for Review"</span>.
                                 </p>
-                            </div>
-                            ${activeApp.project_code ? `
-                                <div class="px-3.5 py-1.5 bg-zinc-950/80 border border-emerald-500/40 rounded-xl flex items-center gap-2">
-                                    <span class="text-[11px] text-zinc-400 font-medium">Project Code:</span>
-                                    <span class="font-mono font-bold text-emerald-400 text-sm">${escapeHtml(activeApp.project_code)}</span>
+                                <div>
+                                    <button id="toggle-resubmit-form-btn" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer inline-flex items-center gap-1.5 active:scale-95">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                        <span>Edit & Resubmit Proposal</span>
+                                    </button>
                                 </div>
-                            ` : ''}
-                        </div>
-                    ` : `
-                        <div class="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center gap-3 text-amber-300 text-xs">
-                            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0"></span>
-                            <div>
-                                <span class="font-bold">Under Mentor Review:</span> Your proposal is currently in the mentor review queue. Mentors will examine your problem statement and architecture shortly.
                             </div>
-                        </div>
-                    `}
+                        ` : activeAppStatusKey === 'approved' ? `
+                            <div class="p-5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-between flex-wrap gap-4 text-emerald-300 shadow-sm">
+                                <div class="space-y-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                                        <h4 class="font-bold text-sm text-emerald-200">Project Approved & Live!</h4>
+                                    </div>
+                                    <p class="text-xs text-emerald-300">
+                                        Congratulations! Your project is published in the public directory and you are appointed as Project Lead.
+                                    </p>
+                                </div>
+                                ${activeApp.project_code ? `
+                                    <div class="px-4 py-2 bg-zinc-900 border border-emerald-500/40 rounded-xl flex items-center gap-2.5">
+                                        <span class="text-xs text-zinc-400 font-medium">Project Code:</span>
+                                        <span class="font-mono font-bold text-emerald-400 text-sm tracking-wide">${escapeHtml(activeApp.project_code)}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : `
+                            <div class="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center gap-3 text-amber-300 text-xs shadow-sm">
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0"></span>
+                                <div>
+                                    <span class="font-bold">Under Mentor Review:</span> Your proposal is currently in the mentor review queue. Mentors will examine your problem statement, architecture, and attached resources.
+                                </div>
+                            </div>
+                        `}
 
-                    <!-- Resubmission Form (Visible when toggled or when changes requested) -->
-                    <div id="resubmit-form-card" class="${activeAppStatusKey === 'changes_requested' ? '' : 'hidden'} p-4 bg-zinc-950/70 border border-zinc-800 rounded-2xl space-y-4">
-                        <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
-                            <h5 class="font-bold text-sm text-white flex items-center gap-2">
-                                <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                                <span>Edit & Resubmit Proposal (Revision ${(activeApp.revision_number || 1) + 1})</span>
-                            </h5>
-                        </div>
-                        <form id="resubmit-app-form" class="space-y-3.5">
-                            <div>
-                                <label class="block text-xs font-semibold text-zinc-300 mb-1">Project Name *</label>
-                                <input type="text" id="rs-name" required value="${escapeHtml(activeApp.project_name)}"
-                                       class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white focus:border-emerald-500 outline-none">
+                        <!-- Resubmission Form (Visible when toggled or when changes requested) -->
+                        <div id="resubmit-form-card" class="${activeAppStatusKey === 'changes_requested' ? '' : 'hidden'} p-5 sm:p-6 bg-zinc-900/70 border border-zinc-800 rounded-2xl space-y-4 shadow-md">
+                            <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+                                <h4 class="font-bold text-sm text-white flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                    <span>Edit & Resubmit Proposal (Revision ${(activeApp.revision_number || 1) + 1})</span>
+                                </h4>
+                                <span class="text-[11px] text-zinc-500">Incremental Revision</span>
                             </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-zinc-300 mb-1">Team Name</label>
-                                <input type="text" id="rs-team" value="${escapeHtml(activeApp.team_name || '')}"
-                                       class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white focus:border-emerald-500 outline-none">
-                            </div>
-                            <div>
-                                <div class="flex items-center justify-between pb-1">
-                                    <label class="block text-xs font-semibold text-zinc-300">Description & Vision *</label>
-                                    <span class="text-[10px] text-zinc-500">Rich Text Formatted</span>
+                            <form id="resubmit-app-form" class="space-y-4">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-zinc-300 mb-1.5">Project Name *</label>
+                                        <input type="text" id="rs-name" required value="${escapeHtml(activeApp.project_name)}"
+                                               class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-xs text-white outline-none transition-colors">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-zinc-300 mb-1.5">Team Name</label>
+                                        <input type="text" id="rs-team" value="${escapeHtml(activeApp.team_name || '')}"
+                                               class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-xs text-white outline-none transition-colors">
+                                    </div>
                                 </div>
-                                ${renderRichEditorToolbar('rs-desc-toolbar')}
-                                <div id="rs-desc-editor" contenteditable="true"
-                                     class="prose-clean min-h-[160px] max-h-[360px] overflow-y-auto p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-200 outline-none leading-relaxed mt-1">
+                                <div>
+                                    <div class="flex items-center justify-between pb-1.5">
+                                        <label class="block text-xs font-semibold text-zinc-300">Description & Vision *</label>
+                                        <span class="text-[10px] text-zinc-500">Rich Text Formatted</span>
+                                    </div>
+                                    ${renderRichEditorToolbar('rs-desc-toolbar')}
+                                    <div id="rs-desc-editor" contenteditable="true"
+                                         class="prose-clean min-h-[160px] max-h-[360px] overflow-y-auto p-3.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-xs text-zinc-200 outline-none leading-relaxed mt-1">
+                                        ${sanitizeRichText(activeApp.description)}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-zinc-300 mb-1.5">Specialties / Tags (comma-separated)</label>
+                                    <input type="text" id="rs-specialties" value="${escapeHtml(Array.isArray(activeApp.specialties) ? activeApp.specialties.join(', ') : (activeApp.specialties || ''))}"
+                                           class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-xs text-white outline-none transition-colors">
+                                </div>
+
+                                <!-- Custom Links in Resubmit Form -->
+                                <div class="space-y-2 pt-1">
+                                    <div class="flex items-center justify-between">
+                                        <label class="block text-xs font-semibold text-zinc-300">Attached Links & Custom Resources</label>
+                                        <button type="button" id="rs-add-link-btn" class="text-xs text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer flex items-center gap-1">
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                            <span>Add Link</span>
+                                        </button>
+                                    </div>
+                                    <div id="rs-custom-links-container" class="space-y-2">
+                                        ${(Array.isArray(activeApp.links) ? activeApp.links : []).map(l => `
+                                            <div class="rs-link-row flex items-center gap-2 p-1.5 bg-zinc-950 border border-zinc-800 rounded-xl">
+                                                <input type="text" class="rs-link-name text-xs w-2/5 px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white" placeholder="Label (e.g. Figma)" value="${escapeHtml(l.name || '')}">
+                                                <input type="url" class="rs-link-url text-xs flex-1 px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white" placeholder="https://..." value="${escapeHtml(l.url || '')}">
+                                                <button type="button" class="rs-remove-link-btn p-1 text-zinc-500 hover:text-rose-400 rounded cursor-pointer" title="Remove"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-emerald-400 mb-1.5">Applicant Note / Explanation of Changes *</label>
+                                    <textarea id="rs-note" rows="2" required placeholder="Describe what revisions and improvements you made in response to mentor comments..."
+                                              class="w-full px-3 py-2 bg-zinc-950 border border-emerald-500/40 rounded-xl text-xs text-white focus:border-emerald-500 outline-none resize-none leading-relaxed"></textarea>
+                                </div>
+                                <div class="flex items-center justify-end gap-2 pt-1">
+                                    <button type="submit" id="rs-submit-btn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-all active:scale-95 flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                        <span>Resubmit for Mentor Review</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Application Overview Card -->
+                        <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 sm:p-6 space-y-4 shadow-sm">
+                            <div class="flex items-start justify-between gap-3 flex-wrap">
+                                <div>
+                                    <h3 class="font-heading font-bold text-lg text-white">${escapeHtml(activeApp.project_name)}</h3>
+                                    <p class="text-xs text-zinc-400 mt-0.5">Team: <span class="text-zinc-200 font-semibold">${escapeHtml(activeApp.team_name || activeApp.project_name)}</span></p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2.5 py-1 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-xl text-[11px] font-mono">
+                                        Revision #${activeApp.revision_number || 1}
+                                    </span>
+                                    ${statusBadge(activeApp.status)}
+                                </div>
+                            </div>
+
+                            <div class="pt-2 border-t border-zinc-800/60">
+                                <h4 class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Description & Vision</h4>
+                                <div class="text-xs sm:text-sm text-zinc-200 leading-relaxed prose-clean bg-zinc-950/70 p-4 rounded-xl border border-zinc-800/60">
                                     ${sanitizeRichText(activeApp.description)}
                                 </div>
                             </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-zinc-300 mb-1">Specialties / Tags (comma-separated)</label>
-                                <input type="text" id="rs-specialties" value="${escapeHtml(Array.isArray(activeApp.specialties) ? activeApp.specialties.join(', ') : (activeApp.specialties || ''))}"
-                                       class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white focus:border-emerald-500 outline-none">
-                            </div>
 
-                            <!-- Custom Links in Resubmit Form -->
-                            <div class="space-y-2 pt-1">
-                                <div class="flex items-center justify-between">
-                                    <label class="block text-xs font-semibold text-zinc-300">Attached Links & Custom Resources</label>
-                                    <button type="button" id="rs-add-link-btn" class="text-xs text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer flex items-center gap-1">
-                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                        <span>Add Link</span>
-                                    </button>
-                                </div>
-                                <div id="rs-custom-links-container" class="space-y-2">
-                                    ${(Array.isArray(activeApp.links) ? activeApp.links : []).map(l => `
-                                        <div class="rs-link-row flex items-center gap-2 p-1.5 bg-zinc-900 border border-zinc-800 rounded-xl">
-                                            <input type="text" class="rs-link-name text-xs w-2/5 px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white" placeholder="Label (e.g. Figma)" value="${escapeHtml(l.name || '')}">
-                                            <input type="url" class="rs-link-url text-xs flex-1 px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white" placeholder="https://..." value="${escapeHtml(l.url || '')}">
-                                            <button type="button" class="rs-remove-link-btn p-1 text-zinc-500 hover:text-red-400 rounded cursor-pointer" title="Remove"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-semibold text-emerald-400 mb-1">Applicant Note / Explanation of Changes *</label>
-                                <textarea id="rs-note" rows="2" required placeholder="Describe what revisions and improvements you made in response to mentor comments..."
-                                          class="w-full px-3 py-2 bg-zinc-900 border border-emerald-500/40 rounded-xl text-xs text-white focus:border-emerald-500 outline-none resize-none"></textarea>
-                            </div>
-                            <div class="flex items-center justify-end gap-2 pt-1">
-                                <button type="submit" id="rs-submit-btn" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-all active:scale-95 flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                    <span>Resubmit for Mentor Review</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- Application Overview Card -->
-                    <div class="bg-zinc-950/70 border border-zinc-800 rounded-2xl p-4 sm:p-5 space-y-3">
-                        <div class="flex items-start justify-between gap-3 flex-wrap">
-                            <div>
-                                <h4 class="font-heading font-bold text-base sm:text-lg text-white">${escapeHtml(activeApp.project_name)}</h4>
-                                <p class="text-xs text-zinc-400 mt-0.5">Team: <span class="text-zinc-200 font-semibold">${escapeHtml(activeApp.team_name || activeApp.project_name)}</span></p>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="px-2.5 py-1 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-xl text-[11px] font-mono">
-                                    Revision ${activeApp.revision_number || 1}
-                                </span>
-                                ${statusBadge(activeApp.status)}
-                            </div>
-                        </div>
-
-                        <div class="pt-2 border-t border-zinc-800/60">
-                            <h6 class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">Description</h6>
-                            <div class="text-xs text-zinc-300 leading-relaxed prose-clean bg-zinc-900/50 p-3.5 rounded-xl border border-zinc-800/40">
-                                ${sanitizeRichText(activeApp.description)}
-                            </div>
-                        </div>
-
-                        ${Array.isArray(activeApp.specialties) && activeApp.specialties.length > 0 ? `
-                            <div class="pt-2">
-                                <h6 class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">Domains & Specialties</h6>
-                                <div class="flex flex-wrap gap-1.5">
-                                    ${activeApp.specialties.map(s => `<span class="px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg text-[11px]">${escapeHtml(s)}</span>`).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
-
-                        ${Array.isArray(activeApp.links) && activeApp.links.length > 0 ? `
-                            <div class="pt-2">
-                                <h6 class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">Attached Links & Resources</h6>
-                                <div class="flex flex-wrap gap-2">
-                                    ${activeApp.links.map(l => `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-emerald-500/40 text-emerald-400 rounded-lg text-xs flex items-center gap-1.5 transition-colors"><span>🔗 ${escapeHtml(l.name || l.url)}</span></a>`).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    <!-- Discussion & Comment Thread with Mentors -->
-                    <div class="bg-zinc-950/70 border border-zinc-800 rounded-2xl p-4 sm:p-5 space-y-4">
-                        <div class="flex items-center justify-between border-b border-zinc-800 pb-2.5">
-                            <h5 class="font-heading font-bold text-sm text-white flex items-center gap-2">
-                                <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                                <span>Mentor Review Discussion & Comments</span>
-                            </h5>
-                            <span id="comments-count-pill" class="px-2 py-0.5 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-full text-[10px] font-bold">
-                                ${comments.length} message${comments.length === 1 ? '' : 's'}
-                            </span>
-                        </div>
-
-                        <!-- Comments List -->
-                        <div id="app-comments-list" class="space-y-3 max-h-60 overflow-y-auto pr-1">
-                            ${comments.length === 0 ? `
-                                <p class="text-xs text-zinc-500 py-3 text-center italic">No comments yet. When mentors review your proposal, their notes will appear here.</p>
-                            ` : comments.map(c => {
-                                const isFeedback = c.is_mentor_feedback || c.author?.role === 'mentor' || c.user_role === 'mentor';
-                                const authorName = c.author?.full_name || c.profiles?.full_name || (c.author_id === ICCSupabase.getUser()?.id ? 'You' : 'User');
-                                const authorRole = (c.author?.role || c.user_role || '').toLowerCase();
-                                const roleBadge = isFeedback ? '🎓 Mentor' : (authorRole === 'superadmin' || authorRole === 'super_admin' ? '⚡ Super Admin' : 'Applicant');
-                                const messageText = c.content || c.comment || '';
-                                return `
-                                <div class="p-3 rounded-xl border ${isFeedback ? 'bg-emerald-950/20 border-emerald-500/30' : 'bg-zinc-900 border-zinc-800'} space-y-1">
-                                    <div class="flex items-center justify-between text-xs">
-                                        <div class="flex items-center gap-2">
-                                            <span class="font-bold text-white">${escapeHtml(authorName)}</span>
-                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isFeedback ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">
-                                                ${roleBadge}
-                                            </span>
-                                        </div>
-                                        <span class="text-[10px] text-zinc-500">${c.created_at ? new Date(c.created_at).toLocaleString() : ''}</span>
+                            ${Array.isArray(activeApp.specialties) && activeApp.specialties.length > 0 ? `
+                                <div class="pt-2 border-t border-zinc-800/60">
+                                    <h4 class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Domains & Specialties</h4>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        ${activeApp.specialties.map(s => `<span class="px-2.5 py-1 bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-lg text-xs font-medium">${escapeHtml(s)}</span>`).join('')}
                                     </div>
-                                    <p class="text-xs text-zinc-200 leading-relaxed whitespace-pre-wrap">${escapeHtml(messageText)}</p>
                                 </div>
-                                `;
-                            }).join('')}
+                            ` : ''}
+
+                            ${Array.isArray(activeApp.links) && activeApp.links.length > 0 ? `
+                                <div class="pt-2 border-t border-zinc-800/60">
+                                    <h4 class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Attached Links & Resources</h4>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        ${activeApp.links.map(l => `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener noreferrer" class="p-2.5 bg-zinc-950/70 hover:bg-zinc-800/70 border border-zinc-800 hover:border-emerald-500/40 text-emerald-400 rounded-xl text-xs flex items-center justify-between transition-colors"><span>🔗 ${escapeHtml(l.name || l.url)}</span><svg class="w-3.5 h-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg></a>`).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
                         </div>
 
-                        <!-- Post Reply Box -->
-                        <form id="post-comment-form" class="space-y-2 pt-2 border-t border-zinc-800">
-                            <textarea id="new-comment-text" rows="2" placeholder="Write a reply or question for mentors..."
-                                      class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 focus:border-emerald-500 rounded-xl text-xs text-white placeholder-zinc-600 outline-none resize-none"></textarea>
-                            <div class="flex justify-end">
-                                <button type="submit" id="send-comment-btn" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-all active:scale-95 flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                                    <span>Send Message</span>
-                                </button>
+                        <!-- Discussion & Comment Thread with Mentors -->
+                        <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 sm:p-6 space-y-4 shadow-sm">
+                            <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+                                <h4 class="font-heading font-bold text-sm text-white flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                                    <span>Mentor Review Discussion & Comments</span>
+                                </h4>
+                                <span id="comments-count-pill" class="px-2.5 py-0.5 bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-full text-[10px] font-bold">
+                                    ${comments.length} message${comments.length === 1 ? '' : 's'}
+                                </span>
                             </div>
-                        </form>
-                    </div>
 
-                    <!-- Status History Timeline -->
-                    ${history.length > 0 ? `
-                        <div class="bg-zinc-950/70 border border-zinc-800 rounded-2xl p-4 sm:p-5 space-y-3">
-                            <h5 class="font-heading font-bold text-xs uppercase tracking-wider text-zinc-400">Status History & Audit Trail</h5>
-                            <div class="space-y-2 text-xs">
-                                ${history.map(h => {
-                                    const fromSt = h.previous_status || h.from_status || 'Submitted';
-                                    const toSt = h.new_status || h.to_status || 'Pending Review';
-                                    const noteText = h.comment || h.notes || '';
+                            <!-- Comments List -->
+                            <div id="app-comments-list" class="space-y-3 max-h-72 overflow-y-auto pr-1">
+                                ${comments.length === 0 ? `
+                                    <p class="text-xs text-zinc-500 py-4 text-center italic">No comments yet. When mentors review your proposal, their notes and questions will appear here.</p>
+                                ` : comments.map(c => {
+                                    const isFeedback = c.is_mentor_feedback || c.author?.role === 'mentor' || c.user_role === 'mentor';
+                                    const authorName = c.author?.full_name || c.profiles?.full_name || (c.author_id === ICCSupabase.getUser()?.id ? 'You' : 'User');
+                                    const authorRole = (c.author?.role || c.user_role || '').toLowerCase();
+                                    const roleBadge = isFeedback ? '🎓 Mentor' : (authorRole === 'superadmin' || authorRole === 'super_admin' ? '⚡ Super Admin' : 'Applicant');
+                                    const messageText = c.content || c.comment || '';
                                     return `
-                                    <div class="flex items-start gap-2.5 p-2 bg-zinc-900/40 rounded-xl border border-zinc-800/40">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0"></span>
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-white font-medium">Status: <span class="text-zinc-400">${escapeHtml(fromSt)}</span> → <span class="font-bold text-emerald-400">${escapeHtml(toSt)}</span></p>
-                                            ${noteText ? `<p class="text-zinc-400 text-[11px] mt-0.5">${escapeHtml(noteText)}</p>` : ''}
-                                            <p class="text-[10px] text-zinc-500 mt-0.5">${h.created_at ? new Date(h.created_at).toLocaleString() : ''}</p>
+                                    <div class="p-3.5 rounded-xl border ${isFeedback ? 'bg-emerald-950/20 border-emerald-500/30' : 'bg-zinc-950/70 border-zinc-800'} space-y-1.5">
+                                        <div class="flex items-center justify-between text-xs">
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-bold text-white">${escapeHtml(authorName)}</span>
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isFeedback ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">
+                                                    ${roleBadge}
+                                                </span>
+                                            </div>
+                                            <span class="text-[10px] text-zinc-500">${c.created_at ? new Date(c.created_at).toLocaleString() : ''}</span>
                                         </div>
+                                        <p class="text-xs text-zinc-200 leading-relaxed whitespace-pre-wrap">${escapeHtml(messageText)}</p>
                                     </div>
                                     `;
                                 }).join('')}
                             </div>
+
+                            <!-- Post Reply Box with Visual Feedback -->
+                            <form id="post-comment-form" class="space-y-2.5 pt-3 border-t border-zinc-800">
+                                <textarea id="new-comment-text" rows="2" placeholder="Write a reply or question for mentors..."
+                                          class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-xs text-white placeholder-zinc-500 outline-none resize-none leading-relaxed transition-colors"></textarea>
+                                <div class="flex justify-end">
+                                    <button type="submit" id="send-comment-btn" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-all active:scale-95 flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                                        <span>Send Message</span>
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                    ` : ''}
-                </div>
+
+                        <!-- Status History Timeline -->
+                        ${history.length > 0 ? `
+                            <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 sm:p-6 space-y-3 shadow-sm">
+                                <h4 class="font-heading font-bold text-xs uppercase tracking-wider text-zinc-400">Status History & Audit Trail</h4>
+                                <div class="space-y-2 text-xs">
+                                    ${history.map(h => {
+                                        const fromSt = h.previous_status || h.from_status || 'Submitted';
+                                        const toSt = h.new_status || h.to_status || 'Pending Review';
+                                        const noteText = h.comment || h.notes || '';
+                                        return `
+                                        <div class="flex items-start gap-2.5 p-2.5 bg-zinc-950/60 rounded-xl border border-zinc-800/50">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0"></span>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-white font-medium">Status: <span class="text-zinc-400">${escapeHtml(fromSt)}</span> → <span class="font-bold text-emerald-400">${escapeHtml(toSt)}</span></p>
+                                                ${noteText ? `<p class="text-zinc-400 text-[11px] mt-0.5">${escapeHtml(noteText)}</p>` : ''}
+                                                <p class="text-[10px] text-zinc-500 mt-0.5">${h.created_at ? new Date(h.created_at).toLocaleString() : ''}</p>
+                                            </div>
+                                        </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </section>
             </div>
             `;
 
@@ -1144,11 +1162,11 @@ const TeamsView = (() => {
             document.getElementById('rs-add-link-btn')?.addEventListener('click', () => {
                 if (!rsLinksContainer) return;
                 const row = document.createElement('div');
-                row.className = 'rs-link-row flex items-center gap-2 p-1.5 bg-zinc-900 border border-zinc-800 rounded-xl animate-fade-in';
+                row.className = 'rs-link-row flex items-center gap-2 p-1.5 bg-zinc-950 border border-zinc-800 rounded-xl animate-fade-in';
                 row.innerHTML = `
-                    <input type="text" class="rs-link-name text-xs w-2/5 px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white" placeholder="Label (e.g. Docs)">
-                    <input type="url" class="rs-link-url text-xs flex-1 px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white" placeholder="https://...">
-                    <button type="button" class="rs-remove-link-btn p-1 text-zinc-500 hover:text-red-400 rounded cursor-pointer" title="Remove"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                    <input type="text" class="rs-link-name text-xs w-2/5 px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white" placeholder="Label (e.g. Docs)">
+                    <input type="url" class="rs-link-url text-xs flex-1 px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white" placeholder="https://...">
+                    <button type="button" class="rs-remove-link-btn p-1 text-zinc-500 hover:text-rose-400 rounded cursor-pointer" title="Remove"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
                 `;
                 row.querySelector('.rs-remove-link-btn').addEventListener('click', () => row.remove());
                 rsLinksContainer.appendChild(row);
@@ -1157,10 +1175,15 @@ const TeamsView = (() => {
             // Toggle resubmit form
             document.getElementById('toggle-resubmit-form-btn')?.addEventListener('click', () => {
                 const card = document.getElementById('resubmit-form-card');
-                if (card) card.classList.toggle('hidden');
+                if (card) {
+                    card.classList.toggle('hidden');
+                    if (!card.classList.contains('hidden')) {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }
             });
 
-            // Resubmit application handler
+            // Resubmit application handler with Visual Feedback
             document.getElementById('resubmit-app-form')?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const btn = document.getElementById('rs-submit-btn');
@@ -1199,8 +1222,13 @@ const TeamsView = (() => {
                     }
                 });
 
+                // Immediate visual feedback
                 btn.disabled = true;
-                btn.textContent = 'Resubmitting...';
+                const originalBtnHtml = btn.innerHTML;
+                btn.innerHTML = `
+                    <svg class="w-3.5 h-3.5 animate-spin text-white" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                    <span>Resubmitting Proposal...</span>
+                `;
 
                 const { data, error } = await ICCSupabase.resubmitProjectApplication(activeApp.id, {
                     projectName: name,
@@ -1215,14 +1243,14 @@ const TeamsView = (() => {
                 if (error) {
                     Toast.error('Failed to resubmit: ' + error.message);
                     btn.disabled = false;
-                    btn.textContent = 'Resubmit for Mentor Review';
+                    btn.innerHTML = originalBtnHtml;
                 } else {
                     Toast.success('Proposal resubmitted for mentor review!');
                     await loadApplications();
                 }
             });
 
-            // Post reply comment handler
+            // Post reply comment handler with Visual Feedback
             document.getElementById('post-comment-form')?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const input = document.getElementById('new-comment-text');
@@ -1231,17 +1259,27 @@ const TeamsView = (() => {
 
                 const btn = document.getElementById('send-comment-btn');
                 btn.disabled = true;
+                const originalBtnHtml = btn.innerHTML;
+                btn.innerHTML = `
+                    <svg class="w-3.5 h-3.5 animate-spin text-white" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                    <span>Sending...</span>
+                `;
 
                 const { data, error } = await ICCSupabase.addApplicationComment(activeApp.id, comment);
                 if (error) {
                     Toast.error('Failed to send comment: ' + error.message);
                     btn.disabled = false;
+                    btn.innerHTML = originalBtnHtml;
                 } else {
+                    Toast.success('Reply sent successfully');
                     input.value = '';
                     btn.disabled = false;
+                    btn.innerHTML = originalBtnHtml;
                     const refreshed = await ICCSupabase.fetchApplicationDetails(activeApp.id);
                     if (refreshed?.data?.comments) {
                         renderCommentsList(refreshed.data.comments);
+                        const list = document.getElementById('app-comments-list');
+                        if (list) list.scrollTop = list.scrollHeight;
                     }
                 }
             });
@@ -1538,7 +1576,7 @@ const TeamsView = (() => {
                             </button>
                         ` : ''}
 
-                        <button id="open-create-proj-btn" onclick="TeamsView.openCreateProjectModal()" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-900/30 active:scale-95 cursor-pointer" title="Submit a new project proposal for mentor review">
+                        <button id="open-create-proj-btn" onclick="TeamsView.openCreateProjectModal()" class="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer" title="Submit a new project proposal for mentor review">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                             <span>+ Create Project</span>
                         </button>
