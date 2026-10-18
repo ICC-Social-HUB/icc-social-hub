@@ -107,7 +107,7 @@ const AdminView = (() => {
     }
 
     function getFilteredUsers() {
-        const displayUsers = allUsers.filter(u => u.role !== 'admin' && u.role !== 'lead');
+        const displayUsers = allUsers.filter(u => u.role !== 'mentor' && !u.is_mentor);
         const query = (userSearchQuery || '').trim().toLowerCase();
         const sectionQuery = (userSectionFilter || '').trim().toUpperCase();
         const teamQuery = (userTeamFilter || '').trim();
@@ -1411,7 +1411,7 @@ const AdminView = (() => {
 
     function renderUsers() {
         const currentUserId = ICCSupabase.getUser()?.id;
-        const displayUsers = allUsers.filter(u => u.role !== 'admin' && u.role !== 'lead');
+        const displayUsers = allUsers.filter(u => u.role !== 'mentor' && !u.is_mentor);
         const isSuper = ICCSupabase.isSuperAdmin();
         const perms = ICCSupabase.getAdminPermissions ? ICCSupabase.getAdminPermissions() : { all: true };
         const canRequestEdit = isSuper || perms.users_edit || perms.all;

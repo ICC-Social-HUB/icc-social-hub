@@ -112,27 +112,22 @@ module.exports = async (req, res) => {
         });
 
         // 3. Query profiles table:
-        // Exclude Mentors and Super Admins / Admins at database query level
+        // Exclude only Mentors at database query level (admins, super admins, leads, and regular members are all students)
         let query = supabase
             .from('profiles')
-            .select('id, full_name, username, avatar_url, email, linkedin, year, branch, section, role, team_id, created_at, updated_at');
+            .select('id, full_name, username, avatar_url, email, linkedin, year, branch, section, role, team_id, created_at, updated_at, is_mentor');
 
-        // Filter out mentor and admin roles at query level
-        query = query.not('role', 'in', '("mentor","admin","super_admin","superadmin")');
+        query = query.or('role.neq.mentor,role.is.null');
 
         const { data: profiles, error: profErr } = await query;
         if (profErr) {
             return sendError(500, profErr.message || 'Error fetching student profiles');
         }
 
-        // In-memory filter for deactivated/deleted and strict non-mentor / non-superadmin check
+        // In-memory filter: exclude only Mentors; list all students including admins and leads
         let filteredStudents = (profiles || []).filter(student => {
-            // Strictly exclude Mentors and Admins
-            const role = (student.role || '').toLowerCase();
-            if (role === 'mentor' || role === 'super_admin' || role === 'superadmin' || role === 'admin') {
-                return false;
-            }
-            if (student.is_mentor === true || student.is_super_admin === true) {
+            const role = (student.role || '').toLowerCase().trim();
+            if (role === 'mentor' || student.is_mentor === true) {
                 return false;
             }
             // Exclude deactivated/deleted if column exists

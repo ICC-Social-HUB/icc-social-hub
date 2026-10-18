@@ -3731,18 +3731,17 @@ const ICCSupabase = (() => {
                 }
             });
 
-            // 3. Query profiles excluding mentors and superadmins/admins
+            // 3. Query profiles excluding only mentors (admins, super admins, leads, and regular members are all students)
             let query = client.from('profiles')
-                .select('id, full_name, username, avatar_url, email, linkedin, year, branch, section, role, team_id, created_at, updated_at')
-                .not('role', 'in', '("mentor","admin","super_admin","superadmin")');
+                .select('id, full_name, username, avatar_url, email, linkedin, year, branch, section, role, team_id, created_at, updated_at, is_mentor')
+                .or('role.neq.mentor,role.is.null');
 
             const { data: rawProfiles, error: profErr } = await query;
             if (profErr) throw profErr;
 
             let filtered = (rawProfiles || []).filter(s => {
-                const role = (s.role || '').toLowerCase();
-                if (role === 'mentor' || role === 'super_admin' || role === 'superadmin' || role === 'admin') return false;
-                if (s.is_mentor === true || s.is_super_admin === true) return false;
+                const role = (s.role || '').toLowerCase().trim();
+                if (role === 'mentor' || s.is_mentor === true) return false;
                 if (s.is_active === false || s.status === 'deactivated' || s.status === 'banned') return false;
                 return true;
             });
