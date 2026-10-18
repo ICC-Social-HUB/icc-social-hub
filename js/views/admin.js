@@ -928,6 +928,14 @@ const AdminView = (() => {
                                     </div>
                                     <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="users_export" ${appointingUserDraft?.users_export ? 'checked' : ''}>
                                 </label>
+
+                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
+                                    <div>
+                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">📝 Minutes of Meeting</span>
+                                        <span class="text-[10px] text-zinc-500">Create, edit, & delete MoM in Core Space</span>
+                                    </div>
+                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="mom" ${appointingUserDraft?.mom ? 'checked' : ''}>
+                                </label>
                             </div>
                         </div>
 
@@ -1189,6 +1197,18 @@ const AdminView = (() => {
                                             </div>
                                             <label class="switch-container flex-shrink-0">
                                                 <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="users_export" data-name="${escapeHtml(fullName)}" ${perms.users_export ? 'checked' : ''}>
+                                                <span class="switch-slider"></span>
+                                            </label>
+                                        </div>
+
+                                        <!-- 7. Minutes of Meeting (MoM) -->
+                                        <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
+                                            <div class="min-w-0 pr-2">
+                                                <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">📝 Minutes of Meeting</span>
+                                                <span class="text-[10px] text-zinc-500 block truncate">Add, edit, & delete MoM in Core Space</span>
+                                            </div>
+                                            <label class="switch-container flex-shrink-0">
+                                                <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="mom" data-name="${escapeHtml(fullName)}" ${perms.mom ? 'checked' : ''}>
                                                 <span class="switch-slider"></span>
                                             </label>
                                         </div>
@@ -2503,6 +2523,7 @@ const AdminView = (() => {
                 users_edit: !!appointingUserDraft.users_edit,
                 users_export: !!appointingUserDraft.users_export,
                 users: !!(appointingUserDraft.users_edit || appointingUserDraft.users_export),
+                mom: !!appointingUserDraft.mom,
                 all: !!appointingUserDraft.all
             };
 
@@ -2601,8 +2622,8 @@ const AdminView = (() => {
                     currentPerms.users = !!(currentPerms.users_edit || currentPerms.users_export);
                 }
 
-                const allSix = !!(currentPerms.broadcast && currentPerms.moderate && currentPerms.events && currentPerms.leads && currentPerms.users_edit && currentPerms.users_export);
-                currentPerms.all = allSix;
+                const allSeven = !!(currentPerms.broadcast && currentPerms.moderate && currentPerms.events && currentPerms.leads && currentPerms.users_edit && currentPerms.users_export && currentPerms.mom);
+                currentPerms.all = allSeven;
 
                 const res = await ICCSupabase.updateAdminPermissions(userId, currentPerms);
                 if (res.error) {
@@ -2616,7 +2637,8 @@ const AdminView = (() => {
                         leads: 'Team Leads',
                         users_edit: 'Request User Edits',
                         users_export: 'View & Download Excel',
-                        users: 'User Management'
+                        users: 'User Management',
+                        mom: 'Minutes of Meeting (MoM)'
                     };
                     Toast.success(`${permNames[perm] || perm} ${checked ? 'enabled' : 'disabled'} for ${userName}`);
                     // Re-fetch fresh data from DB to ensure UI reflects actual persisted state

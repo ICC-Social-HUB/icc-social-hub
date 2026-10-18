@@ -1410,6 +1410,162 @@ const ICCSupabase = (() => {
         return { error: rpcErr };
     }
 
+
+    function canManageMom(prof = currentProfile) {
+        const target = prof || currentProfile;
+        if (!target && !currentUser) return false;
+        if (isSuperAdmin(target)) return true;
+        const perms = getAdminPermissions(target);
+        return !!(perms.all || perms.mom);
+    }
+
+    function updateMomCache(item, action = 'add') {
+        try {
+            let list = [];
+            const raw = localStorage.getItem('icc_mom_cache');
+            if (raw) list = JSON.parse(raw);
+            if (!Array.isArray(list)) list = [];
+
+            if (action === 'add') {
+                list = [item, ...list.filter(m => m.id !== item.id)];
+            } else if (action === 'update') {
+                const idx = list.findIndex(m => m.id === item.id);
+                if (idx !== -1) list[idx] = { ...list[idx], ...item };
+                else list.unshift(item);
+            } else if (action === 'delete') {
+                list = list.filter(m => m.id !== item.id);
+            }
+            localStorage.setItem('icc_mom_cache', JSON.stringify(list));
+        } catch(e) {}
+    }
+
+    async function fetchMinutesOfMeeting() {
+        if (!client) {
+            try {
+                const cached = localStorage.getItem('icc_mom_cache');
+                return cached ? JSON.parse(cached) : [];
+            } catch(e) { return []; }
+        }
+
+        try {
+            const { data, error } = await client
+                .from('minutes_of_meeting')
+                .select('*, profiles:author_id(full_name, username, avatar_url, role)')
+                .order('meeting_date', { ascending: false })
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.warn('minutes_of_meeting fetch error, using local cache fallback:', error.message);
+                const cached = localStorage.getItem('icc_mom_cache');
+                return cached ? JSON.parse(cached) : [];
+            }
+
+            if (data) {
+                try { localStorage.setItem('icc_mom_cache', JSON.stringify(data)); } catch(e) {}
+            }
+            return data || [];
+        } catch (err) {
+            console.error('fetchMinutesOfMeeting error:', err);
+            try {
+                const cached = localStorage.getItem('icc_mom_cache');
+                return cached ? JSON.parse(cached) : [];
+            } catch(e) { return []; }
+        }
+    }
+
+    async function createMinutesOfMeeting({ title, meeting_date, meeting_time, content, attendees = '', tags = [] }) {
+        if (!canManageMom()) {
+            return { error: { message: 'Unauthorized: Permission required to create Minutes of Meeting.' } };
+        }
+
+        const record = {
+            title: title.trim(),
+            meeting_date: meeting_date || new Date().toISOString().split('T')[0],
+            meeting_time: meeting_time || '',
+            content: content || '',
+            author_id: currentUser?.id || null,
+            author_name: currentProfile?.full_name || currentProfile?.username || 'Core Administrator',
+            attendees: (attendees || '').trim(),
+            tags: Array.isArray(tags) ? tags : [],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+
+        if (client) {
+            const { data, error } = await client
+                .from('minutes_of_meeting')
+                .insert([record])
+                .select('*, profiles:author_id(full_name, username, avatar_url, role)')
+                .single();
+
+            if (!error && data) {
+                updateMomCache(data, 'add');
+                return { data, error: null };
+            }
+            if (error) {
+                console.warn('Supabase createMinutesOfMeeting failed, saving to local cache:', error);
+            }
+        }
+
+        // Offline / local cache fallback
+        const fallbackRecord = {
+            id: 'mom_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+            ...record,
+            profiles: {
+                full_name: currentProfile?.full_name || 'Administrator',
+                username: currentProfile?.username || 'admin',
+                avatar_url: currentProfile?.avatar_url || '',
+                role: currentProfile?.role || 'admin'
+            }
+        };
+        updateMomCache(fallbackRecord, 'add');
+        return { data: fallbackRecord, error: null };
+    }
+
+    async function updateMinutesOfMeeting(id, fields) {
+        if (!canManageMom()) {
+            return { error: { message: 'Unauthorized: Permission required to edit Minutes of Meeting.' } };
+        }
+
+        const updatePayload = {
+            ...fields,
+            updated_at: new Date().toISOString()
+        };
+
+        if (client) {
+            const { data, error } = await client
+                .from('minutes_of_meeting')
+                .update(updatePayload)
+                .eq('id', id)
+                .select('*, profiles:author_id(full_name, username, avatar_url, role)')
+                .single();
+
+            if (!error && data) {
+                updateMomCache(data, 'update');
+                return { data, error: null };
+            }
+        }
+
+        updateMomCache({ id, ...updatePayload }, 'update');
+        return { data: { id, ...updatePayload }, error: null };
+    }
+
+    async function deleteMinutesOfMeeting(id) {
+        if (!canManageMom()) {
+            return { error: { message: 'Unauthorized: Permission required to delete Minutes of Meeting.' } };
+        }
+
+        if (client) {
+            const { error } = await client.from('minutes_of_meeting').delete().eq('id', id);
+            if (error) {
+                console.warn('deleteMinutesOfMeeting error, removing from local cache:', error);
+            }
+        }
+
+        updateMomCache({ id }, 'delete');
+        return { error: null, success: true };
+    }
+
     // ==================== SUPER ADMIN ACCESS CONTROL & APPROVAL WORKFLOW ====================
 
     const DEFAULT_ADMIN_PERMISSIONS = {

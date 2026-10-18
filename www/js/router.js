@@ -120,6 +120,10 @@ const Router = (() => {
                 previousView = 'onboarding';
                 if (!ICCSupabase.getUser()) { window.location.hash = '#dashboard'; return; }
                 OnboardingView.mount(container);
+            } else if (hash === '#core-space' || hash === '#corespace') {
+                if (!ICCSupabase.isAdmin() && !ICCSupabase.isMentor()) { window.location.hash = '#dashboard'; return; }
+                previousView = 'coreSpace';
+                CoreSpaceView.mount(container);
             } else if (hash === '#admin') {
                 if (!ICCSupabase.isAdmin()) { window.location.hash = '#dashboard'; return; }
                 previousView = 'admin';
