@@ -3571,6 +3571,10 @@ const ICCSupabase = (() => {
         return role === 'lead';
     }
 
+    function needsOnboarding() {
+        return currentProfile && !currentProfile.username;
+    }
+
     async function fetchStudentsDirectory(options = {}) {
         const {
             search = '',
