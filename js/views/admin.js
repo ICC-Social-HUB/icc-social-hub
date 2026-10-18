@@ -1564,7 +1564,7 @@ const AdminView = (() => {
                                         <div class="relative pt-0.5">
                                             <select class="user-role-select w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-white focus:border-amber-500 outline-none">
                                                 <option value="member" ${(!u.role || u.role === 'member') ? 'selected' : ''}>Regular Member</option>
-                                                <option value="mentor" ${u.role === 'mentor' ? 'selected' : ''}>🎓 Mentor (Project Audit & Guidance)</option>
+                                                ${u.role === 'mentor' ? '<option value="mentor" selected disabled>🎓 Mentor (Appointed via Access Control)</option>' : ''}
                                                 <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>👑 Administrator</option>
                                                 <option value="super_admin" ${u.role === 'super_admin' || u.role === 'superadmin' ? 'selected' : ''}>🛡️ Super Admin</option>
                                             </select>
@@ -1594,17 +1594,7 @@ const AdminView = (() => {
                             </div>
                             
                             <div class="flex items-center gap-1.5 flex-shrink-0">
-                                ${isSuper && !isEditing && u.id !== currentUserId && u.role !== 'super_admin' && u.role !== 'superadmin' ? `
-                                    ${u.role === 'mentor' ? `
-                                        <button class="quick-revoke-mentor-btn px-2.5 py-1.5 text-[11px] font-bold bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 rounded-xl transition-all cursor-pointer flex items-center gap-1 active:scale-95 shadow-sm" data-id="${u.id}" data-name="${escapeHtml(fullName)}" title="Revoke Mentor Role">
-                                            <span>✕ Revoke Mentor</span>
-                                        </button>
-                                    ` : `
-                                        <button class="quick-assign-mentor-btn px-2.5 py-1.5 text-[11px] font-bold bg-amber-500/15 hover:bg-amber-500 text-amber-400 hover:text-zinc-950 border border-amber-500/30 rounded-xl transition-all cursor-pointer flex items-center gap-1 active:scale-95 shadow-sm" data-id="${u.id}" data-name="${escapeHtml(fullName)}" title="Assign as Mentor">
-                                            <span>🎓 Assign Mentor</span>
-                                        </button>
-                                    `}
-                                ` : ''}
+                                
 
                                 ${canRequestEdit && !isEditing ? `
                                     <button class="edit-user-btn p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-all cursor-pointer" data-id="${u.id}" title="${isSuper ? 'Edit user details (Direct)' : 'Request edit for user details'}">
@@ -2053,50 +2043,7 @@ const AdminView = (() => {
             });
         });
 
-        // Quick Assign Mentor from Users Directory
-        container.querySelectorAll('.quick-assign-mentor-btn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const userId = btn.dataset.id;
-                const name = btn.dataset.name || 'User';
-                btn.disabled = true;
-                btn.innerHTML = 'Assigning...';
-                const res = await ICCSupabase.setMentorRole(userId, true);
-                if (res?.error) {
-                    Toast.error('Failed to assign mentor: ' + (res.error.message || res.error));
-                    btn.disabled = false;
-                    btn.innerHTML = '🎓 Assign Mentor';
-                } else {
-                    Toast.success(`🎓 Appointed ${name} as Mentor!`);
-                    allUsers = await ICCSupabase.getAllProfiles();
-                    container.innerHTML = render();
-                    bindEvents(container);
-                }
-            });
-        });
-
-        // Quick Revoke Mentor from Users Directory
-        container.querySelectorAll('.quick-revoke-mentor-btn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const userId = btn.dataset.id;
-                const name = btn.dataset.name || 'User';
-                if (!confirm(`Are you sure you want to revoke Mentor status for ${name}?`)) return;
-                btn.disabled = true;
-                btn.innerHTML = 'Revoking...';
-                const res = await ICCSupabase.setMentorRole(userId, false);
-                if (res?.error) {
-                    Toast.error('Failed to revoke mentor: ' + (res.error.message || res.error));
-                    btn.disabled = false;
-                    btn.innerHTML = '✕ Revoke Mentor';
-                } else {
-                    Toast.success(`Mentor role removed for ${name}`);
-                    allUsers = await ICCSupabase.getAllProfiles();
-                    container.innerHTML = render();
-                    bindEvents(container);
-                }
-            });
-        });
+        
 
         // User Search & Filter
         const applyUserFilters = () => {
