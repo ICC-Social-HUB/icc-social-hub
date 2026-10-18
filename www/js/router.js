@@ -40,6 +40,7 @@ const Router = (() => {
         if (previousView === 'events') EventsView.unmount?.();
         if (previousView === 'eventDetail') EventDetailView.unmount?.();
         if (previousView === 'mentorDashboard') MentorDashboardView.unmount?.();
+        if (previousView === 'students') StudentsView.unmount?.();
 
         // Clean up any open modals or overlays when route changes
         const modalRoot = document.getElementById('modal-root');
@@ -100,6 +101,14 @@ const Router = (() => {
                 previousView = 'chat';
                 const partnerId = hash.split('/')[1];
                 ChatView.mount(container, partnerId);
+            } else if (hash === '#students' || hash.startsWith('#students?') || hash.startsWith('#students/')) {
+                previousView = 'students';
+                StudentsView.mount(container);
+            } else if (hash.startsWith('#profile/')) {
+                const userId = hash.split('/')[1]?.split('?')[0];
+                if (userId && typeof UserProfileModal !== 'undefined') {
+                    UserProfileModal.open(userId);
+                }
             } else if (hash === '#profile') {
                 previousView = 'profile';
                 if (ICCSupabase.getUser() && ICCSupabase.needsOnboarding()) {

@@ -3571,13 +3571,240 @@ const ICCSupabase = (() => {
         return role === 'lead';
     }
 
-    function needsOnboarding() {
-        return currentProfile && !currentProfile.username;
+    async function fetchStudentsDirectory(options = {}) {
+        const {
+            search = '',
+            projectFilter = [],
+            hasLinkedin = 'all',
+            projectCountFilter = 'all',
+            branch = '',
+            year = '',
+            sort = 'name_asc',
+            page = 1,
+            pageSize = 24
+        } = options;
+
+        // Try calling the backend API first
+        try {
+            const session = (await client?.auth?.getSession())?.data?.session;
+            const token = session?.access_token;
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const baseUrl = ICC_CONFIG.API_BASE_URL || '';
+            const res = await fetch(`${baseUrl}/api/students`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    search,
+                    projects: projectFilter,
+                    hasLinkedin,
+                    projectCount: projectCountFilter,
+                    branch,
+                    year,
+                    sort,
+                    page,
+                    pageSize
+                })
+            });
+
+            if (res.ok) {
+                const json = await res.json();
+                if (json && json.success) {
+                    return json;
+                }
+            }
+        } catch (apiErr) {
+            console.warn('Backend /api/students call failed, falling back to direct Supabase query:', apiErr);
+        }
+
+        // Resilient Fallback: Query directly via Supabase client
+        if (!client) return { success: false, error: 'Database not initialized', students: [], totalCount: 0, page: 1, pageSize, totalPages: 1, availableProjects: [] };
+
+        try {
+            // 1. Get live projects
+            let liveProjects = [];
+            const { data: dbLeads } = await client.from('core_leads').select('id, team, project_name, avatar_url, initials, color, gradient, lead_user_id');
+            if (dbLeads && dbLeads.length > 0) {
+                liveProjects = dbLeads;
+            } else if (typeof CORE_LEADS !== 'undefined' && Array.isArray(CORE_LEADS)) {
+                liveProjects = CORE_LEADS;
+            }
+
+            const projectsMap = new Map();
+            liveProjects.forEach(p => {
+                projectsMap.set(Number(p.id), {
+                    id: p.id,
+                    name: p.team || p.project_name || `Project ${p.id}`,
+                    avatar_url: p.avatar_url || null,
+                    initials: p.initials || (p.team ? p.team.replace(/Team\s*/i, '').slice(0, 2).toUpperCase() : 'PR'),
+                    color: p.color || '#3390ec',
+                    gradient: p.gradient || 'from-blue-600 to-indigo-600',
+                    lead_user_id: p.lead_user_id || null
+                });
+            });
+
+            // 2. Get memberships
+            const { data: allMemberships } = await client.from('team_memberships').select('user_id, team_id');
+            const userProjectsMap = new Map();
+            (allMemberships || []).forEach(m => {
+                if (!m.user_id) return;
+                const proj = projectsMap.get(Number(m.team_id));
+                if (!proj) return;
+                if (!userProjectsMap.has(m.user_id)) userProjectsMap.set(m.user_id, []);
+                const list = userProjectsMap.get(m.user_id);
+                if (!list.some(existing => existing.id === proj.id)) list.push(proj);
+            });
+
+            liveProjects.forEach(p => {
+                if (p.lead_user_id) {
+                    const proj = projectsMap.get(Number(p.id));
+                    if (proj) {
+                        if (!userProjectsMap.has(p.lead_user_id)) userProjectsMap.set(p.lead_user_id, []);
+                        const list = userProjectsMap.get(p.lead_user_id);
+                        if (!list.some(existing => existing.id === proj.id)) list.push(proj);
+                    }
+                }
+            });
+
+            // 3. Query profiles excluding mentors and superadmins/admins
+            let query = client.from('profiles')
+                .select('id, full_name, username, avatar_url, email, linkedin, year, branch, section, role, team_id, created_at, updated_at')
+                .not('role', 'in', '("mentor","admin","super_admin","superadmin")');
+
+            const { data: rawProfiles, error: profErr } = await query;
+            if (profErr) throw profErr;
+
+            let filtered = (rawProfiles || []).filter(s => {
+                const role = (s.role || '').toLowerCase();
+                if (role === 'mentor' || role === 'super_admin' || role === 'superadmin' || role === 'admin') return false;
+                if (s.is_mentor === true || s.is_super_admin === true) return false;
+                if (s.is_active === false || s.status === 'deactivated' || s.status === 'banned') return false;
+                return true;
+            });
+
+            let mapped = filtered.map(s => {
+                const projects = [...(userProjectsMap.get(s.id) || [])];
+                if (s.team_id && projectsMap.has(Number(s.team_id))) {
+                    const tp = projectsMap.get(Number(s.team_id));
+                    if (!projects.some(p => p.id === tp.id)) projects.push(tp);
+                }
+                return {
+                    id: s.id,
+                    full_name: s.full_name || s.username || 'Student',
+                    username: s.username || '',
+                    avatar_url: s.avatar_url || null,
+                    email: s.email || '',
+                    linkedin: s.linkedin || null,
+                    year: s.year || '',
+                    branch: s.branch || '',
+                    section: s.section || '',
+                    created_at: s.created_at || null,
+                    projects: projects.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        avatar_url: p.avatar_url,
+                        initials: p.initials,
+                        color: p.color,
+                        gradient: p.gradient
+                    }))
+                };
+            });
+
+            // Filters
+            const q = search.trim().toLowerCase();
+            if (q) {
+                mapped = mapped.filter(s => 
+                    (s.full_name || '').toLowerCase().includes(q) ||
+                    (s.username || '').toLowerCase().includes(q) ||
+                    (s.email || '').toLowerCase().includes(q) ||
+                    (s.projects || []).some(p => (p.name || '').toLowerCase().includes(q))
+                );
+            }
+
+            if (hasLinkedin === 'yes') {
+                mapped = mapped.filter(s => !!(s.linkedin && s.linkedin.trim()));
+            } else if (hasLinkedin === 'no') {
+                mapped = mapped.filter(s => !(s.linkedin && s.linkedin.trim()));
+            }
+
+            if (projectCountFilter === 'none' || projectCountFilter === '0' || projectCountFilter === 'no_projects') {
+                mapped = mapped.filter(s => s.projects.length === 0);
+            } else if (projectCountFilter === '1') {
+                mapped = mapped.filter(s => s.projects.length === 1);
+            } else if (projectCountFilter === '2') {
+                mapped = mapped.filter(s => s.projects.length === 2);
+            } else if (projectCountFilter === '3+' || projectCountFilter === '3_plus') {
+                mapped = mapped.filter(s => s.projects.length >= 3);
+            }
+
+            if (Array.isArray(projectFilter) && projectFilter.length > 0) {
+                const targetIds = projectFilter.map(id => Number(id));
+                mapped = mapped.filter(s => s.projects.some(p => targetIds.includes(Number(p.id))));
+            }
+
+            if (branch) {
+                mapped = mapped.filter(s => (s.branch || '').toLowerCase() === branch.toLowerCase());
+            }
+
+            if (year) {
+                mapped = mapped.filter(s => (s.year || '').toLowerCase() === year.toLowerCase());
+            }
+
+            // Sorting
+            mapped.sort((a, b) => {
+                if (sort === 'name_desc') return (b.full_name || '').localeCompare(a.full_name || '');
+                if (sort === 'most_projects') {
+                    const diff = (b.projects?.length || 0) - (a.projects?.length || 0);
+                    if (diff !== 0) return diff;
+                    return (a.full_name || '').localeCompare(b.full_name || '');
+                }
+                if (sort === 'recently_joined' || sort === 'recent') {
+                    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+                }
+                return (a.full_name || '').localeCompare(b.full_name || '');
+            });
+
+            const totalCount = mapped.length;
+            const totalPages = Math.ceil(totalCount / pageSize) || 1;
+            const startIndex = (page - 1) * pageSize;
+            const paginatedStudents = mapped.slice(startIndex, startIndex + pageSize);
+
+            const availableProjects = Array.from(projectsMap.values()).map(p => ({
+                id: p.id,
+                name: p.name,
+                initials: p.initials,
+                avatar_url: p.avatar_url
+            }));
+
+            return {
+                success: true,
+                students: paginatedStudents,
+                totalCount,
+                page,
+                pageSize,
+                totalPages,
+                availableProjects
+            };
+        } catch (err) {
+            console.error('Error in fetchStudentsDirectory fallback:', err);
+            return {
+                success: false,
+                error: err.message,
+                students: [],
+                totalCount: 0,
+                page: 1,
+                pageSize,
+                totalPages: 1,
+                availableProjects: []
+            };
+        }
     }
 
     return {
         init, signInWithGoogle, sendOTP, verifyOTP, verifyOTPOnly, signOut, getSession, onAuthStateChange,
         fetchProfile, updateProfile, fetchUserById, fetchProfileByEmail, searchUsers, checkUsernameAvailable,
+        fetchStudentsDirectory,
         fetchPosts, fetchPostById, fetchPostsByTeam, fetchPostsByUser, createPost, updatePostStatus, deletePost,
         toggleLike, hasLiked, fetchUserLikes,
         fetchComments, addComment, deleteComment,

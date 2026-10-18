@@ -283,6 +283,17 @@ const ProfileView = (() => {
                 return;
             }
 
+            const linkedinRaw = document.getElementById('edit-linkedin')?.value.trim() || '';
+            let formattedLinkedin = null;
+            if (linkedinRaw) {
+                const linkedinRegex = /^(https?:\/\/)?([a-z0-9\-]+\.)?linkedin\.com\/.*$/i;
+                if (!linkedinRegex.test(linkedinRaw)) {
+                    Toast.error('Please enter a valid LinkedIn URL (e.g. https://linkedin.com/in/username)');
+                    return;
+                }
+                formattedLinkedin = linkedinRaw.startsWith('http') ? linkedinRaw : 'https://' + linkedinRaw;
+            }
+
             if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<div class="spinner spinner-sm mx-auto"></div> Saving...'; }
 
             const fields = {
@@ -290,7 +301,7 @@ const ProfileView = (() => {
                 year: yearVal,
                 branch: branchVal,
                 phone: document.getElementById('edit-phone').value.trim() || null,
-                linkedin: document.getElementById('edit-linkedin').value.trim() || null,
+                linkedin: formattedLinkedin,
                 github: document.getElementById('edit-github').value.trim() || null,
                 bio: document.getElementById('edit-bio').value.trim() || null,
                 skills: document.getElementById('edit-skills').value.split(',').map(s => s.trim()).filter(Boolean)

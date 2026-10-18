@@ -10,6 +10,7 @@ const masterLoginHandler = require('./api/master-login');
 const sendAuthOtpHandler = require('./api/send-auth-otp');
 const verifyAuthOtpHandler = require('./api/verify-auth-otp');
 const verifyOtpHandler = require('./api/verify-otp');
+const studentsHandler = require('./api/students');
 
 const corsMiddleware = cors({ origin: true, credentials: true });
 
@@ -52,6 +53,8 @@ const server = http.createServer((req, res) => {
                     return await verifyAuthOtpHandler(req, res);
                 } else if (url === '/api/verify-otp') {
                     return await verifyOtpHandler(req, res);
+                } else if (url === '/api/students') {
+                    return await studentsHandler(req, res);
                 } else {
                     res.status(404).json({ error: 'Endpoint not found' });
                 }
