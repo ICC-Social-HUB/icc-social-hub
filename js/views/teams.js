@@ -684,7 +684,9 @@ const TeamsView = (() => {
             `;
 
             const { data, error } = await ICCSupabase.createProjectApplication({
+                projectName: projectName,
                 project_name: projectName,
+                teamName: teamName,
                 team_name: teamName,
                 description: cleanHtml,
                 specialties: specialties,
@@ -1152,7 +1154,9 @@ const TeamsView = (() => {
                 btn.textContent = 'Resubmitting...';
 
                 const { data, error } = await ICCSupabase.resubmitProjectApplication(activeApp.id, {
+                    projectName: name,
                     project_name: name,
+                    teamName: team || name,
                     team_name: team || name,
                     description: cleanHtml,
                     specialties: spec ? spec.split(',').map(s => s.trim()).filter(Boolean) : [],

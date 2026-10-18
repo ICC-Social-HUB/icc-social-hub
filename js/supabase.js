@@ -2436,13 +2436,16 @@ const ICCSupabase = (() => {
         return `PRJ-${year}-${rand}`;
     }
 
-    async function createProjectApplication({ projectName, description, teamName = '', specialties = [], links = [] }) {
+    async function createProjectApplication(params = {}) {
         if (!client || !currentUser) {
             return { error: { message: 'Sign in required to submit a project application.' } };
         }
 
-        const cleanName = String(projectName || '').trim();
-        const cleanDesc = String(description || '').trim();
+        const cleanName = String(params.projectName || params.project_name || '').trim();
+        const cleanDesc = String(params.description || '').trim();
+        const cleanTeam = String(params.teamName || params.team_name || cleanName).trim();
+        const specs = Array.isArray(params.specialties) ? params.specialties : [];
+        const allLinks = Array.isArray(params.links) ? params.links : [];
 
         if (!cleanName) return { error: { message: 'Project Name is required.' } };
         if (!cleanDesc) return { error: { message: 'Project Description is required.' } };
@@ -2453,18 +2456,18 @@ const ICCSupabase = (() => {
                 submitted_at: new Date().toISOString(),
                 project_name: cleanName,
                 description: cleanDesc,
-                team_name: teamName ? String(teamName).trim() : cleanName,
-                specialties: Array.isArray(specialties) ? specialties : [],
-                links: Array.isArray(links) ? links : []
+                team_name: cleanTeam,
+                specialties: specs,
+                links: allLinks
             };
 
             const payload = {
                 applicant_id: currentUser.id,
                 project_name: cleanName,
                 description: cleanDesc,
-                team_name: teamName ? String(teamName).trim() : cleanName,
-                specialties: Array.isArray(specialties) ? specialties : [],
-                links: Array.isArray(links) ? links : [],
+                team_name: cleanTeam,
+                specialties: specs,
+                links: allLinks,
                 status: 'Pending Review',
                 revision_number: 1,
                 revisions: [initialRevision],
@@ -2731,11 +2734,14 @@ const ICCSupabase = (() => {
         }
     }
 
-    async function resubmitProjectApplication(applicationId, { projectName, description, teamName = '', specialties = [], links = [] }) {
+    async function resubmitProjectApplication(applicationId, params = {}, note = '') {
         if (!client || !currentUser) return { error: { message: 'Sign in required.' } };
 
-        const cleanName = String(projectName || '').trim();
-        const cleanDesc = String(description || '').trim();
+        const cleanName = String(params.projectName || params.project_name || '').trim();
+        const cleanDesc = String(params.description || '').trim();
+        const cleanTeam = String(params.teamName || params.team_name || cleanName).trim();
+        const specs = Array.isArray(params.specialties) ? params.specialties : [];
+        const allLinks = Array.isArray(params.links) ? params.links : [];
 
         if (!cleanName) return { error: { message: 'Project Name is required.' } };
         if (!cleanDesc) return { error: { message: 'Project Description is required.' } };
@@ -2756,9 +2762,10 @@ const ICCSupabase = (() => {
                 submitted_at: new Date().toISOString(),
                 project_name: cleanName,
                 description: cleanDesc,
-                team_name: teamName ? String(teamName).trim() : cleanName,
-                specialties: Array.isArray(specialties) ? specialties : [],
-                links: Array.isArray(links) ? links : []
+                team_name: cleanTeam,
+                specialties: specs,
+                links: allLinks,
+                note: note ? String(note).trim() : ''
             };
 
             const existingRevs = Array.isArray(appData.revisions) ? appData.revisions : [];
@@ -2769,9 +2776,9 @@ const ICCSupabase = (() => {
                 .update({
                     project_name: cleanName,
                     description: cleanDesc,
-                    team_name: teamName ? String(teamName).trim() : cleanName,
-                    specialties: Array.isArray(specialties) ? specialties : [],
-                    links: Array.isArray(links) ? links : [],
+                    team_name: cleanTeam,
+                    specialties: specs,
+                    links: allLinks,
                     status: 'Pending Review',
                     revision_number: nextRevNumber,
                     revisions: updatedRevisions,
@@ -2784,14 +2791,25 @@ const ICCSupabase = (() => {
             if (error) throw error;
 
             // Log status history
+            const histComment = note ? `Applicant submitted revision #${nextRevNumber}: ${String(note).trim()}` : `Applicant submitted revision #${nextRevNumber} for mentor review.`;
             await client.from('project_application_status_history').insert([{
                 application_id: applicationId,
                 changed_by: currentUser.id,
                 previous_status: 'Changes Requested',
                 new_status: 'Pending Review',
-                comment: `Applicant submitted revision #${nextRevNumber} for mentor review.`,
+                comment: histComment,
                 created_at: new Date().toISOString()
             }]).catch(e => console.warn('History err:', e));
+
+            if (note && String(note).trim()) {
+                await client.from('project_application_comments').insert([{
+                    application_id: applicationId,
+                    author_id: currentUser.id,
+                    content: `📝 Revision Note: ${String(note).trim()}`,
+                    is_mentor_feedback: false,
+                    created_at: new Date().toISOString()
+                }]).catch(e => console.warn('Comment err:', e));
+            }
 
             // Notify reviewer if known
             if (appData.reviewer_id) {
