@@ -1644,6 +1644,165 @@ const ICCSupabase = (() => {
         updateMomCache({ id }, 'delete');
         return { error: null, success: true };
     }
+    // ==================== PROJECT TASKS (MENTOR WORKFLOW) API ====================
+
+    async function fetchProjectTasks(projectId) {
+        if (!projectId) return [];
+        const cacheKey = 'icc_project_tasks_' + projectId;
+        if (client) {
+            try {
+                const { data, error } = await client
+                    .from('project_tasks')
+                    .select('*')
+                    .eq('project_id', projectId)
+                    .order('created_at', { ascending: false });
+
+                if (!error && Array.isArray(data)) {
+                    try { localStorage.setItem(cacheKey, JSON.stringify(data)); } catch (e) {}
+                    return data;
+                }
+                if (error) console.warn('fetchProjectTasks error, falling back to cache:', error);
+            } catch (e) {
+                console.warn('fetchProjectTasks exception, falling back to cache:', e);
+            }
+        }
+        try {
+            const cached = localStorage.getItem(cacheKey);
+            return cached ? JSON.parse(cached) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    async function createProjectTask(projectId, taskData) {
+        if (!projectId || !taskData?.title) return { error: { message: 'Project ID and Task Name are required.' } };
+
+        if (!isMentor() && !isAdmin()) {
+            return { error: { message: 'Unauthorized: Only Mentors and Admins can assign tasks.' } };
+        }
+
+        const newTask = {
+            id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+            project_id: projectId,
+            title: (taskData.title || '').trim(),
+            description: (taskData.description || '').trim(),
+            assigned_to: taskData.assigned_to || null,
+            assigned_to_name: taskData.assigned_to_name || 'Team Member',
+            assigned_to_avatar: taskData.assigned_to_avatar || null,
+            created_by: currentUser?.id || null,
+            created_by_name: currentProfile?.full_name || currentProfile?.username || 'Mentor',
+            status: 'pending',
+            submission_content: '',
+            completed_at: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+
+        const cacheKey = 'icc_project_tasks_' + projectId;
+
+        if (client) {
+            try {
+                const { data, error } = await client
+                    .from('project_tasks')
+                    .insert([newTask])
+                    .select()
+                    .maybeSingle();
+
+                if (!error && data) {
+                    const cached = await fetchProjectTasks(projectId);
+                    const updatedList = [data, ...cached.filter(t => t.id !== data.id)];
+                    try { localStorage.setItem(cacheKey, JSON.stringify(updatedList)); } catch (e) {}
+                    return { data, error: null };
+                }
+                if (error) console.warn('createProjectTask DB error, using local fallback:', error);
+            } catch (e) {
+                console.warn('createProjectTask exception, using local fallback:', e);
+            }
+        }
+
+        try {
+            const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+            cached.unshift(newTask);
+            localStorage.setItem(cacheKey, JSON.stringify(cached));
+        } catch (e) {}
+
+        return { data: newTask, error: null };
+    }
+
+    async function completeProjectTask(taskId, submissionContent, projectId) {
+        if (!taskId) return { error: { message: 'Task ID is required.' } };
+
+        const updatePayload = {
+            status: 'completed',
+            submission_content: submissionContent || '',
+            completed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+
+        const cacheKey = 'icc_project_tasks_' + projectId;
+
+        if (client) {
+            try {
+                const { data, error } = await client
+                    .from('project_tasks')
+                    .update(updatePayload)
+                    .eq('id', taskId)
+                    .select()
+                    .maybeSingle();
+
+                if (!error && data) {
+                    const cached = await fetchProjectTasks(projectId);
+                    const idx = cached.findIndex(t => t.id === taskId);
+                    if (idx !== -1) cached[idx] = { ...cached[idx], ...data };
+                    try { localStorage.setItem(cacheKey, JSON.stringify(cached)); } catch (e) {}
+                    return { data, error: null };
+                }
+                if (error) console.warn('completeProjectTask DB error, falling back to cache:', error);
+            } catch (e) {
+                console.warn('completeProjectTask exception, falling back to cache:', e);
+            }
+        }
+
+        try {
+            const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+            const idx = cached.findIndex(t => t.id === taskId);
+            if (idx !== -1) {
+                cached[idx] = { ...cached[idx], ...updatePayload };
+                localStorage.setItem(cacheKey, JSON.stringify(cached));
+                return { data: cached[idx], error: null };
+            }
+        } catch (e) {}
+
+        return { error: { message: 'Task not found in cache.' } };
+    }
+
+    async function deleteProjectTask(taskId, projectId) {
+        if (!taskId) return { error: { message: 'Task ID is required.' } };
+
+        if (!isMentor() && !isAdmin()) {
+            return { error: { message: 'Unauthorized: Only Mentors and Admins can delete tasks.' } };
+        }
+
+        const cacheKey = 'icc_project_tasks_' + projectId;
+
+        if (client) {
+            try {
+                await client.from('project_tasks').delete().eq('id', taskId);
+            } catch (e) {
+                console.warn('deleteProjectTask DB error:', e);
+            }
+        }
+
+        try {
+            const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+            const filtered = cached.filter(t => t.id !== taskId);
+            localStorage.setItem(cacheKey, JSON.stringify(filtered));
+        } catch (e) {}
+
+        return { success: true, error: null };
+    }
+
+
 
     // ==================== SUPER ADMIN ACCESS CONTROL & APPROVAL WORKFLOW ====================
 
@@ -4225,7 +4384,9 @@ const ICCSupabase = (() => {
         fetchProjectMentorMessages, fetchAllProjectMentorMessages, sendProjectMentorMessage, deleteProjectMentorMessage,
         subscribeToProjectMentorChat, canAccessProjectMentorChat, canUserAccessProjectMentorChat,
         // Core Space & Minutes of Meeting (MoM) API
-        fetchCoreProfiles, fetchMinutesOfMeeting, createMinutesOfMeeting, updateMinutesOfMeeting, deleteMinutesOfMeeting, canManageMom
+        fetchCoreProfiles, fetchMinutesOfMeeting, createMinutesOfMeeting, updateMinutesOfMeeting, deleteMinutesOfMeeting, canManageMom,
+        // Project Tasks API
+        fetchProjectTasks, createProjectTask, completeProjectTask, deleteProjectTask
     };
 })();
 
