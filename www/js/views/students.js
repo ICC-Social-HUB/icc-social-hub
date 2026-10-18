@@ -78,7 +78,8 @@ const StudentsView = (() => {
         if (state.page > 1) params.set('page', state.page);
 
         const queryString = params.toString();
-        const newHash = '#students' + (queryString ? '?' + queryString : '');
+        const baseHash = window.location.hash.startsWith('#hustlers') ? '#hustlers' : '#students';
+        const newHash = baseHash + (queryString ? '?' + queryString : '');
         if (window.location.hash !== newHash) {
             window.history.replaceState(null, '', newHash);
         }
@@ -155,7 +156,7 @@ const StudentsView = (() => {
                 <div>
                     <div class="flex items-center gap-3">
                         <h1 class="text-2xl sm:text-3xl font-heading font-bold text-white tracking-tight">
-                            ${isMentorsTab ? 'Mentors & Project Guides' : 'Students Directory'}
+                            ${isMentorsTab ? 'Mentors & Project Guides' : 'Hustlers'}
                         </h1>
                         <span id="students-badge-count" class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${isMentorsTab ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' : 'bg-[#3390ec]/15 text-[#3390ec] border border-[#3390ec]/30'}">
                             ${isMentorsTab ? mentors.length : totalCount}
@@ -175,7 +176,7 @@ const StudentsView = (() => {
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
                         </svg>
-                        <span>Students</span>
+                        <span>Hustlers</span>
                         <span id="students-tab-badge" class="px-1.5 py-0.2 rounded-full text-[10px] ${!isMentorsTab ? 'bg-white/20 text-white' : 'bg-[#0e1621] text-[#708499]'} font-semibold">${totalCount}</span>
                     </button>
                     <button id="tab-mentors-btn" onclick="StudentsView.setActiveTab('mentors')" role="tab" aria-selected="${isMentorsTab}"
@@ -198,10 +199,10 @@ const StudentsView = (() => {
                         </svg>
                     </div>
                     <input type="text" id="students-search-input" value="${escapeHtml(state.search)}" 
-                        placeholder="Search by student name, email, or project..." 
+                        placeholder="Search by hustler name, email, or project..." 
                         class="w-full pl-10 pr-10 py-2.5 bg-[#17212b] border border-[#1c2a38] focus:border-[#3390ec] rounded-xl text-sm text-white placeholder-[#708499] focus:outline-none transition-all shadow-inner" 
                         oninput="StudentsView.onSearchInput(this.value)" 
-                        aria-label="Search students">
+                        aria-label="Search hustlers">
                     <button id="students-search-clear" onclick="StudentsView.clearSearch()" 
                         class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#708499] hover:text-white transition-colors cursor-pointer ${state.search ? '' : 'hidden'}" 
                         title="Clear search" aria-label="Clear search">
@@ -481,7 +482,7 @@ const StudentsView = (() => {
 
         pagRoot.innerHTML = `
             <div>
-                Showing <span class="font-semibold text-white">${start}</span> to <span class="font-semibold text-white">${end}</span> of <span class="font-semibold text-white">${totalCount}</span> students
+                Showing <span class="font-semibold text-white">${start}</span> to <span class="font-semibold text-white">${end}</span> of <span class="font-semibold text-white">${totalCount}</span> hustlers
             </div>
             ${state.totalPages > 1 ? `
             <div class="flex items-center gap-1.5">
@@ -523,7 +524,7 @@ const StudentsView = (() => {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                     </svg>
                 </div>
-                <h3 class="text-lg font-heading font-bold text-white mb-1">Failed to Load Students</h3>
+                <h3 class="text-lg font-heading font-bold text-white mb-1">Failed to Load Hustlers</h3>
                 <p class="text-sm text-[#708499] max-w-md mb-6">${escapeHtml(errorMsg)}</p>
                 <button onclick="StudentsView.retry()" class="px-6 py-2.5 bg-[#3390ec] hover:bg-[#2b7cce] text-white rounded-xl text-xs font-semibold shadow-md transition-all active:scale-95">
                     Retry Loading
@@ -541,7 +542,7 @@ const StudentsView = (() => {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
                     </svg>
                 </div>
-                <h3 class="text-lg font-heading font-bold text-white mb-1">No students match your filters</h3>
+                <h3 class="text-lg font-heading font-bold text-white mb-1">No hustlers match your filters</h3>
                 <p class="text-sm text-[#708499] max-w-sm mb-6">Try adjusting your search criteria, clearing selected filters, or searching for a different keyword.</p>
                 <button onclick="StudentsView.clearAllFilters()" class="px-5 py-2.5 bg-[#242f3d] hover:bg-[#2b394a] text-white border border-[#2b394a] rounded-xl text-xs font-semibold transition-all">
                     Clear all filters
@@ -567,7 +568,7 @@ const StudentsView = (() => {
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="border-b border-[#1c2a38] bg-[#0e1621]/40 text-[#708499] text-[11px] font-semibold uppercase tracking-wider">
-                            <th scope="col" class="py-3.5 pl-6 pr-4">Student</th>
+                            <th scope="col" class="py-3.5 pl-6 pr-4">Hustler</th>
                             <th scope="col" class="py-3.5 px-4">Email</th>
                             <th scope="col" class="py-3.5 px-4">LinkedIn</th>
                             <th scope="col" class="py-3.5 pl-4 pr-6">Projects</th>

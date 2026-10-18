@@ -101,7 +101,7 @@ const Router = (() => {
                 previousView = 'chat';
                 const partnerId = hash.split('/')[1];
                 ChatView.mount(container, partnerId);
-            } else if (hash === '#students' || hash.startsWith('#students?') || hash.startsWith('#students/')) {
+            } else if (hash === '#students' || hash.startsWith('#students?') || hash.startsWith('#students/') || hash === '#hustlers' || hash.startsWith('#hustlers?') || hash.startsWith('#hustlers/')) {
                 previousView = 'students';
                 StudentsView.mount(container);
             } else if (hash.startsWith('#profile/')) {
