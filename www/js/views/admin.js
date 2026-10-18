@@ -1405,6 +1405,7 @@ const AdminView = (() => {
     }
 
     function renderUsers() {
+        const currentUserId = ICCSupabase.getUser()?.id;
         const displayUsers = allUsers.filter(u => u.role !== 'admin' && u.role !== 'lead');
         const isSuper = ICCSupabase.isSuperAdmin();
         const perms = ICCSupabase.getAdminPermissions ? ICCSupabase.getAdminPermissions() : { all: true };
