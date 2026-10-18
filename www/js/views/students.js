@@ -1078,17 +1078,28 @@ const StudentsView = (() => {
         const linkedinUrl = m.linkedin ? (m.linkedin.startsWith('http') ? m.linkedin : 'https://' + m.linkedin) : null;
         const phone = (m.phone && String(m.phone).trim()) ? String(m.phone).trim() : null;
         const email = (m.email && String(m.email).trim()) ? String(m.email).trim() : null;
+        const mentorTick = (typeof ICC_CONFIG !== 'undefined' && ICC_CONFIG.MENTOR_TICK) ? ICC_CONFIG.MENTOR_TICK : '';
 
         return `
-        <div class="bg-[#17212b] rounded-2xl p-5 shadow-md space-y-3.5 transition-all">
+        <div onclick="StudentsView.navigateToProfile('${m.id}')" 
+             role="button" 
+             tabindex="0" 
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();StudentsView.navigateToProfile('${m.id}');}" 
+             class="group bg-[#17212b] hover:bg-[#242f3d] rounded-2xl p-5 shadow-md space-y-3.5 transition-all cursor-pointer border-none" 
+             title="View ${escapeHtml(m.full_name || 'Mentor')}'s profile">
             <div class="flex items-center gap-3">
                 <div class="w-12 h-12 rounded-full bg-[#0e1621] flex items-center justify-center text-white font-bold text-base overflow-hidden flex-shrink-0 shadow-inner">
                     ${m.avatar_url ? `<img src="${m.avatar_url}" class="w-full h-full object-cover">` : initials}
                 </div>
                 <div class="min-w-0 flex-1">
-                    <h3 class="font-heading font-bold text-base text-white truncate">
-                        ${escapeHtml(m.full_name || m.username || 'Mentor')}
-                    </h3>
+                    <div class="flex items-center gap-1.5 min-w-0">
+                        <h3 class="font-heading font-bold text-base text-white group-hover:text-[#3390ec] transition-colors truncate">
+                            ${escapeHtml(m.full_name || m.username || 'Mentor')}
+                        </h3>
+                        <span class="flex-shrink-0 inline-flex items-center text-amber-400" title="Verified Mentor">
+                            ${mentorTick}
+                        </span>
+                    </div>
                     <p class="text-xs text-[#708499] truncate">@${escapeHtml(m.username || 'mentor')}</p>
                 </div>
             </div>
@@ -1099,7 +1110,7 @@ const StudentsView = (() => {
                         <svg class="w-4 h-4 text-sky-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/>
                         </svg>
-                        <a href="mailto:${escapeHtml(email)}" class="text-zinc-300 hover:text-white truncate transition-colors" title="${escapeHtml(email)}">${escapeHtml(email)}</a>
+                        <a href="mailto:${escapeHtml(email)}" onclick="event.stopPropagation()" class="text-zinc-300 hover:text-white truncate transition-colors" title="${escapeHtml(email)}">${escapeHtml(email)}</a>
                     </div>
                 ` : ''}
 
@@ -1108,7 +1119,7 @@ const StudentsView = (() => {
                         <svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
                         </svg>
-                        <a href="tel:${escapeHtml(phone)}" class="text-zinc-300 hover:text-white truncate transition-colors" title="${escapeHtml(phone)}">${escapeHtml(phone)}</a>
+                        <a href="tel:${escapeHtml(phone)}" onclick="event.stopPropagation()" class="text-zinc-300 hover:text-white truncate transition-colors" title="${escapeHtml(phone)}">${escapeHtml(phone)}</a>
                     </div>
                 ` : ''}
 
@@ -1117,7 +1128,7 @@ const StudentsView = (() => {
                         <svg class="w-4 h-4 text-[#3390ec] flex-shrink-0 fill-current" viewBox="0 0 24 24">
                             <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
                         </svg>
-                        <a href="${escapeHtml(linkedinUrl)}" target="_blank" rel="noopener noreferrer" class="text-[#3390ec] hover:underline truncate transition-colors">LinkedIn</a>
+                        <a href="${escapeHtml(linkedinUrl)}" onclick="event.stopPropagation()" target="_blank" rel="noopener noreferrer" class="text-[#3390ec] hover:underline truncate transition-colors">LinkedIn</a>
                     </div>
                 ` : ''}
             </div>
