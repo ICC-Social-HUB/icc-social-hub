@@ -308,20 +308,20 @@ const TeamsView = (() => {
         const tag = rawTag || (isThisMemberLead ? 'Team Leader' : '');
 
         return `
-        <div class="workforce-member-item group flex flex-col items-center justify-start text-center relative select-none w-full max-w-[130px] sm:max-w-[155px]" 
+        <div class="workforce-member-item group flex flex-col items-center justify-start text-center relative select-none w-full max-w-[95px] sm:max-w-[110px]" 
              style="animation-delay:${i * 0.04}s">
             
             <!-- Circular Avatar with Leader prominence -->
             <div class="open-user-profile cursor-pointer relative" data-id="${m.id}" title="View ${escapeHtml(name)}'s Profile">
-                <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden shadow-xl ${isThisMemberLead ? 'ring-2 ring-amber-400 shadow-[0_0_18px_rgba(251,191,36,0.35)] group-hover:ring-amber-300' : 'ring-2 ring-zinc-800/90 group-hover:ring-emerald-500/80'} group-hover:scale-105 transition-all duration-300 flex items-center justify-center bg-zinc-900 relative">
+                <div class="${isThisMemberLead ? 'w-16 h-16 sm:w-[72px] sm:h-[72px] ring-2 ring-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.35)] group-hover:ring-amber-300' : 'w-14 h-14 sm:w-16 sm:h-16 ring-2 ring-zinc-800/90 group-hover:ring-emerald-500/80'} rounded-full overflow-hidden shadow-md group-hover:scale-105 transition-all duration-300 flex items-center justify-center bg-zinc-900 relative">
                     <img src="${avatarSrc}" 
                          alt="${escapeHtml(name)}" 
                          class="w-full h-full object-cover rounded-full" 
                          onerror="this.onerror=null;this.src='${fallbackAvatar}';">
                 </div>
                 ${isThisMemberLead ? `
-                <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-tr from-amber-600 to-yellow-400 rounded-full border-2 border-zinc-950 flex items-center justify-center shadow-lg" title="Team Leader">
-                    <svg class="w-3 h-3 text-zinc-950 fill-current" viewBox="0 0 20 20">
+                <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-tr from-amber-600 to-yellow-400 rounded-full border-2 border-zinc-950 flex items-center justify-center shadow-lg" title="Team Leader">
+                    <svg class="w-2.5 h-2.5 text-zinc-950 fill-current" viewBox="0 0 20 20">
                         <path d="M2.5 14.5l1.5-7.5 4 4.5 4-6 4 6 4-4.5 1.5 7.5h-19z"/>
                     </svg>
                 </div>
@@ -329,7 +329,7 @@ const TeamsView = (() => {
             </div>
 
             <!-- Member Full Name (Completely visible, no truncation) -->
-            <h4 class="open-user-profile text-xs sm:text-sm font-bold text-zinc-100 group-hover:text-emerald-400 transition-colors text-center break-words w-full px-1 mt-2.5 cursor-pointer leading-snug" 
+            <h4 class="open-user-profile text-[11px] sm:text-xs font-bold text-zinc-100 group-hover:text-emerald-400 transition-colors text-center break-words w-full px-0.5 mt-1.5 cursor-pointer leading-snug" 
                 data-id="${m.id}" 
                 title="View ${escapeHtml(name)}'s Profile">
                 ${escapeHtml(name)}${isThisMemberLead ? ICC_CONFIG.VERIFIED_TICK : ''}
@@ -337,21 +337,21 @@ const TeamsView = (() => {
 
             <!-- Member Tag below the name (Prominent and unique for Leader) -->
             ${isThisMemberLead ? `
-                <div class="inline-flex items-center justify-center gap-1.5 px-2.5 py-0.5 mt-1.5 text-[10px] sm:text-[11px] font-extrabold text-amber-300 bg-gradient-to-r from-amber-500/20 via-yellow-500/25 to-amber-500/20 border border-amber-400/50 rounded-full shadow-[0_0_12px_rgba(251,191,36,0.3)] tracking-wide uppercase select-none">
-                    <svg class="w-3 h-3 text-amber-400 fill-current flex-shrink-0" viewBox="0 0 20 20">
+                <div class="inline-flex items-center justify-center gap-1 px-2 py-0.5 mt-1 text-[9px] sm:text-[10px] font-extrabold text-amber-300 bg-gradient-to-r from-amber-500/20 via-yellow-500/25 to-amber-500/20 border border-amber-400/50 rounded-full shadow-[0_0_10px_rgba(251,191,36,0.3)] tracking-wider uppercase select-none">
+                    <svg class="w-2.5 h-2.5 text-amber-400 fill-current flex-shrink-0" viewBox="0 0 20 20">
                         <path d="M2.5 14.5l1.5-7.5 4 4.5 4-6 4 6 4-4.5 1.5 7.5h-19z"/>
                     </svg>
                     <span class="break-words leading-tight text-center">${escapeHtml(tag)}</span>
                 </div>
             ` : (tag ? `
-                <span class="inline-flex items-center justify-center px-2 py-0.5 mt-1 text-[10px] sm:text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full max-w-full break-words text-center leading-tight">
+                <span class="inline-flex items-center justify-center px-1.5 py-0.5 mt-0.5 text-[9px] sm:text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full max-w-full break-words text-center leading-tight">
                     ${escapeHtml(tag)}
                 </span>
             ` : '')}
 
             <!-- 3-dot Menu (Only for Leader of this team) -->
             ${isLead ? `
-                <button class="member-actions-btn mt-1.5 p-1 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-full transition-colors cursor-pointer z-10" 
+                <button class="member-actions-btn mt-0.5 p-0.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-full transition-colors cursor-pointer z-10" 
                         data-id="${m.id}" 
                         data-name="${escapeHtml(name)}" 
                         data-tag="${escapeHtml(rawTag || '')}" 
@@ -359,7 +359,7 @@ const TeamsView = (() => {
                         data-is-lead="${isThisMemberLead ? 'true' : 'false'}"
                         title="Member options"
                         onclick="TeamsView.handleMemberActionClick(event, this)">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                         <circle cx="12" cy="5" r="1.75"/>
                         <circle cx="12" cy="12" r="1.75"/>
                         <circle cx="12" cy="19" r="1.75"/>
@@ -696,27 +696,27 @@ const TeamsView = (() => {
 
                     <!-- Right Area on Laptop (lg:): Active Workforce Section (lg:col-span-5) -->
                     <div class="lg:col-span-5 w-full" id="workforce-section">
-                        <div class="glass-card rounded-2xl p-5 sm:p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl">
-                            <div class="flex items-center justify-between gap-3 mb-6 pb-4 border-b border-zinc-800/60">
+                        <div class="glass-card rounded-2xl p-4 sm:p-5 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl">
+                            <div class="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-zinc-800/60">
                                 <div>
-                                    <div class="flex items-center gap-2.5">
-                                        <h3 class="font-heading font-bold text-lg sm:text-xl text-white tracking-tight">Project Workforce</h3>
-                                        <span id="team-member-count" class="px-2.5 py-0.5 bg-red-600/15 text-red-400 border border-red-500/20 rounded-full text-xs font-bold">${teamMembers.length}</span>
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="font-heading font-bold text-base sm:text-lg text-white tracking-tight">Active Workforce</h3>
+                                        <span id="team-member-count" class="px-2 py-0.5 bg-red-600/15 text-red-400 border border-red-500/20 rounded-full text-xs font-bold">${teamMembers.length}</span>
                                     </div>
-                                    <p class="text-xs text-zinc-400 mt-1">Dedicated contributors powering ${lead.project_name || lead.team}</p>
+                                    <p class="text-[11px] text-zinc-400 mt-0.5">Dedicated contributors powering ${lead.project_name || lead.team}</p>
                                 </div>
-                                <div class="flex items-center gap-2 px-3 py-1 bg-zinc-900/80 border border-zinc-800 rounded-full flex-shrink-0">
+                                <div class="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900/80 border border-zinc-800 rounded-full flex-shrink-0">
                                     <span class="relative flex h-2 w-2">
                                         <span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                         <span class="relative rounded-full h-2 w-2 bg-emerald-500"></span>
                                     </span>
-                                    <span class="text-[11px] text-zinc-400 font-medium">Live Roster</span>
+                                    <span class="text-[10px] text-zinc-400 font-medium">Live Roster</span>
                                 </div>
                             </div>
 
-                            <!-- Seamless circle-only grid in workforce column -->
-                            <div id="team-roster" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-y-8 gap-x-4 justify-items-center">
-                                ${teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No project members yet — be first to join!</div>'
+                            <!-- Seamless circle-only grid in workforce column: compact and easy to view -->
+                            <div id="team-roster" class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-y-4 gap-x-2 sm:gap-x-3 justify-items-center">
+                                ${teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-10">No project members yet — be first to join!</div>'
                         : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLead, profile?.id, memberTags, lead.id, lead)).join('')}
                             </div>
                         </div>
