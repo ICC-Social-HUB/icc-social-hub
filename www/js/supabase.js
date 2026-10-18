@@ -4148,6 +4148,80 @@ const ICCSupabase = (() => {
         return currentProfile && !currentProfile.username;
     }
 
+
+    async function fetchMentorsDirectory() {
+        let dbMentors = [];
+        if (client) {
+            try {
+                const { data, error } = await client
+                    .from('profiles')
+                    .select('id, full_name, username, avatar_url, bio, skills, role, email, linkedin, github, created_at')
+                    .or('role.eq.mentor,email.eq.iccsocialhub@gmail.com')
+                    .order('created_at', { ascending: true });
+
+                if (!error && Array.isArray(data)) {
+                    dbMentors = data;
+                }
+            } catch (e) {
+                console.warn('fetchMentorsDirectory query error:', e);
+            }
+        }
+
+        const fallbackMentors = [
+            {
+                id: 'dcb855ff-a8a5-4d5e-bafe-052f7b074fa3',
+                full_name: 'Sushmitha M K',
+                username: 'sushmitha',
+                email: 'sushmitha@inunity.in',
+                role: 'mentor',
+                avatar_url: '',
+                bio: 'Lead Innovation Mentor & Project Evaluator at InUnity. Oversees milestone execution, technical architecture, and student team development.',
+                skills: ['Technical Evaluation', 'Milestone Tracking', 'System Architecture', 'IoT Systems'],
+                domain: 'Technical Evaluation & IoT'
+            },
+            {
+                id: '63b3633e-470e-445f-aef6-0bfbabac97cf',
+                full_name: 'Abhishek',
+                username: 'abhi',
+                email: 'abhishek.p@inunity.in',
+                role: 'mentor',
+                avatar_url: '',
+                bio: 'Senior Innovation Mentor & Full Stack Guide at InUnity. Mentors student teams on robust software systems, product design, and deployment pipelines.',
+                skills: ['Full Stack Development', 'Distributed Systems', 'Cloud & DevOps', 'Agile Delivery'],
+                domain: 'Software Architecture & Cloud'
+            },
+            {
+                id: '5e4c07c4-5539-42c4-8e7b-85c365530abf',
+                full_name: 'ICC Innovation Council',
+                username: 'iccsocialhub',
+                email: 'iccsocialhub@gmail.com',
+                role: 'mentor',
+                avatar_url: '',
+                bio: 'Central Mentorship & Project Governance Board. Providing strategic guidance, hardware resource approvals, and student milestone verification.',
+                skills: ['Project Governance', 'Resource Allocation', 'Milestone Sign-off', 'Strategy'],
+                domain: 'Project Governance & Strategy'
+            }
+        ];
+
+        const combined = [...dbMentors];
+        fallbackMentors.forEach(fb => {
+            const existingIdx = combined.findIndex(m => m.id === fb.id || m.email === fb.email);
+            if (existingIdx !== -1) {
+                combined[existingIdx] = {
+                    ...fb,
+                    ...combined[existingIdx],
+                    bio: combined[existingIdx].bio || fb.bio,
+                    skills: (Array.isArray(combined[existingIdx].skills) && combined[existingIdx].skills.length > 0) ? combined[existingIdx].skills : fb.skills,
+                    domain: fb.domain
+                };
+            } else {
+                combined.push(fb);
+            }
+        });
+
+        return combined;
+    }
+
     async function fetchStudentsDirectory(options = {}) {
         const {
             search = '',
@@ -4380,7 +4454,7 @@ const ICCSupabase = (() => {
     return {
         init, signInWithGoogle, sendOTP, verifyOTP, verifyOTPOnly, signOut, getSession, onAuthStateChange,
         fetchProfile, updateProfile, fetchUserById, fetchProfileByEmail, searchUsers, checkUsernameAvailable,
-        fetchStudentsDirectory,
+        fetchStudentsDirectory, fetchMentorsDirectory,
         fetchPosts, fetchPostById, fetchPostsByTeam, fetchPostsByUser, createPost, updatePostStatus, deletePost,
         toggleLike, hasLiked, fetchUserLikes,
         fetchComments, addComment, deleteComment,
@@ -4420,7 +4494,7 @@ const ICCSupabase = (() => {
         // Core Space & Minutes of Meeting (MoM) API
         fetchCoreProfiles, fetchMinutesOfMeeting, createMinutesOfMeeting, updateMinutesOfMeeting, deleteMinutesOfMeeting, canManageMom,
         // Project Tasks API
-        fetchProjectTasks, createProjectTask, completeProjectTask, deleteProjectTask
+        fetchProjectTasks, fetchAllProjectTasks, createProjectTask, completeProjectTask, deleteProjectTask
     };
 })();
 

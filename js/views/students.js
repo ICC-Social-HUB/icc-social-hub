@@ -4,6 +4,8 @@
 const StudentsView = (() => {
     let container = null;
     let students = [];
+    let mentors = [];
+    let mentorTotalCount = 0;
     let totalCount = 0;
     let availableProjects = [];
     let isLoading = false;
@@ -12,6 +14,9 @@ const StudentsView = (() => {
 
     // State initialized from URL query params or localStorage
     let state = {
+        activeTab: 'students', // 'students' | 'mentors'
+        mentorSearch: '',
+        mentorDomainFilter: 'all',
         viewMode: 'list', // 'list' | 'grid'
         search: '',
         selectedProjects: [], // array of project IDs (strings/numbers)
@@ -36,6 +41,9 @@ const StudentsView = (() => {
         const queryIndex = hash.indexOf('?');
         const params = new URLSearchParams(queryIndex !== -1 ? hash.slice(queryIndex + 1) : '');
 
+        state.activeTab = params.get('tab') === 'mentors' ? 'mentors' : 'students';
+        state.mentorSearch = params.get('mq') || '';
+        state.mentorDomainFilter = params.get('domain') || 'all';
         const savedView = localStorage.getItem('icc_students_view_mode');
         state.viewMode = params.get('view') || savedView || 'list';
         state.search = params.get('q') || '';
@@ -56,6 +64,9 @@ const StudentsView = (() => {
 
     function syncStateToUrl() {
         const params = new URLSearchParams();
+        if (state.activeTab !== 'students') params.set('tab', state.activeTab);
+        if (state.mentorSearch) params.set('mq', state.mentorSearch);
+        if (state.mentorDomainFilter !== 'all') params.set('domain', state.mentorDomainFilter);
         if (state.viewMode !== 'list') params.set('view', state.viewMode);
         if (state.search) params.set('q', state.search);
         if (state.selectedProjects.length > 0) params.set('projects', state.selectedProjects.join(','));
@@ -91,7 +102,8 @@ const StudentsView = (() => {
         renderContent();
 
         try {
-            const res = await ICCSupabase.fetchStudentsDirectory({
+            const [res, mentorsRes] = await Promise.all([
+                ICCSupabase.fetchStudentsDirectory({
                 search: state.search,
                 projectFilter: state.selectedProjects,
                 hasLinkedin: state.hasLinkedin,
@@ -101,7 +113,13 @@ const StudentsView = (() => {
                 sort: state.sort,
                 page: state.page,
                 pageSize: state.pageSize
-            });
+            }),
+                typeof ICCSupabase.fetchMentorsDirectory === 'function' ? ICCSupabase.fetchMentorsDirectory() : []
+            ]);
+            if (Array.isArray(mentorsRes)) {
+                mentors = mentorsRes;
+                mentorTotalCount = mentors.length;
+            }
 
             if (res && res.success) {
                 students = res.students || [];
@@ -128,20 +146,109 @@ const StudentsView = (() => {
 
     function renderShell() {
         if (!container) return;
+        const isMentorsTab = state.activeTab === 'mentors';
+
         container.innerHTML = `
         <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 min-h-[calc(100vh-4rem)] flex flex-col gap-6">
-            <!-- Header Bar -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-[#1c2a38]">
+            <!-- Header Bar with Integrated Tab Switcher -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-[#1c2a38]">
                 <div>
                     <div class="flex items-center gap-3">
-                        <h1 class="text-2xl sm:text-3xl font-heading font-bold text-white tracking-tight">Students Directory</h1>
-                        <span id="students-badge-count" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#3390ec]/15 text-[#3390ec] border border-[#3390ec]/30">0</span>
+                        <h1 class="text-2xl sm:text-3xl font-heading font-bold text-white tracking-tight">
+                            ${isMentorsTab ? 'Mentors & Project Guides' : 'Students Directory'}
+                        </h1>
+                        <span id="students-badge-count" class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${isMentorsTab ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' : 'bg-[#3390ec]/15 text-[#3390ec] border border-[#3390ec]/30'}">
+                            ${isMentorsTab ? mentors.length : totalCount}
+                        </span>
                     </div>
-                    <p class="text-sm text-[#708499] mt-1">Explore and connect with innovators, builders, and creators across all club projects.</p>
+                    <p class="text-sm text-[#708499] mt-1">
+                        ${isMentorsTab 
+                            ? 'Faculty advisors, technical guides, and industry mentors driving student innovation projects and milestone reviews.'
+                            : 'Explore and connect with innovators, builders, and creators across all club projects.'}
+                    </p>
                 </div>
 
-                <!-- View Switcher & Action Controls -->
-                <div class="flex items-center gap-2.5 self-start md:self-auto">
+                <!-- Top Segmented Tabs: Students vs Mentors -->
+                <div class="flex items-center p-1 bg-[#17212b] rounded-2xl border border-[#1c2a38] self-start md:self-auto shadow-sm" role="tablist">
+                    <button id="tab-students-btn" onclick="StudentsView.setActiveTab('students')" role="tab" aria-selected="${!isMentorsTab}"
+                        class="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${!isMentorsTab ? 'bg-[#3390ec] text-white shadow-md shadow-[#3390ec]/20' : 'text-[#708499] hover:text-white'}">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                        </svg>
+                        <span>Students</span>
+                        <span id="students-tab-badge" class="px-1.5 py-0.2 rounded-full text-[10px] ${!isMentorsTab ? 'bg-white/20 text-white' : 'bg-[#0e1621] text-[#708499]'} font-semibold">${totalCount}</span>
+                    </button>
+                    <button id="tab-mentors-btn" onclick="StudentsView.setActiveTab('mentors')" role="tab" aria-selected="${isMentorsTab}"
+                        class="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${isMentorsTab ? 'bg-amber-500 text-zinc-950 font-extrabold shadow-md shadow-amber-500/20' : 'text-[#708499] hover:text-amber-400'}">
+                        <span>🎓</span>
+                        <span>Mentors</span>
+                        <span id="mentors-tab-badge" class="px-1.5 py-0.2 rounded-full text-[10px] ${isMentorsTab ? 'bg-zinc-950/20 text-zinc-950 font-extrabold' : 'bg-amber-500/15 text-amber-400'} font-semibold">${mentors.length}</span>
+                    </button>
+                </div>
+            </div>
+
+            ${!isMentorsTab ? `
+            <!-- Featured Mentors Quick Banner (in Students view) -->
+            <div class="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-300 flex items-center justify-center text-lg flex-shrink-0">
+                        🎓
+                    </div>
+                    <div>
+                        <h4 class="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                            <span>Looking for Project Mentors & Guides?</span>
+                            <span class="px-2 py-0.2 rounded-full text-[9px] font-bold uppercase bg-amber-500/20 text-amber-300">Mentorship</span>
+                        </h4>
+                        <p class="text-[11px] sm:text-xs text-zinc-400 mt-0.5">Explore experienced faculty and innovation mentors who review project proposals and sprint deliverables.</p>
+                    </div>
+                </div>
+                <button onclick="StudentsView.setActiveTab('mentors')" class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-xl text-xs transition-all shadow-sm flex items-center gap-1.5 self-start sm:self-auto cursor-pointer active:scale-95 flex-shrink-0">
+                    <span>Meet Our Mentors</span>
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </button>
+            </div>
+
+            <!-- Search Bar & Controls Bar for Students -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <!-- Search Input Container -->
+                <div class="relative flex-1 max-w-xl">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#708499]">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                        </svg>
+                    </div>
+                    <input type="text" id="students-search-input" value="${escapeHtml(state.search)}" 
+                        placeholder="Search by student name, email, or project..." 
+                        class="w-full pl-10 pr-10 py-2.5 bg-[#17212b] border border-[#1c2a38] focus:border-[#3390ec] rounded-xl text-sm text-white placeholder-[#708499] focus:outline-none transition-all shadow-inner" 
+                        oninput="StudentsView.onSearchInput(this.value)" 
+                        aria-label="Search students">
+                    <button id="students-search-clear" onclick="StudentsView.clearSearch()" 
+                        class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#708499] hover:text-white transition-colors cursor-pointer ${state.search ? '' : 'hidden'}" 
+                        title="Clear search" aria-label="Clear search">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Sort & View Controls -->
+                <div class="flex items-center gap-2.5 justify-between sm:justify-end">
+                    <div class="flex items-center gap-2">
+                        <label for="students-sort-select" class="text-xs text-[#708499] font-medium hidden md:inline">Sort by:</label>
+                        <div class="relative">
+                            <select id="students-sort-select" onchange="StudentsView.setSort(this.value)" 
+                                class="appearance-none pl-3 pr-8 py-2 bg-[#17212b] border border-[#1c2a38] hover:border-[#2b394a] rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-[#3390ec] transition-all cursor-pointer">
+                                <option value="name_asc" ${state.sort === 'name_asc' ? 'selected' : ''}>Name A–Z</option>
+                                <option value="name_desc" ${state.sort === 'name_desc' ? 'selected' : ''}>Name Z–A</option>
+                                <option value="most_projects" ${state.sort === 'most_projects' ? 'selected' : ''}>Most Projects</option>
+                                <option value="recent" ${state.sort === 'recent' || state.sort === 'recently_joined' ? 'selected' : ''}>Recently Joined</option>
+                            </select>
+                            <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-[#708499]">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- View Mode Toggle (List / Grid) -->
                     <div class="flex items-center p-1 bg-[#17212b] rounded-xl border border-[#1c2a38]" role="group" aria-label="View Mode">
                         <button id="view-mode-list-btn" onclick="StudentsView.setViewMode('list')" 
@@ -172,49 +279,6 @@ const StudentsView = (() => {
                         <span>Filters</span>
                         <span id="active-filter-indicator" class="hidden w-2 h-2 rounded-full bg-[#3390ec] animate-pulse"></span>
                     </button>
-                </div>
-            </div>
-
-            <!-- Search Bar & Controls Bar -->
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                <!-- Search Input Container -->
-                <div class="relative flex-1 max-w-xl">
-                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#708499]">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                        </svg>
-                    </div>
-                    <input type="text" id="students-search-input" value="${escapeHtml(state.search)}" 
-                        placeholder="Search by student name, email, or project..." 
-                        class="w-full pl-10 pr-10 py-2.5 bg-[#17212b] border border-[#1c2a38] focus:border-[#3390ec] rounded-xl text-sm text-white placeholder-[#708499] focus:outline-none transition-all shadow-inner" 
-                        oninput="StudentsView.onSearchInput(this.value)" 
-                        aria-label="Search students">
-                    <button id="students-search-clear" onclick="StudentsView.clearSearch()" 
-                        class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#708499] hover:text-white transition-colors cursor-pointer ${state.search ? '' : 'hidden'}" 
-                        title="Clear search" aria-label="Clear search">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- Sort & Summary Control -->
-                <div class="flex items-center gap-3 justify-between sm:justify-end">
-                    <div class="flex items-center gap-2">
-                        <label for="students-sort-select" class="text-xs text-[#708499] font-medium hidden md:inline">Sort by:</label>
-                        <div class="relative">
-                            <select id="students-sort-select" onchange="StudentsView.setSort(this.value)" 
-                                class="appearance-none pl-3 pr-8 py-2 bg-[#17212b] border border-[#1c2a38] hover:border-[#2b394a] rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-[#3390ec] transition-all cursor-pointer">
-                                <option value="name_asc" ${state.sort === 'name_asc' ? 'selected' : ''}>Name A–Z</option>
-                                <option value="name_desc" ${state.sort === 'name_desc' ? 'selected' : ''}>Name Z–A</option>
-                                <option value="most_projects" ${state.sort === 'most_projects' ? 'selected' : ''}>Most Projects</option>
-                                <option value="recent" ${state.sort === 'recent' || state.sort === 'recently_joined' ? 'selected' : ''}>Recently Joined</option>
-                            </select>
-                            <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-[#708499]">
-                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -285,16 +349,50 @@ const StudentsView = (() => {
                     <button onclick="StudentsView.toggleFilterDrawer()" class="px-5 py-2 bg-[#3390ec] hover:bg-[#2b7cce] text-white text-xs font-semibold rounded-xl transition-all shadow-sm">Apply & Close</button>
                 </div>
             </div>
+            ` : `
+            <!-- Mentors Controls Bar -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <!-- Mentors Search Input -->
+                <div class="relative flex-1 max-w-xl">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#708499]">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                        </svg>
+                    </div>
+                    <input type="text" id="mentors-search-input" value="${escapeHtml(state.mentorSearch)}" 
+                        placeholder="Search mentors by name, specialization, or email..." 
+                        class="w-full pl-10 pr-10 py-2.5 bg-[#17212b] border border-[#1c2a38] focus:border-amber-500 rounded-xl text-sm text-white placeholder-[#708499] focus:outline-none transition-all shadow-inner" 
+                        oninput="StudentsView.onMentorSearchInput(this.value)">
+                    <button onclick="StudentsView.clearMentorSearch()" 
+                        class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#708499] hover:text-white transition-colors cursor-pointer ${state.mentorSearch ? '' : 'hidden'}" 
+                        title="Clear search">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
 
-            <!-- Main Content Container (List or Grid, or Skeleton, Empty, Error) -->
+                <!-- Domain Filter Pills -->
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    <button onclick="StudentsView.setMentorDomainFilter('all')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${state.mentorDomainFilter === 'all' ? 'bg-amber-500 text-zinc-950 font-bold shadow-sm' : 'bg-[#17212b] text-[#708499] hover:text-white border border-[#1c2a38]'}">All Domains</button>
+                    <button onclick="StudentsView.setMentorDomainFilter('Technical')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${state.mentorDomainFilter === 'Technical' ? 'bg-amber-500 text-zinc-950 font-bold shadow-sm' : 'bg-[#17212b] text-[#708499] hover:text-white border border-[#1c2a38]'}">Technical Evaluation</button>
+                    <button onclick="StudentsView.setMentorDomainFilter('Software')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${state.mentorDomainFilter === 'Software' ? 'bg-amber-500 text-zinc-950 font-bold shadow-sm' : 'bg-[#17212b] text-[#708499] hover:text-white border border-[#1c2a38]'}">Software Architecture</button>
+                    <button onclick="StudentsView.setMentorDomainFilter('Governance')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${state.mentorDomainFilter === 'Governance' ? 'bg-amber-500 text-zinc-950 font-bold shadow-sm' : 'bg-[#17212b] text-[#708499] hover:text-white border border-[#1c2a38]'}">Project Governance</button>
+                </div>
+            </div>
+            `}
+
+            <!-- Main Content Container (Students or Mentors) -->
             <div id="students-content-root" class="w-full flex-1 flex flex-col"></div>
 
-            <!-- Pagination Bar -->
-            <div id="students-pagination-root" class="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 border-t border-[#1c2a38] text-xs text-[#708499]"></div>
+            <!-- Pagination Bar (Only visible in students view) -->
+            <div id="students-pagination-root" class="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 border-t border-[#1c2a38] text-xs text-[#708499] ${isMentorsTab ? 'hidden' : ''}"></div>
         </section>
         `;
 
-        renderProjectCheckboxes();
+        if (!isMentorsTab) {
+            renderProjectCheckboxes();
+        }
     }
 
     function renderProjectCheckboxes() {
@@ -435,6 +533,11 @@ const StudentsView = (() => {
     function renderContent() {
         const root = document.getElementById('students-content-root');
         if (!root) return;
+
+        if (state.activeTab === 'mentors') {
+            root.innerHTML = renderMentorsGrid();
+            return;
+        }
 
         if (isLoading) {
             root.innerHTML = state.viewMode === 'list' ? renderListSkeleton() : renderGridSkeleton();
@@ -967,6 +1070,147 @@ const StudentsView = (() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+
+    function renderMentorsGrid() {
+        const query = (state.mentorSearch || '').trim().toLowerCase();
+        const domainFilter = state.mentorDomainFilter || 'all';
+
+        const filtered = mentors.filter(m => {
+            if (domainFilter !== 'all') {
+                const dom = (m.domain || '').toLowerCase();
+                if (!dom.includes(domainFilter.toLowerCase())) return false;
+            }
+            if (query) {
+                const target = `${m.full_name || ''} ${m.username || ''} ${m.email || ''} ${m.bio || ''} ${m.domain || ''} ${(m.skills || []).join(' ')}`.toLowerCase();
+                if (!target.includes(query)) return false;
+            }
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            return `
+            <div class="flex flex-col items-center justify-center p-12 text-center bg-[#17212b] rounded-2xl border border-[#1c2a38] my-4 shadow-sm space-y-3">
+                <div class="w-12 h-12 rounded-2xl bg-zinc-800/80 text-zinc-400 flex items-center justify-center text-xl">
+                    🎓
+                </div>
+                <h4 class="font-heading font-semibold text-base text-zinc-300">No mentors found</h4>
+                <p class="text-xs text-[#708499] max-w-sm">No mentor profiles match "${escapeHtml(state.mentorSearch)}". Try adjusting your search or domain filter.</p>
+                <button onclick="StudentsView.clearMentorSearch()" class="px-4 py-2 bg-[#242f3d] hover:bg-[#2b394a] text-white rounded-xl text-xs font-semibold transition-all cursor-pointer">Clear Search</button>
+            </div>
+            `;
+        }
+
+        return `
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pt-2">
+            ${filtered.map(m => renderMentorCard(m)).join('')}
+        </div>
+        `;
+    }
+
+    function renderMentorCard(m) {
+        const skills = Array.isArray(m.skills) ? m.skills : (typeof m.skills === 'string' ? m.skills.split(',').map(s => s.trim()) : []);
+        const initials = (m.full_name || m.username || 'M').charAt(0).toUpperCase();
+
+        return `
+        <div class="bg-[#17212b] rounded-2xl border border-[#1c2a38] hover:border-amber-500/40 transition-all p-5 shadow-lg flex flex-col justify-between gap-4 group">
+            <div class="space-y-3.5">
+                <!-- Header: Avatar, Name, Role badge -->
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="relative w-14 h-14 rounded-2xl bg-zinc-900 border border-[#242f3d] flex items-center justify-center text-white font-bold text-lg overflow-hidden flex-shrink-0 shadow-inner">
+                            ${m.avatar_url ? `<img src="${m.avatar_url}" class="w-full h-full object-cover">` : initials}
+                            <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-500 rounded-full border-2 border-[#17212b] flex items-center justify-center text-[10px] text-zinc-950 font-bold shadow-md">
+                                ${ICC_CONFIG.MENTOR_TICK}
+                            </div>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <h3 class="font-heading font-bold text-base text-white group-hover:text-amber-400 transition-colors truncate">
+                                    ${escapeHtml(m.full_name || m.username || 'Mentor')}
+                                </h3>
+                            </div>
+                            <p class="text-xs text-[#708499] truncate">@${escapeHtml(m.username || 'mentor')}</p>
+                            ${m.domain ? `<span class="inline-block mt-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-sky-500/10 text-sky-300 border border-sky-500/20">${escapeHtml(m.domain)}</span>` : ''}
+                        </div>
+                    </div>
+
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 flex-shrink-0">
+                        🎓 Mentor
+                    </span>
+                </div>
+
+                <!-- Bio / Description -->
+                <p class="text-xs text-zinc-300 leading-relaxed bg-[#0e1621] p-3 rounded-xl border border-[#1c2a38] line-clamp-3">
+                    ${escapeHtml(m.bio || 'Official Project Mentor and Technical Reviewer for ICC Social Hub innovation projects.')}
+                </p>
+
+                <!-- Skills & Guidance Areas -->
+                ${skills.length > 0 ? `
+                    <div class="space-y-1.5">
+                        <span class="text-[10px] font-semibold text-[#708499] uppercase tracking-wider">Expertise & Review Areas</span>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            ${skills.slice(0, 4).map(s => `
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-medium bg-[#242f3d] text-zinc-300 border border-[#1c2a38]">
+                                    ${escapeHtml(s)}
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+
+            <!-- Card Footer & Actions -->
+            <div class="pt-3 border-t border-[#1c2a38] flex items-center justify-between gap-2">
+                <button onclick="StudentsView.navigateToProfile('${m.id}')" class="flex-1 py-2 bg-[#242f3d] hover:bg-[#2b394a] text-white rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 shadow-sm">
+                    <span>View Profile</span>
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </button>
+
+                ${m.email ? `
+                    <a href="mailto:${m.email}" class="p-2 bg-[#0e1621] hover:bg-amber-500/20 text-[#708499] hover:text-amber-400 border border-[#1c2a38] rounded-xl transition-all cursor-pointer" title="Email ${escapeHtml(m.full_name)}">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                    </a>
+                ` : ''}
+
+                ${m.linkedin ? `
+                    <a href="${m.linkedin}" target="_blank" rel="noopener noreferrer" class="p-2 bg-[#0e1621] hover:bg-blue-500/20 text-[#708499] hover:text-blue-400 border border-[#1c2a38] rounded-xl transition-all cursor-pointer" title="LinkedIn Profile">
+                        <svg class="w-4 h-4 fill-currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                    </a>
+                ` : ''}
+            </div>
+        </div>
+        `;
+    }
+
+    function setActiveTab(tab) {
+        state.activeTab = tab;
+        syncStateToUrl();
+        renderShell();
+        renderContent();
+        updateResultsCount();
+    }
+
+    function onMentorSearchInput(val) {
+        state.mentorSearch = val;
+        syncStateToUrl();
+        renderContent();
+    }
+
+    function clearMentorSearch() {
+        state.mentorSearch = '';
+        syncStateToUrl();
+        const input = document.getElementById('mentors-search-input');
+        if (input) input.value = '';
+        renderContent();
+    }
+
+    function setMentorDomainFilter(domain) {
+        state.mentorDomainFilter = domain;
+        syncStateToUrl();
+        renderShell();
+        renderContent();
+    }
+
     function retry() {
         loadData();
     }
@@ -994,6 +1238,10 @@ const StudentsView = (() => {
     return {
         mount,
         unmount,
+        setActiveTab,
+        onMentorSearchInput,
+        clearMentorSearch,
+        setMentorDomainFilter,
         setViewMode,
         onSearchInput,
         clearSearch,
