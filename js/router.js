@@ -39,6 +39,7 @@ const Router = (() => {
         if (previousView === 'profile') ProfileView.unmount?.();
         if (previousView === 'events') EventsView.unmount?.();
         if (previousView === 'eventDetail') EventDetailView.unmount?.();
+        if (previousView === 'mentorDashboard') MentorDashboardView.unmount?.();
 
         // Clean up any open modals or overlays when route changes
         const modalRoot = document.getElementById('modal-root');
@@ -112,6 +113,10 @@ const Router = (() => {
                 if (!ICCSupabase.isAdmin()) { window.location.hash = '#dashboard'; return; }
                 previousView = 'admin';
                 AdminView.mount(container);
+            } else if (hash === '#mentor-dashboard') {
+                if (!ICCSupabase.isMentor()) { window.location.hash = '#dashboard'; return; }
+                previousView = 'mentorDashboard';
+                MentorDashboardView.mount(container);
             } else if (hash === '#notifications') {
                 previousView = 'notifications';
                 NotificationsView.mount(container);

@@ -710,9 +710,10 @@ const AdminView = (() => {
 
     function renderAccessControl() {
         const currentUserId = ICCSupabase.getUser()?.id;
-        const allAdmins = allUsers.filter(u => u.role === 'admin' || u.role === 'super_admin' || u.role === 'superadmin');
+        const allAdmins = allUsers.filter(u => u.role === 'admin' || u.role === 'super_admin' || u.role === 'superadmin' || u.role === 'mentor');
         const superAdminsCount = allAdmins.filter(u => u.role === 'super_admin' || u.role === 'superadmin').length;
-        const standardAdminsCount = allAdmins.length - superAdminsCount;
+        const standardAdminsCount = allAdmins.filter(u => u.role === 'admin').length;
+        const mentorsCount = allAdmins.filter(u => u.role === 'mentor').length;
 
         // Filter active admins based on role pill
         let filteredAdmins = allAdmins;
@@ -720,6 +721,8 @@ const AdminView = (() => {
             filteredAdmins = allAdmins.filter(u => u.role === 'super_admin' || u.role === 'superadmin');
         } else if (accessRoleFilter === 'admin') {
             filteredAdmins = allAdmins.filter(u => u.role === 'admin');
+        } else if (accessRoleFilter === 'mentor') {
+            filteredAdmins = allAdmins.filter(u => u.role === 'mentor');
         }
 
         // Search candidates to appoint
@@ -752,15 +755,15 @@ const AdminView = (() => {
                                 <h3 class="font-heading font-bold text-base text-white">Access Control & Role Governance</h3>
                                 <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">Super Admin Only</span>
                             </div>
-                            <p class="text-[11px] text-zinc-400 mt-0.5">Toggle granular feature permissions, appoint new admins, and govern club privileges.</p>
+                            <p class="text-[11px] text-zinc-400 mt-0.5">Toggle granular feature permissions, appoint new admins & mentors, and govern club privileges.</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Metrics Overview -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5 pt-4 border-t border-zinc-800/60">
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mt-5 pt-4 border-t border-zinc-800/60">
                     <div class="bg-zinc-950/60 rounded-xl p-3 border border-zinc-800/80">
-                        <span class="text-[10px] uppercase font-semibold text-zinc-500 tracking-wider block">Total Admins</span>
+                        <span class="text-[10px] uppercase font-semibold text-zinc-500 tracking-wider block">Total Privileged</span>
                         <div class="flex items-baseline gap-1 mt-0.5">
                             <span class="text-xl font-bold text-white">${allAdmins.length}</span>
                             <span class="text-[10px] text-zinc-500">accounts</span>
@@ -778,6 +781,13 @@ const AdminView = (() => {
                         <div class="flex items-baseline gap-1 mt-0.5">
                             <span class="text-xl font-bold text-blue-300">${standardAdminsCount}</span>
                             <span class="text-[10px] text-blue-400/80">custom perms</span>
+                        </div>
+                    </div>
+                    <div class="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/30">
+                        <span class="text-[10px] uppercase font-semibold text-emerald-400 tracking-wider block">Mentors</span>
+                        <div class="flex items-baseline gap-1 mt-0.5">
+                            <span class="text-xl font-bold text-emerald-300">${mentorsCount}</span>
+                            <span class="text-[10px] text-emerald-400/80">project audit</span>
                         </div>
                     </div>
                     <div class="bg-zinc-950/60 rounded-xl p-3 border border-zinc-800/80">
@@ -832,27 +842,34 @@ const AdminView = (() => {
 
                         <!-- Role Level Selector -->
                         <div class="space-y-1.5">
-                            <label class="text-[11px] font-semibold text-zinc-300 block uppercase tracking-wider">Target Admin Role</label>
-                            <div class="grid grid-cols-2 gap-2">
-                                <label class="flex items-center gap-2 p-2.5 bg-zinc-950/70 border ${!appointingUserDraft?.isSuperAdmin ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-800'} rounded-xl cursor-pointer">
-                                    <input type="radio" name="appoint_role" value="admin" class="accent-blue-500" ${!appointingUserDraft?.isSuperAdmin ? 'checked' : ''} id="role-admin-radio">
+                            <label class="text-[11px] font-semibold text-zinc-300 block uppercase tracking-wider">Target Role</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <label class="flex items-center gap-2 p-2.5 bg-zinc-950/70 border ${appointingUserDraft?.targetRole === 'admin' ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-800'} rounded-xl cursor-pointer">
+                                    <input type="radio" name="appoint_role" value="admin" class="accent-blue-500" ${appointingUserDraft?.targetRole === 'admin' ? 'checked' : ''} id="role-admin-radio">
                                     <div>
                                         <span class="text-xs font-semibold text-white block">👑 Standard Admin</span>
                                         <span class="text-[10px] text-zinc-400">Customizable feature permissions</span>
                                     </div>
                                 </label>
-                                <label class="flex items-center gap-2 p-2.5 bg-zinc-950/70 border ${appointingUserDraft?.isSuperAdmin ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-800'} rounded-xl cursor-pointer">
-                                    <input type="radio" name="appoint_role" value="super_admin" class="accent-amber-500" ${appointingUserDraft?.isSuperAdmin ? 'checked' : ''} id="role-superadmin-radio">
+                                <label class="flex items-center gap-2 p-2.5 bg-zinc-950/70 border ${appointingUserDraft?.targetRole === 'super_admin' ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-800'} rounded-xl cursor-pointer">
+                                    <input type="radio" name="appoint_role" value="super_admin" class="accent-amber-500" ${appointingUserDraft?.targetRole === 'super_admin' ? 'checked' : ''} id="role-superadmin-radio">
                                     <div>
                                         <span class="text-xs font-semibold text-amber-300 block">🛡️ Super Admin</span>
                                         <span class="text-[10px] text-zinc-400">Unrestricted system-wide access</span>
+                                    </div>
+                                </label>
+                                <label class="flex items-center gap-2 p-2.5 bg-zinc-950/70 border ${appointingUserDraft?.targetRole === 'mentor' ? 'border-emerald-500 bg-emerald-500/10' : 'border-zinc-800'} rounded-xl cursor-pointer">
+                                    <input type="radio" name="appoint_role" value="mentor" class="accent-emerald-500" ${appointingUserDraft?.targetRole === 'mentor' ? 'checked' : ''} id="role-mentor-radio">
+                                    <div>
+                                        <span class="text-xs font-semibold text-emerald-400 block">🎓 Mentor</span>
+                                        <span class="text-[10px] text-zinc-400">Project review & full project visibility</span>
                                     </div>
                                 </label>
                             </div>
                         </div>
 
                         <!-- Granular Permissions (Only for Standard Admin) -->
-                        <div id="appoint-perms-section" class="${appointingUserDraft?.isSuperAdmin ? 'opacity-40 pointer-events-none' : ''} space-y-2.5">
+                        <div id="appoint-perms-section" class="${appointingUserDraft?.targetRole !== 'admin' ? 'opacity-40 pointer-events-none' : ''} space-y-2.5">
                             <div class="flex items-center justify-between">
                                 <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-wider">Granular Feature Permissions</label>
                                 <label class="inline-flex items-center gap-2 cursor-pointer">
@@ -958,12 +975,12 @@ const AdminView = (() => {
                                 </div>
                                 <div class="flex-shrink-0">
                                     ${isAlreadyAdmin ? `
-                                        <span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-zinc-800/80 text-zinc-400 border border-zinc-700/40">
-                                            ${u.role === 'super_admin' || u.role === 'superadmin' ? '🛡️ Super Admin' : '👑 Admin'}
+                                        <span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold ${u.role === 'mentor' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : (u.role === 'super_admin' || u.role === 'superadmin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-blue-500/20 text-blue-300 border border-blue-500/40')}">
+                                            ${u.role === 'super_admin' || u.role === 'superadmin' ? '🛡️ Super Admin' : (u.role === 'mentor' ? '🎓 Mentor' : '👑 Admin')}
                                         </span>
                                     ` : `
                                         <button class="start-appoint-btn px-3 py-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl text-xs font-semibold transition-all shadow-sm" data-user-id="${u.id}">
-                                            + Appoint as Admin
+                                            + Appoint Role
                                         </button>
                                     `}
                                 </div>
@@ -972,7 +989,7 @@ const AdminView = (() => {
                     </div>
                 ` : `
                     <div class="p-3 bg-zinc-950/40 rounded-xl border border-zinc-800/60 text-center">
-                        <p class="text-[11px] text-zinc-500">💡 Type a member's name, email, or USN above to promote them to an Administrator.</p>
+                        <p class="text-[11px] text-zinc-500">💡 Type a member's name, email, or USN above to grant Administrator or Mentor privileges.</p>
                     </div>
                 `}
             </div>
@@ -989,10 +1006,11 @@ const AdminView = (() => {
                     </div>
 
                     <!-- Role Filter Pills -->
-                    <div class="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
+                    <div class="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800 flex-wrap">
                         <button class="admin-role-filter px-3 py-1 rounded-lg text-[11px] font-medium transition-all ${accessRoleFilter === 'all' ? 'bg-zinc-800 text-white font-semibold' : 'text-zinc-500 hover:text-zinc-300'}" data-filter="all">All (${allAdmins.length})</button>
                         <button class="admin-role-filter px-3 py-1 rounded-lg text-[11px] font-medium transition-all ${accessRoleFilter === 'super_admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold' : 'text-zinc-500 hover:text-zinc-300'}" data-filter="super_admin">Super Admins (${superAdminsCount})</button>
                         <button class="admin-role-filter px-3 py-1 rounded-lg text-[11px] font-medium transition-all ${accessRoleFilter === 'admin' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30 font-semibold' : 'text-zinc-500 hover:text-zinc-300'}" data-filter="admin">Admins (${standardAdminsCount})</button>
+                        <button class="admin-role-filter px-3 py-1 rounded-lg text-[11px] font-medium transition-all ${accessRoleFilter === 'mentor' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold' : 'text-zinc-500 hover:text-zinc-300'}" data-filter="mentor">Mentors (${mentorsCount})</button>
                     </div>
                 </div>
 
@@ -1000,21 +1018,22 @@ const AdminView = (() => {
                 <div class="space-y-4">
                     ${filteredAdmins.length === 0 ? `
                         <div class="p-8 text-center bg-zinc-950/40 rounded-xl border border-zinc-800 text-xs text-zinc-500">
-                            No administrators found matching the active filter.
+                            No accounts found matching the active filter.
                         </div>
                     ` : filteredAdmins.map(u => {
                         const isMe = u.id === currentUserId;
                         const isSuper = u.role === 'super_admin' || u.role === 'superadmin';
+                        const isMentorRole = u.role === 'mentor';
                         const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
                         const fullName = u.full_name || (student ? student.fullName : 'Anonymous');
                         const perms = ICCSupabase.getAdminPermissions(u);
 
                         return `
-                        <div class="p-4 rounded-2xl border ${isSuper ? 'border-amber-500/30 bg-amber-500/5' : 'border-zinc-800 bg-zinc-900/60'} transition-all" data-admin-id="${u.id}">
+                        <div class="p-4 rounded-2xl border ${isSuper ? 'border-amber-500/30 bg-amber-500/5' : (isMentorRole ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-zinc-800 bg-zinc-900/60')} transition-all" data-admin-id="${u.id}">
                             <!-- Admin Header -->
                             <div class="flex items-start justify-between gap-3 flex-wrap">
                                 <div class="flex items-center gap-3 min-w-0 flex-1">
-                                    <div class="w-10 h-10 rounded-full ${isSuper ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-blue-600/20 text-blue-400 border border-blue-500/30'} flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                    <div class="w-10 h-10 rounded-full ${isSuper ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : (isMentorRole ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-blue-600/20 text-blue-400 border border-blue-500/30')} flex items-center justify-center font-bold text-sm flex-shrink-0">
                                         ${fullName.charAt(0).toUpperCase()}
                                     </div>
                                     <div class="min-w-0">
@@ -1022,9 +1041,11 @@ const AdminView = (() => {
                                             <h5 class="text-sm font-semibold text-white break-words">${escapeHtml(fullName)}</h5>
                                             ${isSuper ? `
                                                 <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">🛡️ Super Admin</span>
+                                            ` : (isMentorRole ? `
+                                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">🎓 Mentor</span>
                                             ` : `
                                                 <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40">👑 Admin</span>
-                                            `}
+                                            `)}
                                             ${isMe ? `
                                                 <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">You</span>
                                             ` : ''}
@@ -1036,9 +1057,13 @@ const AdminView = (() => {
                                 <!-- Action Buttons -->
                                 <div class="flex items-center gap-2">
                                     ${isSuper ? `
-                                         <span class="text-[10px] text-amber-400/90 font-medium px-2.5 py-1 bg-amber-500/10 rounded-lg border border-amber-500/30 flex items-center gap-1.5">
-                                             🔒 Permanent Super Admin
-                                         </span>
+                                        <span class="text-[10px] text-amber-400/90 font-medium px-2.5 py-1 bg-amber-500/10 rounded-lg border border-amber-500/30 flex items-center gap-1.5">
+                                            🔒 Permanent Super Admin
+                                        </span>
+                                    ` : (isMentorRole ? `
+                                        <button class="revoke-mentor-btn px-2.5 py-1 text-[11px] font-medium bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 rounded-lg transition-colors cursor-pointer" data-id="${u.id}" data-name="${escapeHtml(fullName)}">
+                                            Revoke Mentor
+                                        </button>
                                     ` : `
                                         ${!isMe ? `
                                             <button class="promote-superadmin-btn px-2.5 py-1 text-[11px] font-medium bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-white border border-amber-500/30 rounded-lg transition-colors" data-id="${u.id}" data-name="${escapeHtml(fullName)}">
@@ -1050,9 +1075,16 @@ const AdminView = (() => {
                                         ` : `
                                             <span class="text-[10px] text-zinc-500 px-2.5 py-1 bg-zinc-950 rounded-lg border border-zinc-800/80">Active User</span>
                                         `}
-                                    `}
+                                    `)}
                                 </div>
                             </div>
+
+                            ${isMentorRole ? `
+                                <div class="mt-3 pt-3 border-t border-zinc-800/60 flex items-center gap-2 text-xs text-zinc-400">
+                                    <span class="text-emerald-400">✓</span>
+                                    <span>Authorized for full project application reviews, requesting changes, approving live projects, and full 360° project audit in the Mentor Dashboard.</span>
+                                </div>
+                            ` : ''}
 
                             <!-- Granular Feature Access Toggles (Standard Admins Only) -->
                             ${isSuper ? '' : `
@@ -2290,11 +2322,12 @@ const AdminView = (() => {
             });
         });
 
-        // Start Appointing a member as Admin
+        // Start Appointing a member as Admin or Mentor
         container.querySelectorAll('.start-appoint-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 appointingUserId = btn.dataset.userId;
                 appointingUserDraft = {
+                    targetRole: 'admin',
                     broadcast: true,
                     moderate: true,
                     events: true,
@@ -2321,9 +2354,10 @@ const AdminView = (() => {
             });
         });
 
-        // Appoint Role Radios (Standard Admin vs Super Admin)
+        // Appoint Role Radios (Standard Admin vs Super Admin vs Mentor)
         container.querySelector('#role-admin-radio')?.addEventListener('change', e => {
             if (e.target.checked && appointingUserDraft) {
+                appointingUserDraft.targetRole = 'admin';
                 appointingUserDraft.isSuperAdmin = false;
                 container.innerHTML = render();
                 bindEvents(container);
@@ -2331,8 +2365,17 @@ const AdminView = (() => {
         });
         container.querySelector('#role-superadmin-radio')?.addEventListener('change', e => {
             if (e.target.checked && appointingUserDraft) {
+                appointingUserDraft.targetRole = 'super_admin';
                 appointingUserDraft.isSuperAdmin = true;
                 appointingUserDraft.all = true;
+                container.innerHTML = render();
+                bindEvents(container);
+            }
+        });
+        container.querySelector('#role-mentor-radio')?.addEventListener('change', e => {
+            if (e.target.checked && appointingUserDraft) {
+                appointingUserDraft.targetRole = 'mentor';
+                appointingUserDraft.isSuperAdmin = false;
                 container.innerHTML = render();
                 bindEvents(container);
             }
@@ -2373,7 +2416,7 @@ const AdminView = (() => {
             });
         });
 
-        // Confirm Appoint Admin
+        // Confirm Appoint Admin or Mentor
         container.querySelector('#confirm-appoint-btn')?.addEventListener('click', async () => {
             const targetId = appointingUserId;
             if (!targetId) return;
@@ -2383,25 +2426,32 @@ const AdminView = (() => {
             btn.disabled = true;
             btn.innerHTML = 'Appointing...';
 
-            const roleToSet = appointingUserDraft.isSuperAdmin ? 'super_admin' : 'admin';
-            const permsToSet = appointingUserDraft.isSuperAdmin ? null : {
-                broadcast: !!appointingUserDraft.broadcast,
-                moderate: !!appointingUserDraft.moderate,
-                events: !!appointingUserDraft.events,
-                leads: !!appointingUserDraft.leads,
-                users_edit: !!appointingUserDraft.users_edit,
-                users_export: !!appointingUserDraft.users_export,
-                users: !!(appointingUserDraft.users_edit || appointingUserDraft.users_export),
-                all: !!appointingUserDraft.all
-            };
-
-            const res = await ICCSupabase.setAdminRole(targetId, roleToSet, permsToSet);
-            if (res.error) {
-                Toast.error('Failed to appoint admin: ' + (res.error.message || res.error));
-                btn.disabled = false;
-                btn.innerHTML = 'Confirm & Appoint Administrator';
+            const roleToSet = appointingUserDraft.targetRole || (appointingUserDraft.isSuperAdmin ? 'super_admin' : 'admin');
+            
+            let res;
+            if (roleToSet === 'mentor') {
+                res = await ICCSupabase.setMentorRole(targetId, true);
             } else {
-                Toast.success(`👑 Appointed ${targetName} as ${roleToSet === 'super_admin' ? 'Super Admin' : 'Administrator'}!`);
+                const permsToSet = (roleToSet === 'super_admin') ? null : {
+                    broadcast: !!appointingUserDraft.broadcast,
+                    moderate: !!appointingUserDraft.moderate,
+                    events: !!appointingUserDraft.events,
+                    leads: !!appointingUserDraft.leads,
+                    users_edit: !!appointingUserDraft.users_edit,
+                    users_export: !!appointingUserDraft.users_export,
+                    users: !!(appointingUserDraft.users_edit || appointingUserDraft.users_export),
+                    all: !!appointingUserDraft.all
+                };
+                res = await ICCSupabase.setAdminRole(targetId, roleToSet, permsToSet);
+            }
+
+            if (res.error) {
+                Toast.error('Failed to appoint: ' + (res.error.message || res.error));
+                btn.disabled = false;
+                btn.innerHTML = 'Confirm & Appoint Role';
+            } else {
+                const roleLabels = { super_admin: 'Super Admin', admin: 'Administrator', mentor: 'Mentor' };
+                Toast.success(`👑 Appointed ${targetName} as ${roleLabels[roleToSet] || roleToSet}!`);
                 appointingUserId = null;
                 appointingUserDraft = null;
                 accessSearchQuery = '';
@@ -2409,6 +2459,25 @@ const AdminView = (() => {
                 container.innerHTML = render();
                 bindEvents(container);
             }
+        });
+
+        // Revoke Mentor Access
+        container.querySelectorAll('.revoke-mentor-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const userId = btn.dataset.id;
+                const name = btn.dataset.name || 'User';
+                if (!confirm(`Are you sure you want to revoke Mentor privileges for ${name}?`)) return;
+
+                const res = await ICCSupabase.setMentorRole(userId, false);
+                if (res.error) {
+                    Toast.error('Failed to revoke mentor: ' + (res.error.message || res.error));
+                } else {
+                    Toast.success(`Mentor role removed for ${name}`);
+                    allUsers = await ICCSupabase.getAllProfiles();
+                    container.innerHTML = render();
+                    bindEvents(container);
+                }
+            });
         });
 
         // Active Admins: Master Permission Toggle

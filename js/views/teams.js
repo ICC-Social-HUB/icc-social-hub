@@ -301,6 +301,635 @@ const TeamsView = (() => {
         openMemberActionModal(memberId, memberName, currentTag, leadId, isLead);
     }
 
+    // ==========================================
+    // FEATURE 1: PROJECT CREATION & APPLICATIONS
+    // ==========================================
+
+    function openCreateProjectModal() {
+        const user = ICCSupabase.getUser();
+        if (!user) {
+            if (typeof AuthModal !== 'undefined') AuthModal.open();
+            return;
+        }
+
+        const existing = document.getElementById('create-project-modal');
+        if (existing) existing.remove();
+
+        const profile = ICCSupabase.getProfile();
+
+        const modalHtml = `
+        <div id="create-project-modal" class="fixed inset-0 z-[2500] bg-zinc-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in overflow-y-auto">
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-xl p-5 sm:p-6 shadow-2xl space-y-5 my-auto" onclick="event.stopPropagation()">
+                <!-- Header -->
+                <div class="flex items-center justify-between pb-3.5 border-b border-zinc-800">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-900/30">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="font-heading font-bold text-lg text-white">Create Project Proposal</h3>
+                            <p class="text-xs text-zinc-400">Submit your project application for mentor review & approval</p>
+                        </div>
+                    </div>
+                    <button id="close-create-proj-modal" class="text-zinc-500 hover:text-white p-1.5 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <!-- Workflow Notice -->
+                <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2.5 text-xs text-amber-300">
+                    <svg class="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <div>
+                        <span class="font-bold">Mentor Approval Workflow:</span> Submitting saves this as a project application with status <span class="font-bold text-amber-200">"Pending Review"</span>. Mentors will review your proposal, request changes or approve it. Once approved, the project becomes live and you automatically become the Project Lead with a generated unique project code.
+                    </div>
+                </div>
+
+                <!-- Form -->
+                <form id="create-project-form" class="space-y-4">
+                    <!-- Project Name -->
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1">
+                            Project Name <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text" id="cp-project-name" required placeholder="e.g. Autonomous Campus Delivery Drone" maxlength="120"
+                               class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-colors">
+                    </div>
+
+                    <!-- Team Name -->
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1">
+                            Team Name <span class="text-zinc-500 text-[11px]">(Optional, defaults to Project Name)</span>
+                        </label>
+                        <input type="text" id="cp-team-name" placeholder="e.g. AeroInnovators" maxlength="80"
+                               class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-colors">
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1">
+                            Description & Vision <span class="text-red-400">*</span>
+                        </label>
+                        <textarea id="cp-project-desc" rows="4" required placeholder="Provide a detailed overview: problem statement, architecture, technologies, expected impact..."
+                                  class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-colors resize-none"></textarea>
+                    </div>
+
+                    <!-- Specialties / Domains -->
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1">
+                            Specialties / Key Domains <span class="text-zinc-500 text-[11px]">(Comma-separated)</span>
+                        </label>
+                        <input type="text" id="cp-specialties" placeholder="e.g. AI / ML, Robotics, Embedded C++, ROS2"
+                               class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-colors">
+                    </div>
+
+                    <!-- Links Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-300 mb-1">
+                                GitHub Repository <span class="text-zinc-500 text-[11px]">(Optional)</span>
+                            </label>
+                            <input type="url" id="cp-github-url" placeholder="https://github.com/..."
+                                   class="w-full px-3.5 py-2 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-xs text-white placeholder-zinc-600 outline-none transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-300 mb-1">
+                                Demo / YouTube Link <span class="text-zinc-500 text-[11px]">(Optional)</span>
+                            </label>
+                            <input type="url" id="cp-demo-url" placeholder="https://youtube.com/..."
+                                   class="w-full px-3.5 py-2 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-xs text-white placeholder-zinc-600 outline-none transition-colors">
+                        </div>
+                    </div>
+
+                    <!-- Applicant Lead Credit -->
+                    <div class="p-3 bg-zinc-950/70 border border-zinc-800/80 rounded-xl flex items-center justify-between">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="w-8 h-8 rounded-full bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                ${profile?.full_name?.charAt(0) || 'U'}
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-xs font-bold text-white truncate">${escapeHtml(profile?.full_name || 'Innovator')}</p>
+                                <p class="text-[10px] text-zinc-500 truncate">${escapeHtml(profile?.email || '')}</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold">
+                            Designated Project Lead
+                        </span>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="flex items-center justify-end gap-3 pt-2">
+                        <button type="button" id="cancel-create-proj-btn" class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer">
+                            Cancel
+                        </button>
+                        <button type="submit" id="submit-create-proj-btn" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-900/30 active:scale-95 cursor-pointer flex items-center gap-2">
+                            <span>Submit for Mentor Review</span>
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modal = document.getElementById('create-project-modal');
+
+        const close = () => modal?.remove();
+        document.getElementById('close-create-proj-modal')?.addEventListener('click', close);
+        document.getElementById('cancel-create-proj-btn')?.addEventListener('click', close);
+        modal?.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+        document.getElementById('create-project-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submit-create-proj-btn');
+            const projectName = document.getElementById('cp-project-name')?.value.trim();
+            const teamName = document.getElementById('cp-team-name')?.value.trim() || projectName;
+            const description = document.getElementById('cp-project-desc')?.value.trim();
+            const specialtiesRaw = document.getElementById('cp-specialties')?.value.trim();
+            const githubUrl = document.getElementById('cp-github-url')?.value.trim();
+            const demoUrl = document.getElementById('cp-demo-url')?.value.trim();
+
+            if (!projectName) {
+                Toast.error('Please enter a project name.');
+                return;
+            }
+            if (!description || description.length < 10) {
+                Toast.error('Please enter a descriptive project overview (at least 10 characters).');
+                return;
+            }
+
+            const specialties = specialtiesRaw ? specialtiesRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+            const links = [];
+            if (githubUrl) links.push({ type: 'github', name: 'GitHub Repo', url: githubUrl });
+            if (demoUrl) links.push({ type: 'demo', name: 'Demo / Video', url: demoUrl });
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <svg class="w-4 h-4 animate-spin text-white" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                <span>Submitting...</span>
+            `;
+
+            const { data, error } = await ICCSupabase.createProjectApplication({
+                project_name: projectName,
+                team_name: teamName,
+                description: description,
+                specialties: specialties,
+                links: links
+            });
+
+            if (error) {
+                Toast.error('Failed to submit proposal: ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>Submit for Mentor Review</span>';
+                return;
+            }
+
+            Toast.success('Project proposal submitted! A mentor will review it shortly.');
+            close();
+            openMyApplicationsModal(data.id);
+        });
+    }
+
+    async function openMyApplicationsModal(highlightAppId = null) {
+        const user = ICCSupabase.getUser();
+        if (!user) {
+            if (typeof AuthModal !== 'undefined') AuthModal.open();
+            return;
+        }
+
+        const existing = document.getElementById('my-applications-modal');
+        if (existing) existing.remove();
+
+        // Create base modal wrapper with loading state
+        const modalHtml = `
+        <div id="my-applications-modal" class="fixed inset-0 z-[2500] bg-zinc-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in overflow-y-auto">
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto" onclick="event.stopPropagation()">
+                <!-- Modal Header -->
+                <div class="p-4 sm:p-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900 flex-shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="font-heading font-bold text-lg text-white">My Project Applications</h3>
+                            <p class="text-xs text-zinc-400">Track approval status, mentor feedback & revisions</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="my-apps-new-btn" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                            <span>New Proposal</span>
+                        </button>
+                        <button id="close-my-apps-modal" class="text-zinc-500 hover:text-white p-1.5 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal Body -->
+                <div id="my-apps-content" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                    <div class="flex items-center justify-center py-12">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modal = document.getElementById('my-applications-modal');
+        let currentUnsubComments = null;
+
+        const close = () => {
+            if (currentUnsubComments) currentUnsubComments();
+            modal?.remove();
+        };
+        document.getElementById('close-my-apps-modal')?.addEventListener('click', close);
+        document.getElementById('my-apps-new-btn')?.addEventListener('click', () => {
+            close();
+            openCreateProjectModal();
+        });
+        modal?.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+        async function loadApplications() {
+            const content = document.getElementById('my-apps-content');
+            if (!content) return;
+
+            const { data: apps, error } = await ICCSupabase.fetchMyProjectApplications();
+
+            if (error) {
+                content.innerHTML = `
+                    <div class="p-6 text-center text-red-400 bg-red-500/10 rounded-2xl border border-red-500/20">
+                        <p class="font-bold text-sm">Failed to load applications</p>
+                        <p class="text-xs text-red-300 mt-1">${escapeHtml(error.message)}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            if (!apps || apps.length === 0) {
+                content.innerHTML = `
+                    <div class="text-center py-12 px-4 space-y-3">
+                        <div class="w-16 h-16 rounded-2xl bg-zinc-800/80 border border-zinc-700/50 flex items-center justify-center text-zinc-500 mx-auto">
+                            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                        </div>
+                        <h4 class="font-bold text-white text-base">No Applications Yet</h4>
+                        <p class="text-xs text-zinc-400 max-w-sm mx-auto">You have not submitted any project applications. Submit your innovation project proposal to get reviewed by mentors.</p>
+                        <button onclick="document.getElementById('my-apps-new-btn')?.click()" class="mt-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer">
+                            + Create First Project Proposal
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            let selectedAppId = highlightAppId || apps[0]?.id;
+            renderMasterDetail(apps, selectedAppId);
+        }
+
+        async function renderMasterDetail(apps, activeAppId) {
+            const content = document.getElementById('my-apps-content');
+            if (!content) return;
+
+            const activeApp = apps.find(a => a.id === activeAppId) || apps[0];
+            if (!activeApp) return;
+
+            // Fetch active app comments and status history
+            const { data: details } = await ICCSupabase.fetchApplicationDetails(activeApp.id);
+            const comments = details?.comments || [];
+            const history = details?.history || [];
+
+            // Setup realtime subscription for comments
+            if (currentUnsubComments) currentUnsubComments();
+            currentUnsubComments = ICCSupabase.subscribeToApplicationComments(activeApp.id, async () => {
+                const refreshed = await ICCSupabase.fetchApplicationDetails(activeApp.id);
+                if (refreshed?.data?.comments) {
+                    renderCommentsList(refreshed.data.comments);
+                }
+            });
+
+            const statusBadge = (status) => {
+                if (status === 'approved') return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">✓ Approved</span>`;
+                if (status === 'changes_requested') return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">⚠️ Changes Requested</span>`;
+                return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 animate-pulse">⏳ Pending Review</span>`;
+            };
+
+            content.innerHTML = `
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                <!-- Left Column: Applications List (lg:col-span-4) -->
+                <div class="lg:col-span-4 space-y-2.5">
+                    <h4 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-1">Submissions (${apps.length})</h4>
+                    <div class="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                        ${apps.map(app => `
+                            <div class="app-item-card p-3 rounded-xl border transition-all cursor-pointer ${app.id === activeApp.id ? 'bg-zinc-800/80 border-emerald-500/50 shadow-md' : 'bg-zinc-950/60 border-zinc-800/80 hover:bg-zinc-800/40'}" data-app-id="${app.id}">
+                                <div class="flex items-start justify-between gap-2">
+                                    <h5 class="font-bold text-sm text-white truncate flex-1">${escapeHtml(app.project_name)}</h5>
+                                    ${statusBadge(app.status)}
+                                </div>
+                                <p class="text-[11px] text-zinc-400 truncate mt-1">Team: <span class="text-zinc-300 font-medium">${escapeHtml(app.team_name || app.project_name)}</span></p>
+                                <div class="flex items-center justify-between text-[10px] text-zinc-500 mt-2 pt-2 border-t border-zinc-800/50">
+                                    <span>Rev ${app.revision_number || 1}</span>
+                                    <span>${new Date(app.created_at).toLocaleDateString()}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Right Column: Active Application Details, Revisions & Comments (lg:col-span-8) -->
+                <div class="lg:col-span-8 space-y-4">
+                    <!-- Status Notification Banner -->
+                    ${activeApp.status === 'changes_requested' ? `
+                        <div class="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl space-y-2 text-rose-300">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+                                <h5 class="font-bold text-sm text-rose-200">Mentor Requested Changes</h5>
+                            </div>
+                            <p class="text-xs text-rose-300 leading-relaxed">
+                                A mentor reviewed this proposal and requested revisions. Please check the feedback below, edit your proposal, and click <span class="font-bold text-white underline">"Resubmit for Review"</span>.
+                            </p>
+                            <button id="toggle-resubmit-form-btn" class="mt-2 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer inline-flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                <span>Edit & Resubmit Proposal</span>
+                            </button>
+                        </div>
+                    ` : activeApp.status === 'approved' ? `
+                        <div class="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-between flex-wrap gap-3 text-emerald-300">
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                                    <h5 class="font-bold text-sm text-emerald-200">Project Approved & Live!</h5>
+                                </div>
+                                <p class="text-xs text-emerald-300">
+                                    Congratulations! Your project is now published in the public directory with you as Project Lead.
+                                </p>
+                            </div>
+                            ${activeApp.project_code ? `
+                                <div class="px-3.5 py-1.5 bg-zinc-950/80 border border-emerald-500/40 rounded-xl flex items-center gap-2">
+                                    <span class="text-[11px] text-zinc-400 font-medium">Project Code:</span>
+                                    <span class="font-mono font-bold text-emerald-400 text-sm">${escapeHtml(activeApp.project_code)}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : `
+                        <div class="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center gap-3 text-amber-300 text-xs">
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0"></span>
+                            <div>
+                                <span class="font-bold">Under Mentor Review:</span> Your proposal is currently in the mentor review queue. Mentors will examine your problem statement and architecture shortly.
+                            </div>
+                        </div>
+                    `}
+
+                    <!-- Resubmission Form (Visible when toggled or when changes requested) -->
+                    <div id="resubmit-form-card" class="${activeApp.status === 'changes_requested' ? '' : 'hidden'} p-4 bg-zinc-950/70 border border-zinc-800 rounded-2xl space-y-4">
+                        <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+                            <h5 class="font-bold text-sm text-white flex items-center gap-2">
+                                <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                <span>Edit & Resubmit Proposal (Revision ${(activeApp.revision_number || 1) + 1})</span>
+                            </h5>
+                        </div>
+                        <form id="resubmit-app-form" class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-300 mb-1">Project Name *</label>
+                                <input type="text" id="rs-name" required value="${escapeHtml(activeApp.project_name)}"
+                                       class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white focus:border-emerald-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-300 mb-1">Team Name</label>
+                                <input type="text" id="rs-team" value="${escapeHtml(activeApp.team_name || '')}"
+                                       class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white focus:border-emerald-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-300 mb-1">Description & Vision *</label>
+                                <textarea id="rs-desc" rows="4" required class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white focus:border-emerald-500 outline-none resize-none">${escapeHtml(activeApp.description)}</textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-300 mb-1">Specialties / Tags (comma-separated)</label>
+                                <input type="text" id="rs-specialties" value="${escapeHtml(Array.isArray(activeApp.specialties) ? activeApp.specialties.join(', ') : (activeApp.specialties || ''))}"
+                                       class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white focus:border-emerald-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-emerald-400 mb-1">Applicant Note / Explanation of Changes *</label>
+                                <textarea id="rs-note" rows="2" required placeholder="Describe what revisions and improvements you made in response to mentor comments..."
+                                          class="w-full px-3 py-2 bg-zinc-900 border border-emerald-500/40 rounded-xl text-xs text-white focus:border-emerald-500 outline-none resize-none"></textarea>
+                            </div>
+                            <div class="flex items-center justify-end gap-2 pt-1">
+                                <button type="submit" id="rs-submit-btn" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-all active:scale-95 flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    <span>Resubmit for Mentor Review</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Application Overview Card -->
+                    <div class="bg-zinc-950/70 border border-zinc-800 rounded-2xl p-4 sm:p-5 space-y-3">
+                        <div class="flex items-start justify-between gap-3 flex-wrap">
+                            <div>
+                                <h4 class="font-heading font-bold text-base sm:text-lg text-white">${escapeHtml(activeApp.project_name)}</h4>
+                                <p class="text-xs text-zinc-400 mt-0.5">Team: <span class="text-zinc-200 font-semibold">${escapeHtml(activeApp.team_name || activeApp.project_name)}</span></p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-1 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-xl text-[11px] font-mono">
+                                    Revision ${activeApp.revision_number || 1}
+                                </span>
+                                ${statusBadge(activeApp.status)}
+                            </div>
+                        </div>
+
+                        <div class="pt-2 border-t border-zinc-800/60">
+                            <h6 class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">Description</h6>
+                            <div class="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap bg-zinc-900/50 p-3 rounded-xl border border-zinc-800/40">
+                                ${escapeHtml(activeApp.description)}
+                            </div>
+                        </div>
+
+                        ${Array.isArray(activeApp.specialties) && activeApp.specialties.length > 0 ? `
+                            <div class="pt-2">
+                                <h6 class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">Domains & Specialties</h6>
+                                <div class="flex flex-wrap gap-1.5">
+                                    ${activeApp.specialties.map(s => `<span class="px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg text-[11px]">${escapeHtml(s)}</span>`).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Discussion & Comment Thread with Mentors -->
+                    <div class="bg-zinc-950/70 border border-zinc-800 rounded-2xl p-4 sm:p-5 space-y-4">
+                        <div class="flex items-center justify-between border-b border-zinc-800 pb-2.5">
+                            <h5 class="font-heading font-bold text-sm text-white flex items-center gap-2">
+                                <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                                <span>Mentor Review Discussion & Comments</span>
+                            </h5>
+                            <span id="comments-count-pill" class="px-2 py-0.5 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-full text-[10px] font-bold">
+                                ${comments.length} message${comments.length === 1 ? '' : 's'}
+                            </span>
+                        </div>
+
+                        <!-- Comments List -->
+                        <div id="app-comments-list" class="space-y-3 max-h-60 overflow-y-auto pr-1">
+                            ${comments.length === 0 ? `
+                                <p class="text-xs text-zinc-500 py-3 text-center italic">No comments yet. When mentors review your proposal, their notes will appear here.</p>
+                            ` : comments.map(c => `
+                                <div class="p-3 rounded-xl border ${c.user_role === 'mentor' || c.user_role === 'superadmin' ? 'bg-emerald-950/20 border-emerald-500/30' : 'bg-zinc-900 border-zinc-800'} space-y-1">
+                                    <div class="flex items-center justify-between text-xs">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-bold text-white">${escapeHtml(c.profiles?.full_name || 'User')}</span>
+                                            <span class="px-2 py-0.2 rounded-full text-[10px] font-bold ${c.user_role === 'mentor' || c.user_role === 'superadmin' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">
+                                                ${c.user_role === 'mentor' ? '🎓 Mentor' : c.user_role === 'superadmin' ? '⚡ Super Admin' : 'Applicant'}
+                                            </span>
+                                        </div>
+                                        <span class="text-[10px] text-zinc-500">${new Date(c.created_at).toLocaleString()}</span>
+                                    </div>
+                                    <p class="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap">${escapeHtml(c.comment)}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <!-- Post Reply Box -->
+                        <form id="post-comment-form" class="space-y-2 pt-2 border-t border-zinc-800">
+                            <textarea id="new-comment-text" rows="2" placeholder="Write a reply or question for mentors..."
+                                      class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 focus:border-emerald-500 rounded-xl text-xs text-white placeholder-zinc-600 outline-none resize-none"></textarea>
+                            <div class="flex justify-end">
+                                <button type="submit" id="send-comment-btn" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-all active:scale-95 flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                                    <span>Send Message</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Status History Timeline -->
+                    ${history.length > 0 ? `
+                        <div class="bg-zinc-950/70 border border-zinc-800 rounded-2xl p-4 sm:p-5 space-y-3">
+                            <h5 class="font-heading font-bold text-xs uppercase tracking-wider text-zinc-400">Status History & Audit Trail</h5>
+                            <div class="space-y-2 text-xs">
+                                ${history.map(h => `
+                                    <div class="flex items-start gap-2.5 p-2 bg-zinc-900/40 rounded-xl border border-zinc-800/40">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0"></span>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-white font-medium">Status changed: <span class="text-zinc-400">${h.from_status || 'initial'}</span> → <span class="font-bold text-emerald-400">${h.to_status}</span></p>
+                                            ${h.notes ? `<p class="text-zinc-400 text-[11px] mt-0.5">${escapeHtml(h.notes)}</p>` : ''}
+                                            <p class="text-[10px] text-zinc-500 mt-0.5">${new Date(h.created_at).toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            `;
+
+            // Card click listener for switching applications
+            document.querySelectorAll('.app-item-card').forEach(card => {
+                card.onclick = () => {
+                    const appId = card.dataset.appId;
+                    renderMasterDetail(apps, appId);
+                };
+            });
+
+            // Toggle resubmit form
+            document.getElementById('toggle-resubmit-form-btn')?.addEventListener('click', () => {
+                const card = document.getElementById('resubmit-form-card');
+                if (card) card.classList.toggle('hidden');
+            });
+
+            // Resubmit application handler
+            document.getElementById('resubmit-app-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('rs-submit-btn');
+                const name = document.getElementById('rs-name')?.value.trim();
+                const team = document.getElementById('rs-team')?.value.trim();
+                const desc = document.getElementById('rs-desc')?.value.trim();
+                const spec = document.getElementById('rs-specialties')?.value.trim();
+                const note = document.getElementById('rs-note')?.value.trim();
+
+                if (!name || !desc) {
+                    Toast.error('Project name and description are required.');
+                    return;
+                }
+                if (!note) {
+                    Toast.error('Please include an applicant note explaining the changes.');
+                    return;
+                }
+
+                btn.disabled = true;
+                btn.textContent = 'Resubmitting...';
+
+                const { data, error } = await ICCSupabase.resubmitProjectApplication(activeApp.id, {
+                    project_name: name,
+                    team_name: team || name,
+                    description: desc,
+                    specialties: spec ? spec.split(',').map(s => s.trim()).filter(Boolean) : []
+                }, note);
+
+                if (error) {
+                    Toast.error('Failed to resubmit: ' + error.message);
+                    btn.disabled = false;
+                    btn.textContent = 'Resubmit for Mentor Review';
+                } else {
+                    Toast.success('Proposal resubmitted for mentor review!');
+                    await loadApplications();
+                }
+            });
+
+            // Post reply comment handler
+            document.getElementById('post-comment-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const input = document.getElementById('new-comment-text');
+                const comment = input?.value.trim();
+                if (!comment) return;
+
+                const btn = document.getElementById('send-comment-btn');
+                btn.disabled = true;
+
+                const { data, error } = await ICCSupabase.addApplicationComment(activeApp.id, comment);
+                if (error) {
+                    Toast.error('Failed to send comment: ' + error.message);
+                    btn.disabled = false;
+                } else {
+                    input.value = '';
+                    btn.disabled = false;
+                    const refreshed = await ICCSupabase.fetchApplicationDetails(activeApp.id);
+                    if (refreshed?.data?.comments) {
+                        renderCommentsList(refreshed.data.comments);
+                    }
+                }
+            });
+        }
+
+        function renderCommentsList(comments) {
+            const list = document.getElementById('app-comments-list');
+            const pill = document.getElementById('comments-count-pill');
+            if (pill) pill.textContent = `${comments.length} message${comments.length === 1 ? '' : 's'}`;
+            if (!list) return;
+
+            if (comments.length === 0) {
+                list.innerHTML = `<p class="text-xs text-zinc-500 py-3 text-center italic">No comments yet. When mentors review your proposal, their notes will appear here.</p>`;
+                return;
+            }
+
+            list.innerHTML = comments.map(c => `
+                <div class="p-3 rounded-xl border ${c.user_role === 'mentor' || c.user_role === 'superadmin' ? 'bg-emerald-950/20 border-emerald-500/30' : 'bg-zinc-900 border-zinc-800'} space-y-1">
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-white">${escapeHtml(c.profiles?.full_name || 'User')}</span>
+                            <span class="px-2 py-0.2 rounded-full text-[10px] font-bold ${c.user_role === 'mentor' || c.user_role === 'superadmin' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">
+                                ${c.user_role === 'mentor' ? '🎓 Mentor' : c.user_role === 'superadmin' ? '⚡ Super Admin' : 'Applicant'}
+                            </span>
+                        </div>
+                        <span class="text-[10px] text-zinc-500">${new Date(c.created_at).toLocaleString()}</span>
+                    </div>
+                    <p class="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap">${escapeHtml(c.comment)}</p>
+                </div>
+            `).join('');
+            list.scrollTop = list.scrollHeight;
+        }
+
+        await loadApplications();
+    }
+
     function getRoboticAvatar(seed = '') {
         const colors = ['#38bdf8', '#818cf8', '#34d399', '#f472b6', '#fbbf24', '#a78bfa'];
         let hash = 0;
@@ -533,18 +1162,32 @@ const TeamsView = (() => {
     }
 
     function renderGrid() {
+        const user = ICCSupabase.getUser();
         const profile = ICCSupabase.getProfile();
         const userTeamId = profile?.team_id;
         return `
         <section class="min-h-screen pt-2 pb-8 px-2.5 sm:px-4 md:px-6 lg:px-8 xl:px-10" id="teams-section">
             <div class="w-full max-w-[1760px] mx-auto">
-                <!-- Top Navigation Bar with Back Button -->
-                <div class="mb-4 flex items-center justify-between">
+                <!-- Top Navigation Bar with Back Button & Actions -->
+                <div class="mb-4 flex items-center justify-between gap-3 flex-wrap">
                     <button id="teams-grid-back-btn" onclick="window.location.hash='#dashboard'" class="flex items-center gap-2 px-3.5 py-2 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer shadow-sm active:scale-95 group" title="Return to Dashboard">
                         <svg class="w-4 h-4 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                         <span>Back to Dashboard</span>
                     </button>
-                    <span class="text-[11px] font-medium text-zinc-500 uppercase tracking-widest hidden sm:inline">Projects Directory</span>
+                    
+                    <div class="flex items-center gap-2.5">
+                        ${user ? `
+                            <button id="open-my-apps-btn" onclick="TeamsView.openMyApplicationsModal()" class="flex items-center gap-2 px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer shadow-sm active:scale-95" title="Track your project proposals and mentor review status">
+                                <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                <span>My Applications</span>
+                            </button>
+                        ` : ''}
+
+                        <button id="open-create-proj-btn" onclick="TeamsView.openCreateProjectModal()" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-900/30 active:scale-95 cursor-pointer" title="Submit a new project proposal for mentor review">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                            <span>+ Create Project</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="text-center mb-8 px-2">
@@ -767,6 +1410,7 @@ const TeamsView = (() => {
         const isMember = profile?.memberships?.map(Number).includes(Number(lead.id));
         const isPending = profile?.pending_teams?.map(Number).includes(Number(lead.id));
         const isLead = isLeadForTeam(lead.id, lead, teamMembers);
+        const canSeeCode = Boolean(lead.project_code && (isLead || isMember || ICCSupabase.isMentor() || ICCSupabase.isAdmin()));
         const memberTags = getMemberTags(lead.id);
 
         const validLinks = getProjectLinks(lead);
@@ -838,8 +1482,14 @@ const TeamsView = (() => {
                                         </button>`;
                                     })()}
                                 </div>
-                                <div class="flex items-center gap-2 mt-1.5 text-xs">
+                                <div class="flex items-center flex-wrap gap-2 mt-1.5 text-xs">
                                     <span class="px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded-full font-semibold text-zinc-400">Team: <span class="text-zinc-200 font-bold">${lead.team}</span></span>
+                                    ${canSeeCode ? `
+                                        <span class="px-2.5 py-0.5 bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 rounded-full font-mono font-bold text-xs flex items-center gap-1.5 shadow-sm" title="Unique Project Code (Visible to Project Lead, Members, Mentors, and Admins)">
+                                            <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/></svg>
+                                            <span>Code: ${escapeHtml(lead.project_code)}</span>
+                                        </span>
+                                    ` : ''}
                                 </div>
                             </div>
                         </div>
@@ -1723,5 +2373,15 @@ const TeamsView = (() => {
         if (workforceModal) workforceModal.remove();
     }
 
-    return { mount, unmount, goBack, handleMemberActionClick, openMemberActionModal, getMemberTags, isLeadForTeam };
+    return {
+        mount,
+        unmount,
+        goBack,
+        handleMemberActionClick,
+        openMemberActionModal,
+        openCreateProjectModal,
+        openMyApplicationsModal,
+        getMemberTags,
+        isLeadForTeam
+    };
 })();

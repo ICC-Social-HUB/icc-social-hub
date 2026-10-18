@@ -38,6 +38,10 @@ const Sidebar = (() => {
             menuItems.push({ id: 'admin', label: 'Admin Dashboard', hash: '#admin', icon: adminIcon(false) });
         }
 
+        if (ICCSupabase.isMentor()) {
+            menuItems.push({ id: 'mentor', label: 'Mentor Dashboard', hash: '#mentor-dashboard', icon: mentorIcon(window.location.hash.startsWith('#mentor-dashboard')) });
+        }
+
         return `
         <!-- Sidebar Backdrop -->
         <div id="sidebar-backdrop" class="fixed inset-0 bg-[#0e1621]/80 backdrop-blur-md z-[2000] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}" onclick="Sidebar.close()"></div>
@@ -126,6 +130,10 @@ const Sidebar = (() => {
 
     function eventsIcon(a) {
         return `<svg class="w-6 h-6" fill="${a?'currentColor':'none'}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="${a?'0':'1.5'}">${a?'<path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 002 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z"/>':'<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"/>'}</svg>`;
+    }
+
+    function mentorIcon(a) {
+        return `<svg class="w-6 h-6" fill="${a?'currentColor':'none'}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="${a?'0':'1.5'}">${a?'<path d="M12 2L1 7l11 5 9-4.09V17h2V7L12 2zm-7.5 9.7V17c0 3.04 3.36 5.5 7.5 5.5s7.5-2.46 7.5-5.5v-5.3L12 16.2 4.5 11.7z"/>':'<path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0112 20.055a11.952 11.952 0 01-5.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5"/>'}</svg>`;
     }
 
     function mount() {

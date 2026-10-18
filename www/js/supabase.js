@@ -1521,6 +1521,8 @@ const ICCSupabase = (() => {
                 updatePayload.admin_permissions = permissions;
             } else if (newRole === 'admin') {
                 updatePayload.admin_permissions = { ...DEFAULT_ADMIN_PERMISSIONS, all: true };
+            } else if (newRole === 'mentor') {
+                updatePayload.admin_permissions = null;
             } else if (newRole === 'member' || newRole === 'student') {
                 updatePayload.admin_permissions = null;
             }
@@ -1548,7 +1550,8 @@ const ICCSupabase = (() => {
             let notifBody = 'Your account role has been updated.';
             if (newRole === 'super_admin') notifBody = '🛡️ You have been appointed as a Super Admin on ICC Hub!';
             else if (newRole === 'admin') notifBody = '👑 You have been appointed as an Administrator on ICC Hub!';
-            else if (newRole === 'member') notifBody = 'Your administrator privileges have been removed.';
+            else if (newRole === 'mentor') notifBody = '🎓 You have been appointed as a Mentor on ICC Hub!';
+            else if (newRole === 'member') notifBody = 'Your administrator/mentor privileges have been removed.';
 
             createNotification({
                 userId: userId,
@@ -1562,6 +1565,13 @@ const ICCSupabase = (() => {
             console.error('setAdminRole exception:', err);
             return { error: err };
         }
+    }
+
+    async function setMentorRole(userId, isMentor) {
+        if (!client || !isSuperAdmin()) {
+            return { error: { message: 'Unauthorized: Only Super Admins can alter Mentor roles.' } };
+        }
+        return setAdminRole(userId, isMentor ? 'mentor' : 'member');
     }
 
 
@@ -2410,6 +2420,709 @@ const ICCSupabase = (() => {
         return subscribeChannel('requests-sync', 'inventory_requests', '*', callback);
     }
 
+    function subscribeToProjectApplications(callback) {
+        return subscribeChannel('project-apps-sync', 'project_applications', '*', callback);
+    }
+
+    function subscribeToApplicationComments(applicationId, callback) {
+        return subscribeChannel(`app-comments-${applicationId}`, 'project_application_comments', '*', callback);
+    }
+
+    // ==================== PROJECT APPLICATIONS & MENTOR APPROVAL ====================
+
+    function generateUniqueProjectCode() {
+        const year = new Date().getFullYear();
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        return `PRJ-${year}-${rand}`;
+    }
+
+    async function createProjectApplication({ projectName, description, teamName = '', specialties = [], links = [] }) {
+        if (!client || !currentUser) {
+            return { error: { message: 'Sign in required to submit a project application.' } };
+        }
+
+        const cleanName = String(projectName || '').trim();
+        const cleanDesc = String(description || '').trim();
+
+        if (!cleanName) return { error: { message: 'Project Name is required.' } };
+        if (!cleanDesc) return { error: { message: 'Project Description is required.' } };
+
+        try {
+            const initialRevision = {
+                revision: 1,
+                submitted_at: new Date().toISOString(),
+                project_name: cleanName,
+                description: cleanDesc,
+                team_name: teamName ? String(teamName).trim() : cleanName,
+                specialties: Array.isArray(specialties) ? specialties : [],
+                links: Array.isArray(links) ? links : []
+            };
+
+            const payload = {
+                applicant_id: currentUser.id,
+                project_name: cleanName,
+                description: cleanDesc,
+                team_name: teamName ? String(teamName).trim() : cleanName,
+                specialties: Array.isArray(specialties) ? specialties : [],
+                links: Array.isArray(links) ? links : [],
+                status: 'Pending Review',
+                revision_number: 1,
+                revisions: [initialRevision],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            const { data, error } = await client
+                .from('project_applications')
+                .insert([payload])
+                .select()
+                .maybeSingle();
+
+            if (error) throw error;
+
+            // Log initial status in status history
+            if (data?.id) {
+                await client.from('project_application_status_history').insert([{
+                    application_id: data.id,
+                    changed_by: currentUser.id,
+                    previous_status: null,
+                    new_status: 'Pending Review',
+                    comment: 'Initial application submitted for mentor review.'
+                }]).catch(e => console.warn('Could not log status history:', e));
+            }
+
+            // Notify applicant
+            createNotification({
+                userId: currentUser.id,
+                type: 'system',
+                actorId: currentUser.id,
+                referenceId: data?.id,
+                body: `📋 Your project application "${cleanName}" was submitted for Mentor Review.`
+            }).catch(e => console.warn('Notif err:', e));
+
+            return { data, success: true };
+        } catch (err) {
+            console.error('createProjectApplication error:', err);
+            return { error: err };
+        }
+    }
+
+    async function fetchMyProjectApplications() {
+        if (!client || !currentUser) return [];
+        try {
+            const { data, error } = await client
+                .from('project_applications')
+                .select('*, reviewer:reviewer_id(id, full_name, role)')
+                .eq('applicant_id', currentUser.id)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.warn('fetchMyProjectApplications error:', error);
+                return [];
+            }
+            return data || [];
+        } catch (e) {
+            console.error('fetchMyProjectApplications exception:', e);
+            return [];
+        }
+    }
+
+    async function fetchAllProjectApplications(filterStatus = null) {
+        if (!client || !isMentor()) {
+            return { error: { message: 'Unauthorized: Only Mentors and Super Admins can access all applications.' } };
+        }
+
+        try {
+            let query = client
+                .from('project_applications')
+                .select(`
+                    *,
+                    applicant:applicant_id(id, full_name, email, avatar_url, username, phone, usn),
+                    reviewer:reviewer_id(id, full_name, role)
+                `)
+                .order('created_at', { ascending: false });
+
+            if (filterStatus && filterStatus !== 'all') {
+                query = query.eq('status', filterStatus);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+            return { data: data || [], success: true };
+        } catch (err) {
+            console.error('fetchAllProjectApplications error:', err);
+            return { error: err, data: [] };
+        }
+    }
+
+    async function fetchApplicationDetails(applicationId) {
+        if (!client || !currentUser) return { error: { message: 'Sign in required.' } };
+
+        try {
+            const { data: application, error: appErr } = await client
+                .from('project_applications')
+                .select(`
+                    *,
+                    applicant:applicant_id(id, full_name, email, avatar_url, username, phone, usn),
+                    reviewer:reviewer_id(id, full_name, role)
+                `)
+                .eq('id', applicationId)
+                .maybeSingle();
+
+            if (appErr || !application) {
+                return { error: appErr || { message: 'Application not found.' } };
+            }
+
+            // Permissions check: must be applicant or mentor/admin
+            const isApplicant = application.applicant_id === currentUser.id;
+            if (!isApplicant && !isMentor()) {
+                return { error: { message: 'Unauthorized: You do not have permission to view this application.' } };
+            }
+
+            // Fetch comments
+            const { data: comments } = await client
+                .from('project_application_comments')
+                .select(`
+                    *,
+                    author:author_id(id, full_name, avatar_url, role)
+                `)
+                .eq('application_id', applicationId)
+                .order('created_at', { ascending: true });
+
+            // Fetch status history
+            const { data: history } = await client
+                .from('project_application_status_history')
+                .select(`
+                    *,
+                    changer:changed_by(id, full_name, role)
+                `)
+                .eq('application_id', applicationId)
+                .order('created_at', { ascending: true });
+
+            return {
+                data: {
+                    application,
+                    comments: comments || [],
+                    history: history || []
+                },
+                success: true
+            };
+        } catch (err) {
+            console.error('fetchApplicationDetails error:', err);
+            return { error: err };
+        }
+    }
+
+    async function addApplicationComment(applicationId, content, isMentorFeedback = false) {
+        if (!client || !currentUser) return { error: { message: 'Sign in required.' } };
+        const cleanContent = String(content || '').trim();
+        if (!cleanContent) return { error: { message: 'Comment content cannot be empty.' } };
+
+        try {
+            // Verify permission
+            const { data: appData } = await client.from('project_applications').select('applicant_id, project_name').eq('id', applicationId).maybeSingle();
+            if (!appData) return { error: { message: 'Application not found.' } };
+
+            const isApplicant = appData.applicant_id === currentUser.id;
+            if (!isApplicant && !isMentor()) {
+                return { error: { message: 'Unauthorized.' } };
+            }
+
+            const { data, error } = await client
+                .from('project_application_comments')
+                .insert([{
+                    application_id: applicationId,
+                    author_id: currentUser.id,
+                    content: cleanContent,
+                    is_mentor_feedback: isMentorFeedback || (!isApplicant && isMentor()),
+                    created_at: new Date().toISOString()
+                }])
+                .select(`*, author:author_id(id, full_name, avatar_url, role)`)
+                .maybeSingle();
+
+            if (error) throw error;
+
+            // Notify counterpart
+            if (!isApplicant) {
+                createNotification({
+                    userId: appData.applicant_id,
+                    type: 'system',
+                    actorId: currentUser.id,
+                    referenceId: applicationId,
+                    body: `💬 Mentor feedback received on your project application "${appData.project_name}".`
+                }).catch(e => console.warn('Comment notif err:', e));
+            }
+
+            return { data, success: true };
+        } catch (err) {
+            console.error('addApplicationComment error:', err);
+            return { error: err };
+        }
+    }
+
+    async function requestApplicationChanges(applicationId, comment) {
+        if (!client || !isMentor()) {
+            return { error: { message: 'Unauthorized: Only Mentors and Super Admins can request changes.' } };
+        }
+
+        const cleanComment = String(comment || '').trim();
+        if (!cleanComment) {
+            return { error: { message: 'A comment explaining the requested changes is mandatory.' } };
+        }
+
+        try {
+            const { data: appData, error: fetchErr } = await client
+                .from('project_applications')
+                .select('*')
+                .eq('id', applicationId)
+                .maybeSingle();
+
+            if (fetchErr || !appData) return { error: { message: 'Application not found.' } };
+
+            const prevStatus = appData.status;
+
+            // 1. Update application status
+            const { data, error } = await client
+                .from('project_applications')
+                .update({
+                    status: 'Changes Requested',
+                    reviewer_id: currentUser.id,
+                    reviewed_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', applicationId)
+                .select()
+                .maybeSingle();
+
+            if (error) throw error;
+
+            // 2. Post the mentor's comment to the comment thread
+            await client.from('project_application_comments').insert([{
+                application_id: applicationId,
+                author_id: currentUser.id,
+                content: cleanComment,
+                is_mentor_feedback: true,
+                created_at: new Date().toISOString()
+            }]).catch(e => console.warn('Could not post feedback comment:', e));
+
+            // 3. Log into status history
+            await client.from('project_application_status_history').insert([{
+                application_id: applicationId,
+                changed_by: currentUser.id,
+                previous_status: prevStatus,
+                new_status: 'Changes Requested',
+                comment: cleanComment,
+                created_at: new Date().toISOString()
+            }]).catch(e => console.warn('Could not log status history:', e));
+
+            // 4. Notify applicant
+            createNotification({
+                userId: appData.applicant_id,
+                type: 'system',
+                actorId: currentUser.id,
+                referenceId: applicationId,
+                body: `⚠️ Changes requested on "${appData.project_name}": ${cleanComment.substring(0, 80)}`
+            }).catch(e => console.warn('Notif err:', e));
+
+            return { data, success: true };
+        } catch (err) {
+            console.error('requestApplicationChanges error:', err);
+            return { error: err };
+        }
+    }
+
+    async function resubmitProjectApplication(applicationId, { projectName, description, teamName = '', specialties = [], links = [] }) {
+        if (!client || !currentUser) return { error: { message: 'Sign in required.' } };
+
+        const cleanName = String(projectName || '').trim();
+        const cleanDesc = String(description || '').trim();
+
+        if (!cleanName) return { error: { message: 'Project Name is required.' } };
+        if (!cleanDesc) return { error: { message: 'Project Description is required.' } };
+
+        try {
+            const { data: appData, error: fetchErr } = await client
+                .from('project_applications')
+                .select('*')
+                .eq('id', applicationId)
+                .maybeSingle();
+
+            if (fetchErr || !appData) return { error: { message: 'Application not found.' } };
+            if (appData.applicant_id !== currentUser.id) return { error: { message: 'Unauthorized.' } };
+
+            const nextRevNumber = (appData.revision_number || 1) + 1;
+            const newRevision = {
+                revision: nextRevNumber,
+                submitted_at: new Date().toISOString(),
+                project_name: cleanName,
+                description: cleanDesc,
+                team_name: teamName ? String(teamName).trim() : cleanName,
+                specialties: Array.isArray(specialties) ? specialties : [],
+                links: Array.isArray(links) ? links : []
+            };
+
+            const existingRevs = Array.isArray(appData.revisions) ? appData.revisions : [];
+            const updatedRevisions = [...existingRevs, newRevision];
+
+            const { data, error } = await client
+                .from('project_applications')
+                .update({
+                    project_name: cleanName,
+                    description: cleanDesc,
+                    team_name: teamName ? String(teamName).trim() : cleanName,
+                    specialties: Array.isArray(specialties) ? specialties : [],
+                    links: Array.isArray(links) ? links : [],
+                    status: 'Pending Review',
+                    revision_number: nextRevNumber,
+                    revisions: updatedRevisions,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', applicationId)
+                .select()
+                .maybeSingle();
+
+            if (error) throw error;
+
+            // Log status history
+            await client.from('project_application_status_history').insert([{
+                application_id: applicationId,
+                changed_by: currentUser.id,
+                previous_status: 'Changes Requested',
+                new_status: 'Pending Review',
+                comment: `Applicant submitted revision #${nextRevNumber} for mentor review.`,
+                created_at: new Date().toISOString()
+            }]).catch(e => console.warn('History err:', e));
+
+            // Notify reviewer if known
+            if (appData.reviewer_id) {
+                createNotification({
+                    userId: appData.reviewer_id,
+                    type: 'system',
+                    actorId: currentUser.id,
+                    referenceId: applicationId,
+                    body: `🔄 Resubmitted: "${cleanName}" has been updated with requested changes.`
+                }).catch(e => console.warn('Reviewer notif err:', e));
+            }
+
+            return { data, success: true };
+        } catch (err) {
+            console.error('resubmitProjectApplication error:', err);
+            return { error: err };
+        }
+    }
+
+    async function approveProjectApplication(applicationId) {
+        if (!client || !isMentor()) {
+            return { error: { message: 'Unauthorized: Only Mentors and Super Admins can approve applications.' } };
+        }
+
+        try {
+            const { data: appData, error: fetchErr } = await client
+                .from('project_applications')
+                .select('*, applicant:applicant_id(*)')
+                .eq('id', applicationId)
+                .maybeSingle();
+
+            if (fetchErr || !appData) return { error: { message: 'Application not found.' } };
+            if (appData.status === 'Approved') return { error: { message: 'Application has already been approved.' } };
+
+            // Generate unique project code
+            let projectCode = appData.project_code;
+            if (!projectCode) {
+                for (let i = 0; i < 20; i++) {
+                    const candidate = generateUniqueProjectCode();
+                    const { data: existingCode } = await client.from('core_leads').select('id').eq('project_code', candidate).maybeSingle();
+                    if (!existingCode) {
+                        projectCode = candidate;
+                        break;
+                    }
+                }
+                if (!projectCode) projectCode = `PRJ-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`;
+            }
+
+            // Create or update live project in core_leads
+            const applicantUser = appData.applicant || {};
+            const applicantName = applicantUser.full_name || applicantUser.username || 'Project Lead';
+            const initials = (appData.project_name || 'PRJ')
+                .split(' ')
+                .map(w => w[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase();
+
+            // Next sort_order
+            const { data: maxOrderData } = await client.from('core_leads').select('sort_order').order('sort_order', { ascending: false }).limit(1).maybeSingle();
+            const nextSort = (maxOrderData?.sort_order || 13) + 1;
+
+            const leadPayload = {
+                name: applicantName,
+                role: 'Project Lead',
+                team: appData.team_name || appData.project_name,
+                project_name: appData.project_name,
+                project_code: projectCode,
+                lead_user_id: appData.applicant_id,
+                bio: appData.description,
+                specialties: Array.isArray(appData.specialties) ? appData.specialties : [],
+                links: Array.isArray(appData.links) ? appData.links : [],
+                avatar_url: applicantUser.avatar_url || null,
+                initials: initials || 'ICC',
+                gradient: 'from-emerald-600 to-teal-500',
+                color: '#10b981',
+                milestones: {
+                    planning: true,
+                    design: false,
+                    selection: false,
+                    development: false,
+                    programming: false,
+                    testing: false,
+                    optimization: false,
+                    deployment: false
+                },
+                sort_order: nextSort,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            const { data: newLead, error: leadErr } = await client
+                .from('core_leads')
+                .insert([leadPayload])
+                .select()
+                .maybeSingle();
+
+            if (leadErr) throw leadErr;
+
+            // Update applicant role to 'lead' and team_id if not super admin
+            const currentRole = (applicantUser.role || '').toLowerCase();
+            const shouldChangeRole = currentRole !== 'super_admin' && currentRole !== 'superadmin' && currentRole !== 'admin';
+            const profileUpdates = {
+                team_id: newLead.id,
+                updated_at: new Date().toISOString()
+            };
+            if (shouldChangeRole) profileUpdates.role = 'lead';
+
+            await client.from('profiles').update(profileUpdates).eq('id', appData.applicant_id);
+
+            // Add applicant to team_memberships
+            await client.from('team_memberships').upsert([{
+                user_id: appData.applicant_id,
+                team_id: newLead.id,
+                created_at: new Date().toISOString()
+            }]).catch(e => console.warn('Membership upsert err:', e));
+
+            // Update application status to 'Approved'
+            const { data: updatedApp, error: appUpdateErr } = await client
+                .from('project_applications')
+                .update({
+                    status: 'Approved',
+                    project_code: projectCode,
+                    approved_project_id: newLead.id,
+                    reviewer_id: currentUser.id,
+                    reviewed_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', applicationId)
+                .select()
+                .maybeSingle();
+
+            if (appUpdateErr) throw appUpdateErr;
+
+            // Log status history
+            await client.from('project_application_status_history').insert([{
+                application_id: applicationId,
+                changed_by: currentUser.id,
+                previous_status: appData.status,
+                new_status: 'Approved',
+                comment: `Application approved! Live project initialized with Code: ${projectCode}`,
+                created_at: new Date().toISOString()
+            }]).catch(e => console.warn('History err:', e));
+
+            // Send notification to applicant
+            createNotification({
+                userId: appData.applicant_id,
+                type: 'system',
+                actorId: currentUser.id,
+                referenceId: applicationId,
+                body: `🎉 Congratulations! Your project "${appData.project_name}" has been approved! Code: ${projectCode}`
+            }).catch(e => console.warn('Notif err:', e));
+
+            // Refresh in-memory CORE_LEADS
+            if (typeof loadLeads === 'function') {
+                await loadLeads();
+            }
+
+            return { data: updatedApp, project: newLead, projectCode, success: true };
+        } catch (err) {
+            console.error('approveProjectApplication error:', err);
+            return { error: err };
+        }
+    }
+
+    async function fetchMentorDashboardSummary() {
+        if (!client || !isMentor()) {
+            return { error: { message: 'Unauthorized' } };
+        }
+
+        try {
+            const { data: applications } = await client.from('project_applications').select('id, status');
+            const { data: projects } = await client.from('core_leads').select('id');
+
+            const allApps = applications || [];
+            const pending = allApps.filter(a => a.status === 'Pending Review').length;
+            const changesRequested = allApps.filter(a => a.status === 'Changes Requested').length;
+            const approved = allApps.filter(a => a.status === 'Approved').length;
+            const totalProjects = (projects || []).length;
+
+            return {
+                data: {
+                    pending,
+                    changesRequested,
+                    approved,
+                    totalProjects,
+                    totalApplications: allApps.length
+                },
+                success: true
+            };
+        } catch (err) {
+            console.error('fetchMentorDashboardSummary error:', err);
+            return { error: err };
+        }
+    }
+
+    async function fetchProjectForMentor(projectId) {
+        if (!client || !isMentor()) {
+            return { error: { message: 'Unauthorized: Complete project audit is restricted to Mentors and Super Admins.' } };
+        }
+
+        try {
+            // 1. Fetch live project
+            const { data: project, error: pErr } = await client
+                .from('core_leads')
+                .select('*')
+                .eq('id', projectId)
+                .maybeSingle();
+
+            if (pErr || !project) return { error: { message: 'Project not found.' } };
+
+            // 2. Fetch Lead profile
+            let leadUser = null;
+            if (project.lead_user_id) {
+                const { data: lData } = await client.from('profiles').select('*').eq('id', project.lead_user_id).maybeSingle();
+                leadUser = lData;
+            }
+
+            // 3. Fetch Full Member List with contact info
+            const { data: memberRows } = await client
+                .from('team_memberships')
+                .select('user_id, created_at, profile:user_id(*)')
+                .eq('team_id', projectId);
+
+            // 4. Fetch linked application if available
+            const { data: application } = await client
+                .from('project_applications')
+                .select(`
+                    *,
+                    applicant:applicant_id(*),
+                    reviewer:reviewer_id(id, full_name, role)
+                `)
+                .or(`approved_project_id.eq.${projectId},project_name.eq."${project.project_name || project.team}"`)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            // 5. Fetch comments and status history if application exists
+            let comments = [];
+            let history = [];
+            if (application?.id) {
+                const { data: cData } = await client
+                    .from('project_application_comments')
+                    .select('*, author:author_id(id, full_name, avatar_url, role)')
+                    .eq('application_id', application.id)
+                    .order('created_at', { ascending: true });
+                comments = cData || [];
+
+                const { data: hData } = await client
+                    .from('project_application_status_history')
+                    .select('*, changer:changed_by(id, full_name, role)')
+                    .eq('application_id', application.id)
+                    .order('created_at', { ascending: true });
+                history = hData || [];
+            }
+
+            return {
+                data: {
+                    project,
+                    leadUser,
+                    members: memberRows || [],
+                    application,
+                    comments,
+                    history
+                },
+                success: true
+            };
+        } catch (err) {
+            console.error('fetchProjectForMentor error:', err);
+            return { error: err };
+        }
+    }
+
+    function filterProjectFieldsForUser(project, currentUserId = currentUser?.id, prof = currentProfile) {
+        if (!project) return null;
+        const isSuper = isSuperAdmin(prof);
+        const isMent = isMentor(prof);
+        const userTeamId = prof?.team_id;
+        const memberships = Array.isArray(prof?.memberships) ? prof.memberships.map(Number) : [];
+        const isMember = memberships.includes(Number(project.id)) || Number(userTeamId) === Number(project.id);
+        const isLead = (project.lead_user_id && project.lead_user_id === currentUserId) || 
+                       (prof?.role === 'lead' && Number(userTeamId) === Number(project.id));
+        const isAdminUser = isAdmin();
+
+        // Mentors & Super Admins get full fields
+        if (isSuper || isMent) {
+            return { ...project, _canViewFullAudit: true, _canViewCode: true };
+        }
+
+        // Project Lead & Members see basic info + project code
+        if (isLead || isMember || isAdminUser) {
+            return {
+                id: project.id,
+                name: project.name,
+                team: project.team,
+                project_name: project.project_name || project.team,
+                project_code: project.project_code || null,
+                bio: project.bio,
+                specialties: project.specialties,
+                links: project.links,
+                milestones: project.milestones,
+                avatar_url: project.avatar_url,
+                initials: project.initials,
+                gradient: project.gradient,
+                color: project.color,
+                lead_user_id: project.lead_user_id,
+                _canViewFullAudit: false,
+                _canViewCode: true
+            };
+        }
+
+        // Regular users / public see ONLY basic info (project name, description, lead name, avatar, milestones)
+        // Explicitly omits project_code and sensitive data!
+        return {
+            id: project.id,
+            name: project.name,
+            team: project.team,
+            project_name: project.project_name || project.team,
+            bio: project.bio,
+            specialties: project.specialties,
+            links: project.links,
+            milestones: project.milestones,
+            avatar_url: project.avatar_url,
+            initials: project.initials,
+            gradient: project.gradient,
+            color: project.color,
+            _canViewFullAudit: false,
+            _canViewCode: false
+        };
+    }
+
     // ==================== HELPERS ====================
 
     function getUser() { return currentUser; }
@@ -2420,6 +3133,13 @@ const ICCSupabase = (() => {
     function isAdmin() {
         const role = (currentProfile?.role || '').toLowerCase().trim();
         return role === 'admin' || role === 'super_admin' || role === 'superadmin';
+    }
+
+    function isMentor(prof = currentProfile) {
+        const target = prof || currentProfile;
+        if (!target && !currentUser) return false;
+        const role = (target?.role || '').toLowerCase().trim();
+        return role === 'mentor' || isSuperAdmin(target);
     }
 
     function isLead() {
@@ -2460,8 +3180,13 @@ const ICCSupabase = (() => {
         subscribeToFeed, subscribeToMessages, subscribeToConversation,
         subscribeToTeam, subscribeToAllLeads, subscribeToBroadcasts, subscribeToNotifications,
         unsubscribeChannel, cleanupAllChannels,
-        getUser, getProfile, isConfigured, getClient, isAdmin, isLead, isSuperAdmin, needsOnboarding,
-        getAdminPermissions, hasAdminPermission, updateAdminPermissions, setAdminRole, DEFAULT_ADMIN_PERMISSIONS
+        getUser, getProfile, isConfigured, getClient, isAdmin, isLead, isSuperAdmin, isMentor, needsOnboarding,
+        getAdminPermissions, hasAdminPermission, updateAdminPermissions, setAdminRole, setMentorRole, DEFAULT_ADMIN_PERMISSIONS,
+        // Project Application & Mentor Workflow API
+        createProjectApplication, fetchMyProjectApplications, fetchAllProjectApplications, fetchApplicationDetails,
+        addApplicationComment, requestApplicationChanges, resubmitProjectApplication, approveProjectApplication,
+        fetchMentorDashboardSummary, fetchProjectForMentor, filterProjectFieldsForUser,
+        subscribeToProjectApplications, subscribeToApplicationComments
     };
 })();
 
