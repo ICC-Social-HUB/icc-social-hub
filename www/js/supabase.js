@@ -1079,10 +1079,10 @@ const ICCSupabase = (() => {
                 return { error: { message: 'Permission denied: Only the sender or team leader can delete this message.' } };
             }
             if (isLead && !isMe && !isMentor() && !isAdmin() && !isSuperAdmin()) {
-                const { data: senderProf } = await client.from('profiles').select('role, is_mentor').eq('id', msg.sender_id).maybeSingle();
+                const { data: senderProf } = await client.from('profiles').select('role').eq('id', msg.sender_id).maybeSingle();
                 if (senderProf) {
                     const r = (senderProf.role || '').toLowerCase();
-                    if (r === 'mentor' || r === 'super_admin' || r === 'superadmin' || Boolean(senderProf.is_mentor)) {
+                    if (r === 'mentor' || r === 'super_admin' || r === 'superadmin') {
                         return { error: { message: 'Team leads cannot delete messages sent by mentors.' } };
                     }
                 }
@@ -3512,13 +3512,13 @@ const ICCSupabase = (() => {
                 if (senderId && senderId !== currentUser.id) {
                     const { data: prof } = await client
                         .from('profiles')
-                        .select('role, is_mentor')
+                        .select('role')
                         .eq('id', senderId)
                         .maybeSingle();
 
                     if (prof) {
                         const role = (prof.role || '').toLowerCase();
-                        const isSenderMentor = role === 'mentor' || role === 'super_admin' || role === 'superadmin' || Boolean(prof.is_mentor);
+                        const isSenderMentor = role === 'mentor' || role === 'super_admin' || role === 'superadmin';
                         if (isSenderMentor) {
                             return { error: { message: 'Team leads and members cannot delete messages sent by mentors.' } };
                         }
@@ -3733,7 +3733,7 @@ const ICCSupabase = (() => {
 
             // 3. Query profiles excluding only mentors (admins, super admins, leads, and regular members are all students)
             let query = client.from('profiles')
-                .select('id, full_name, username, avatar_url, email, linkedin, year, branch, section, role, team_id, created_at, updated_at, is_mentor')
+                .select('id, full_name, username, avatar_url, email, linkedin, year, branch, section, role, team_id, created_at, updated_at')
                 .or('role.neq.mentor,role.is.null');
 
             const { data: rawProfiles, error: profErr } = await query;
@@ -3741,7 +3741,7 @@ const ICCSupabase = (() => {
 
             let filtered = (rawProfiles || []).filter(s => {
                 const role = (s.role || '').toLowerCase().trim();
-                if (role === 'mentor' || s.is_mentor === true) return false;
+                if (role === 'mentor') return false;
                 if (s.is_active === false || s.status === 'deactivated' || s.status === 'banned') return false;
                 return true;
             });

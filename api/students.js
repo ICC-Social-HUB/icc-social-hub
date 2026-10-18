@@ -115,7 +115,7 @@ module.exports = async (req, res) => {
         // Exclude only Mentors at database query level (admins, super admins, leads, and regular members are all students)
         let query = supabase
             .from('profiles')
-            .select('id, full_name, username, avatar_url, email, linkedin, year, branch, section, role, team_id, created_at, updated_at, is_mentor');
+            .select('id, full_name, username, avatar_url, email, linkedin, year, branch, section, role, team_id, created_at, updated_at');
 
         query = query.or('role.neq.mentor,role.is.null');
 
@@ -127,7 +127,7 @@ module.exports = async (req, res) => {
         // In-memory filter: exclude only Mentors; list all students including admins and leads
         let filteredStudents = (profiles || []).filter(student => {
             const role = (student.role || '').toLowerCase().trim();
-            if (role === 'mentor' || student.is_mentor === true) {
+            if (role === 'mentor') {
                 return false;
             }
             // Exclude deactivated/deleted if column exists
