@@ -2421,11 +2421,19 @@ const ICCSupabase = (() => {
     }
 
     function subscribeToProjectApplications(callback) {
-        return subscribeChannel('project-apps-sync', 'project_applications', '*', callback);
+        const channelName = 'project-apps-sync';
+        const ch = subscribeChannel(channelName, 'project_applications', '*', callback);
+        const unsub = () => unsubscribeChannel(channelName);
+        unsub.channel = ch;
+        return unsub;
     }
 
     function subscribeToApplicationComments(applicationId, callback) {
-        return subscribeChannel(`app-comments-${applicationId}`, 'project_application_comments', '*', callback);
+        const channelName = `app-comments-${applicationId}`;
+        const ch = subscribeChannel(channelName, 'project_application_comments', '*', callback);
+        const unsub = () => unsubscribeChannel(channelName);
+        unsub.channel = ch;
+        return unsub;
     }
 
     // ==================== PROJECT APPLICATIONS & MENTOR APPROVAL ====================

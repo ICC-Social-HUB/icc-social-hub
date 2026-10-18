@@ -721,23 +721,27 @@ const TeamsView = (() => {
         <div id="my-applications-modal" class="fixed inset-0 z-[2500] bg-zinc-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in overflow-y-auto">
             <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto" onclick="event.stopPropagation()">
                 <!-- Modal Header -->
-                <div class="p-4 sm:p-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900 flex-shrink-0">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <div class="p-3.5 sm:p-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900 flex-shrink-0">
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <button id="back-my-apps-btn" class="flex items-center gap-1.5 px-3 py-1.5 text-zinc-300 hover:text-white bg-zinc-800/80 hover:bg-zinc-700/80 border border-zinc-700/80 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 shadow-sm" title="Back to Projects">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                            <span>Back</span>
+                        </button>
+                        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 flex-shrink-0">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         </div>
-                        <div>
-                            <h3 class="font-heading font-bold text-lg text-white">My Project Applications</h3>
-                            <p class="text-xs text-zinc-400">Track approval status, mentor feedback & revisions</p>
+                        <div class="min-w-0">
+                            <h3 class="font-heading font-bold text-base sm:text-lg text-white truncate">My Project Applications</h3>
+                            <p class="text-[11px] sm:text-xs text-zinc-400 truncate">Track approval status, mentor feedback & revisions</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-shrink-0">
                         <button id="my-apps-new-btn" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer">
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                            <span>New Proposal</span>
+                            <span class="hidden sm:inline">New Proposal</span>
                         </button>
-                        <button id="close-my-apps-modal" class="text-zinc-500 hover:text-white p-1.5 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        <button id="close-my-apps-modal" class="text-zinc-500 hover:text-white p-2 rounded-xl hover:bg-zinc-800 transition-colors cursor-pointer" title="Close">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                         </button>
                     </div>
                 </div>
@@ -756,10 +760,33 @@ const TeamsView = (() => {
         const modal = document.getElementById('my-applications-modal');
         let currentUnsubComments = null;
 
+        const cleanupCommentsSub = () => {
+            if (currentUnsubComments) {
+                try {
+                    if (typeof currentUnsubComments === 'function') {
+                        currentUnsubComments();
+                    } else if (typeof ICCSupabase.unsubscribeChannel === 'function') {
+                        ICCSupabase.unsubscribeChannel(currentUnsubComments);
+                    }
+                } catch (e) {
+                    console.warn('Could not cleanup comments sub:', e);
+                }
+                currentUnsubComments = null;
+            }
+        };
+
         const close = () => {
-            if (currentUnsubComments) currentUnsubComments();
+            cleanupCommentsSub();
+            document.removeEventListener('keydown', onEsc);
             modal?.remove();
         };
+
+        const onEsc = (e) => {
+            if (e.key === 'Escape') close();
+        };
+        document.addEventListener('keydown', onEsc);
+
+        document.getElementById('back-my-apps-btn')?.addEventListener('click', close);
         document.getElementById('close-my-apps-modal')?.addEventListener('click', close);
         document.getElementById('my-apps-new-btn')?.addEventListener('click', () => {
             close();
@@ -818,13 +845,17 @@ const TeamsView = (() => {
             const history = details?.history || [];
 
             // Setup realtime subscription for comments
-            if (currentUnsubComments) currentUnsubComments();
-            currentUnsubComments = ICCSupabase.subscribeToApplicationComments(activeApp.id, async () => {
-                const refreshed = await ICCSupabase.fetchApplicationDetails(activeApp.id);
-                if (refreshed?.data?.comments) {
-                    renderCommentsList(refreshed.data.comments);
-                }
-            });
+            cleanupCommentsSub();
+            try {
+                currentUnsubComments = ICCSupabase.subscribeToApplicationComments(activeApp.id, async () => {
+                    const refreshed = await ICCSupabase.fetchApplicationDetails(activeApp.id);
+                    if (refreshed?.data?.comments) {
+                        renderCommentsList(refreshed.data.comments);
+                    }
+                });
+            } catch (err) {
+                console.warn('Realtime comments subscription warning:', err);
+            }
 
             const normStatus = (st) => String(st || '').toLowerCase().replace(/[\s_-]+/g, '_');
             const statusBadge = (status) => {
