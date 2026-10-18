@@ -31,13 +31,13 @@ const ProfileView = (() => {
                             ${email ? `<p class="text-xs text-zinc-500 flex items-center gap-1.5 mt-1 truncate"><svg class="w-3.5 h-3.5 flex-shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg><span class="truncate">${escapeHtml(email)}</span></p>` : ''}
                             ${profile.phone ? `<p class="text-xs text-zinc-400 flex items-center gap-1.5 mt-1 truncate"><svg class="w-3.5 h-3.5 flex-shrink-0 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg><a href="tel:${escapeHtml(profile.phone)}" class="hover:underline text-zinc-300">${escapeHtml(profile.phone)}</a></p>` : ''}
                             <div class="flex flex-wrap items-center gap-2 mt-1">
-                                ${profile.year ? `<span class="px-2 py-0.5 bg-rose-500/15 text-rose-400 rounded text-[10px] font-semibold">${escapeHtml(profile.year)}</span>` : ''}
-                                ${profile.branch ? `<span class="px-2 py-0.5 bg-blue-500/15 text-blue-400 rounded text-[10px] font-semibold">${escapeHtml(profile.branch)}</span>` : ''}
+                                ${profile.year ? `<span class="text-xs font-semibold text-rose-400">${escapeHtml(profile.year)}</span>` : ''}
+                                ${profile.branch ? `<span class="text-xs font-semibold text-blue-400">${escapeHtml(profile.branch)}</span>` : ''}
                                 ${(profile.memberships || []).map(tid => {
                                     const lead = getLeadByTeamId(tid);
-                                    return lead ? `<span class="px-2 py-0.5 bg-zinc-800/80 rounded text-[10px] text-zinc-300 font-medium">${lead.team}</span>` : '';
+                                    return lead ? `<span class="text-xs text-zinc-300 font-medium">${lead.team}</span>` : '';
                                 }).join('')}
-                                ${profile.role === 'lead' ? `<span class="px-2 py-0.5 bg-red-600/15 text-red-400 rounded text-[10px] font-bold uppercase">${profile.role}</span>` : ''}
+                                ${profile.role === 'lead' ? `<span class="text-xs font-bold uppercase text-red-400">${profile.role}</span>` : ''}
                             </div>
                         </div>
                         <button id="profile-edit-btn" class="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
@@ -59,7 +59,7 @@ const ProfileView = (() => {
                         </a>` : ''}
                     </div>` : ''}
                     ${profile.bio ? `<p class="text-sm text-zinc-400 mt-3 leading-relaxed">${escapeHtml(profile.bio)}</p>` : ''}
-                    ${profile.skills?.length ? `<div class="flex flex-wrap gap-1.5 mt-3">${profile.skills.map(s => `<span class="px-2 py-0.5 bg-zinc-800/80 rounded text-[10px] text-zinc-400 font-medium">${escapeHtml(s)}</span>`).join('')}</div>` : ''}
+                    ${profile.skills?.length ? `<div class="flex flex-wrap items-center gap-1.5 mt-3 text-xs text-zinc-400">${profile.skills.map(s => `<span class="text-zinc-300 font-medium">${escapeHtml(s)}</span>`).join('<span class="text-zinc-600 mx-1">•</span>')}</div>` : ''}
                 </div>
 
                 ${editing ? renderEditForm(profile) : ''}

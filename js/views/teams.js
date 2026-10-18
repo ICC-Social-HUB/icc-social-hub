@@ -1126,7 +1126,7 @@ const TeamsView = (() => {
                                         <div class="flex items-center justify-between text-xs">
                                             <div class="flex items-center gap-2">
                                                 <span class="font-bold text-white">${escapeHtml(authorName)}</span>
-                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isFeedback ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-800/80 text-zinc-400'}">
+                                                <span class="text-[10px] font-bold ${isFeedback ? 'text-emerald-400' : 'text-zinc-400'}">
                                                     ${roleBadge}
                                                 </span>
                                             </div>
@@ -1342,7 +1342,7 @@ const TeamsView = (() => {
                     <div class="flex items-center justify-between text-xs">
                         <div class="flex items-center gap-2">
                             <span class="font-bold text-white">${escapeHtml(authorName)}</span>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isFeedback ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-800/80 text-zinc-400'}">
+                            <span class="text-[10px] font-bold ${isFeedback ? 'text-emerald-400' : 'text-zinc-400'}">
                                 ${roleBadge}
                             </span>
                         </div>
@@ -1884,7 +1884,7 @@ const TeamsView = (() => {
                                         if (!user) return `<button id="team-join-btn" class="join-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs sm:text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/30 cursor-pointer shadow-md active:scale-95 flex-shrink-0"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg><span>Join Team</span></button>`;
                                         if (isMember || isLead) return `
                                             <div class="inline-flex items-center gap-2 flex-wrap">
-                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600/15 rounded-xl text-emerald-400 text-xs font-semibold">
+                                                <span class="inline-flex items-center gap-1.5 text-emerald-400 text-xs font-semibold">
                                                     <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                                     <span>${isLead ? "Team Leader" : "Team Member"}</span>
                                                 </span>
@@ -1893,16 +1893,16 @@ const TeamsView = (() => {
                                                     <span>Team Chat</span>
                                                 </button>
                                             </div>`;
-                                        if (profile?.memberships?.length > 0 || profile?.role === 'lead') return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900/80 rounded-xl text-zinc-500 text-xs font-medium"><svg class="w-3.5 h-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span>In Another Project</span></span>`;
+                                        if (profile?.memberships?.length > 0 || profile?.role === 'lead') return `<span class="inline-flex items-center gap-1.5 text-zinc-400 text-xs font-medium"><svg class="w-3.5 h-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span>In Another Project</span></span>`;
                                         if (isPending) return `
                                             <div class="inline-flex items-center gap-2">
-                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/15 rounded-xl text-amber-400 text-xs font-semibold">
+                                                <span class="inline-flex items-center gap-1.5 text-amber-400 text-xs font-semibold">
                                                     <svg class="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                                     <span>Pending</span>
                                                 </span>
                                                 <button id="team-cancel-btn" class="text-xs text-zinc-500 hover:text-red-400 transition-colors underline decoration-dotted cursor-pointer">Cancel</button>
                                             </div>`;
-                                        if (profile?.pending_teams?.length > 0) return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900/80 rounded-xl text-zinc-500 text-xs font-medium">Pending Elsewhere</span>`;
+                                        if (profile?.pending_teams?.length > 0) return `<span class="inline-flex items-center gap-1.5 text-zinc-400 text-xs font-medium">Pending Elsewhere</span>`;
 
                                         return `<button id="team-join-btn" class="join-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs sm:text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/30 cursor-pointer shadow-md active:scale-95 flex-shrink-0">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
@@ -1911,9 +1911,9 @@ const TeamsView = (() => {
                                     })()}
                                 </div>
                                 <div class="flex items-center flex-wrap gap-2 mt-1.5 text-xs">
-                                    <span class="px-2.5 py-0.5 bg-zinc-900/80 rounded-full font-semibold text-zinc-400">Team: <span class="text-zinc-200 font-bold">${lead.team}</span></span>
+                                    <span class="text-xs font-medium text-zinc-400">Team: <span class="text-zinc-200 font-bold">${lead.team}</span></span>
                                     ${canSeeCode ? `
-                                        <span class="px-2.5 py-0.5 bg-emerald-500/15 text-emerald-300 rounded-full font-mono font-bold text-xs flex items-center gap-1.5" title="Unique Project Code (Visible to Project Lead, Members, Mentors, and Admins)">
+                                        <span class="text-xs font-mono font-bold text-emerald-400 flex items-center gap-1.5" title="Unique Project Code (Visible to Project Lead, Members, Mentors, and Admins)">
                                             <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/></svg>
                                             <span>Code: ${escapeHtml(lead.project_code)}</span>
                                         </span>
@@ -1955,7 +1955,7 @@ const TeamsView = (() => {
                                 <div>
                                     <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-2">Specialties & Tech Stack</h3>
                                     <div class="flex flex-wrap gap-2">
-                                        ${(lead.specialties || []).map(s => `<span class="specialty-pill px-3 py-1.5 bg-zinc-900/80 rounded-lg text-xs text-zinc-400">${s}</span>`).join('')}
+                                        ${(lead.specialties || []).map(s => `<span class="specialty-pill text-xs text-zinc-400 font-medium">${s}</span>`).join('<span class="text-zinc-600 mx-1">•</span>')}
                                     </div>
                                 </div>
                             </div>
@@ -2052,9 +2052,9 @@ const TeamsView = (() => {
                                 <div class="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-zinc-800/60">
                                     <div class="flex items-center gap-2">
                                         <h3 class="font-heading font-bold text-sm text-white tracking-tight">Active Workforce</h3>
-                                        <span id="team-member-count" class="px-2 py-0.5 bg-red-600/15 text-red-400 rounded-full text-[11px] font-bold">${teamMembers.length}</span>
+                                        <span id="team-member-count" class="text-xs font-bold text-red-400">(${teamMembers.length})</span>
                                     </div>
-                                    <div class="flex items-center gap-1.5 px-2.5 py-0.5 bg-zinc-900/80 rounded-full flex-shrink-0">
+                                    <div class="flex items-center gap-1.5 flex-shrink-0">
                                         <span class="relative flex h-2 w-2">
                                             <span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                             <span class="relative rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -2094,7 +2094,7 @@ const TeamsView = (() => {
                                     </div>
                                     <div class="p-3">
                                         <div class="flex items-center gap-2 mb-2">
-                                            <span class="px-2 py-0.5 bg-red-600/10 text-red-400 rounded text-[9px] font-bold uppercase tracking-wider">${m.disc_tag || 'No Tag'}</span>
+                                            <span class="text-[10px] font-bold uppercase tracking-wider text-red-400">${m.disc_tag || 'No Tag'}</span>
                                             <span class="text-[10px] text-zinc-500 italic">DISC Personality</span>
                                         </div>
                                         <p class="text-[11px] text-zinc-400 leading-relaxed italic bg-zinc-900/30 p-2 rounded-lg">"${m.summary || 'No summary provided.'}"</p>
@@ -2343,7 +2343,7 @@ const TeamsView = (() => {
                                     </div>
                                     <div class="p-3">
                                         <div class="flex items-center gap-2 mb-2">
-                                            <span class="px-2 py-0.5 bg-red-600/10 text-red-400 rounded text-[9px] font-bold uppercase tracking-wider">${m.disc_tag || 'No Tag'}</span>
+                                            <span class="text-[10px] font-bold uppercase tracking-wider text-red-400">${m.disc_tag || 'No Tag'}</span>
                                             <span class="text-[10px] text-zinc-500 italic">DISC Personality</span>
                                         </div>
                                         <p class="text-[11px] text-zinc-400 leading-relaxed italic bg-zinc-900/30 p-2 rounded-lg">"${m.summary || 'No summary provided.'}"</p>

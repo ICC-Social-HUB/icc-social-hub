@@ -109,24 +109,24 @@ const UserProfileModal = (() => {
                             
                             <!-- Prominent / Unique Leader Tag OR Member Tag below name -->
                             ${isLeadOfTeam ? `
-                                <div class="inline-flex items-center justify-center gap-1.5 px-3 py-1 mt-1 text-xs font-extrabold text-amber-300 bg-amber-500/20 rounded-full shadow-[0_0_15px_rgba(251,191,36,0.3)] tracking-wide uppercase select-none">
+                                <div class="inline-flex items-center justify-center gap-1.5 mt-1 text-xs font-extrabold text-amber-400 tracking-wide uppercase select-none">
                                     <svg class="w-3.5 h-3.5 text-amber-400 fill-current flex-shrink-0" viewBox="0 0 20 20">
                                         <path d="M2.5 14.5l1.5-7.5 4 4.5 4-6 4 6 4-4.5 1.5 7.5h-19z"/>
                                     </svg>
                                     <span>${escapeHtml(displayTag)}</span>
                                 </div>
                             ` : (displayTag ? `
-                                <div class="inline-flex items-center justify-center px-3 py-1 mt-1 text-xs font-semibold text-emerald-400 bg-emerald-500/15 rounded-full">
+                                <div class="inline-flex items-center justify-center mt-1 text-xs font-semibold text-emerald-400">
                                     ${escapeHtml(displayTag)}
                                 </div>
                             ` : '')}
 
-                            <div class="flex flex-wrap items-center justify-center gap-2 pt-2">
-                                ${profile.year ? `<span class="px-3 py-1 bg-rose-500/15 text-rose-300 rounded-full text-xs font-semibold">${escapeHtml(profile.year)}</span>` : ''}
-                                ${profile.branch ? `<span class="px-3 py-1 bg-blue-500/15 text-blue-300 rounded-full text-xs font-semibold">${escapeHtml(profile.branch)}</span>` : ''}
-                                ${teamLead ? `<span class="px-3 py-1 bg-zinc-800/80 rounded-full text-xs text-zinc-200 font-medium">${teamLead.team}</span>` : ''}
-                                ${profile.role === 'lead' ? `<span class="px-3 py-1 bg-red-600/15 text-red-400 rounded-full text-xs font-bold uppercase tracking-wider">${profile.role}</span>` : ''}
-                                ${profile.role === 'admin' ? `<span class="px-3 py-1 bg-amber-500/15 text-amber-300 rounded-full text-xs font-bold uppercase tracking-wider">Admin</span>` : ''}
+                            <div class="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+                                ${profile.year ? `<span class="text-xs font-semibold text-rose-400">${escapeHtml(profile.year)}</span>` : ''}
+                                ${profile.branch ? `<span class="text-xs font-semibold text-blue-400">${escapeHtml(profile.branch)}</span>` : ''}
+                                ${teamLead ? `<span class="text-xs text-zinc-300 font-medium">${teamLead.team}</span>` : ''}
+                                ${profile.role === 'lead' ? `<span class="text-xs font-bold uppercase tracking-wider text-red-400">${profile.role}</span>` : ''}
+                                ${profile.role === 'admin' ? `<span class="text-xs font-bold uppercase tracking-wider text-amber-400">Admin</span>` : ''}
                             </div>
                         </div>
                     </div>
@@ -191,7 +191,7 @@ const UserProfileModal = (() => {
                     <div ${profile.bio ? 'class="pt-3 border-t border-zinc-800/60"' : ''}>
                         <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Skills & Expertise</h3>
                         <div class="flex flex-wrap gap-2">
-                            ${profile.skills.map(s => `<span class="px-3 py-1 bg-zinc-800/80 rounded-lg text-xs text-zinc-300 font-medium">${escapeHtml(s)}</span>`).join('')}
+                            ${profile.skills.map(s => `<span class="text-xs text-zinc-300 font-medium">${escapeHtml(s)}</span>`).join('<span class="text-zinc-600 mx-1">•</span>')}
                         </div>
                     </div>` : ''}
                 </div>` : ''}

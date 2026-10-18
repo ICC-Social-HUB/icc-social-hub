@@ -1547,15 +1547,15 @@ const AdminView = (() => {
                                     <div class="flex-1 min-w-0">
                                         <div class="flex flex-wrap items-center gap-2">
                                             <h4 class="text-sm font-semibold text-white break-words">${escapeHtml(fullName || 'Anonymous')}</h4>
-                                            ${isVerified ? `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400">Excel Verified</span>` : `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-red-500/15 text-red-400">Unverified</span>`}
-                                            ${isManuallyUpdated ? `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-blue-500/15 text-blue-400">Manually Updated</span>` : ''}
+                                            ${isVerified ? `<span class="text-[9px] font-bold uppercase tracking-wider text-emerald-400">Excel Verified</span>` : `<span class="text-[9px] font-bold uppercase tracking-wider text-red-400">Unverified</span>`}
+                                            ${isManuallyUpdated ? `<span class="text-[9px] font-bold uppercase tracking-wider text-blue-400">Manually Updated</span>` : ''}
                                             ${(() => {
                                                 const att = attendanceMap[u.id];
                                                 if (att && att.total > 0) {
-                                                    const col = att.percent >= 75 ? 'bg-emerald-500/15 text-emerald-400' : att.percent >= 50 ? 'bg-amber-500/15 text-amber-400' : 'bg-red-500/15 text-red-400';
-                                                    return `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${col}" title="Attendance: ${att.present}/${att.total} days">Att: ${att.percent}%</span>`;
+                                                    const col = att.percent >= 75 ? 'text-emerald-400' : att.percent >= 50 ? 'text-amber-400' : 'text-red-400';
+                                                    return `<span class="text-[9px] font-bold uppercase tracking-wider ${col}" title="Attendance: ${att.present}/${att.total} days">Att: ${att.percent}%</span>`;
                                                 }
-                                                return `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-zinc-800/80 text-zinc-500">Att: 0%</span>`;
+                                                return `<span class="text-[9px] font-bold uppercase tracking-wider text-zinc-500">Att: 0%</span>`;
                                             })()}
                                         </div>
                                         <p class="text-[11px] text-zinc-500 truncate">@${escapeHtml(u.username || '—')}</p>
@@ -1595,7 +1595,7 @@ const AdminView = (() => {
                                 <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Section & Team</span>
                                 <div class="flex gap-2 items-center">
                                     <span class="text-[11px] font-bold text-zinc-300 uppercase">${escapeHtml(section || '-')}</span>
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${u.team_id ? 'bg-blue-500/10 text-blue-400' : 'bg-zinc-800 text-zinc-500'}">
+                                    <span class="text-[11px] font-medium ${u.team_id ? 'text-blue-400' : 'text-zinc-500'}">
                                         ${escapeHtml(teamName)}
                                     </span>
                                 </div>

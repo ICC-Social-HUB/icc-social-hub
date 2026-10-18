@@ -263,10 +263,10 @@ const InventoryView = (() => {
                 <h2 class="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-4">Currently Borrowed & History</h2>
                 ${activeRequests.map(req => {
                     const statusColors = {
-                        'pending': 'text-amber-400 bg-amber-400/15',
-                        'taken': 'text-blue-400 bg-blue-400/15',
-                        'completed': 'text-emerald-400 bg-emerald-400/15',
-                        'cancelled': 'text-zinc-500 bg-zinc-500/15'
+                        'pending': 'text-amber-400',
+                        'taken': 'text-blue-400',
+                        'completed': 'text-emerald-400',
+                        'cancelled': 'text-zinc-500'
                     };
                     return `
                         <div class="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -286,7 +286,7 @@ const InventoryView = (() => {
                                 </div>
                             </div>
                             <div class="flex items-center justify-between sm:justify-end gap-3">
-                                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusColors[req.status] || ''}">
+                                <span class="text-xs font-bold uppercase tracking-wider ${statusColors[req.status] || ''}">
                                     ${req.status}
                                 </span>
                                 ${req.status === 'pending' ? `
@@ -352,10 +352,10 @@ const InventoryView = (() => {
                     <div class="grid grid-cols-1 gap-4">
                         ${filteredRequests.length > 0 ? filteredRequests.map(req => {
                             const statusStyle = 
-                                req.status === 'pending' ? 'bg-amber-500/15 text-amber-400' :
-                                req.status === 'taken' ? 'bg-blue-500/15 text-blue-400' :
-                                req.status === 'completed' ? 'bg-emerald-500/15 text-emerald-400' :
-                                'bg-red-500/15 text-red-400';
+                                req.status === 'pending' ? 'text-amber-400' :
+                                req.status === 'taken' ? 'text-blue-400' :
+                                req.status === 'completed' ? 'text-emerald-400' :
+                                'text-red-400';
                             
                             const isLead = req.profiles?.role === 'lead';
                             
@@ -416,7 +416,7 @@ const InventoryView = (() => {
 
                                         <!-- Status & Actions -->
                                         <div class="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-3 shrink-0">
-                                            <div class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter ${statusStyle}">
+                                            <div class="text-xs font-bold uppercase tracking-wider ${statusStyle}">
                                                 ${req.status}
                                             </div>
                                             <div class="flex items-center gap-2">
