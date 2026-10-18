@@ -3491,18 +3491,50 @@ const TeamsView = (() => {
             (user && Array.isArray(teamMembers) && teamMembers.some(m => String(m.id) === String(user.id)))
         );
 
-        // Tab Switchers (Overview vs Mentor Chat)
+        // Tab Switchers (Overview, Tasks, Mentor Chat)
         const overviewTabBtn = document.getElementById('project-tab-overview-btn');
+        const tasksTabBtn = document.getElementById('project-tab-tasks-btn');
         const mentorTabBtn = document.getElementById('project-tab-mentor-btn');
         const overviewContent = document.getElementById('project-tab-overview-content');
+        const tasksContent = document.getElementById('project-tab-tasks-content');
         const mentorContent = document.getElementById('project-tab-mentor-content');
+        const isMentorOrAdmin = ICCSupabase.isMentor() || ICCSupabase.isAdmin();
 
         const switchTab = (tab) => {
             currentProjectTab = tab;
             const overviewIcon = overviewTabBtn?.querySelector('svg');
             const overviewIndicator = overviewTabBtn?.querySelector('.tab-indicator');
+            const tasksIcon = tasksTabBtn?.querySelector('svg');
+            const tasksIndicator = tasksTabBtn?.querySelector('.tab-indicator');
             const mentorIcon = mentorTabBtn?.querySelector('svg');
             const mentorIndicator = mentorTabBtn?.querySelector('.tab-indicator');
+
+            // Reset all 3 tabs to inactive styling
+            overviewTabBtn?.classList.remove('text-emerald-400', 'font-bold');
+            overviewTabBtn?.classList.add('text-zinc-400', 'hover:text-zinc-200');
+            overviewIcon?.classList.remove('text-emerald-400');
+            overviewIcon?.classList.add('text-zinc-500', 'group-hover:text-zinc-300');
+            overviewIndicator?.classList.remove('bg-emerald-500');
+            overviewIndicator?.classList.add('bg-transparent');
+
+            tasksTabBtn?.classList.remove('text-sky-400', 'font-bold');
+            tasksTabBtn?.classList.add('text-zinc-400', 'hover:text-sky-400');
+            tasksIcon?.classList.remove('text-sky-400');
+            tasksIcon?.classList.add('text-zinc-500', 'group-hover:text-sky-400');
+            tasksIndicator?.classList.remove('bg-sky-400');
+            tasksIndicator?.classList.add('bg-transparent');
+
+            mentorTabBtn?.classList.remove('text-amber-400', 'font-bold');
+            mentorTabBtn?.classList.add('text-zinc-400', 'hover:text-amber-400');
+            mentorIcon?.classList.remove('text-amber-400');
+            mentorIcon?.classList.add('text-zinc-500', 'group-hover:text-amber-400');
+            mentorIndicator?.classList.remove('bg-amber-400');
+            mentorIndicator?.classList.add('bg-transparent');
+
+            // Hide all tab contents
+            overviewContent?.classList.add('hidden');
+            tasksContent?.classList.add('hidden');
+            mentorContent?.classList.add('hidden');
 
             if (tab === 'overview') {
                 overviewTabBtn?.classList.remove('text-zinc-400', 'hover:text-zinc-200');
@@ -3511,16 +3543,16 @@ const TeamsView = (() => {
                 overviewIcon?.classList.add('text-emerald-400');
                 overviewIndicator?.classList.remove('bg-transparent');
                 overviewIndicator?.classList.add('bg-emerald-500');
-
-                mentorTabBtn?.classList.remove('text-amber-400', 'font-bold');
-                mentorTabBtn?.classList.add('text-zinc-400', 'hover:text-amber-400');
-                mentorIcon?.classList.remove('text-amber-400');
-                mentorIcon?.classList.add('text-zinc-500', 'group-hover:text-amber-400');
-                mentorIndicator?.classList.remove('bg-amber-400');
-                mentorIndicator?.classList.add('bg-transparent');
-
                 overviewContent?.classList.remove('hidden');
-                mentorContent?.classList.add('hidden');
+            } else if (tab === 'tasks') {
+                tasksTabBtn?.classList.remove('text-zinc-400', 'hover:text-sky-400');
+                tasksTabBtn?.classList.add('text-sky-400', 'font-bold');
+                tasksIcon?.classList.remove('text-zinc-500', 'group-hover:text-sky-400');
+                tasksIcon?.classList.add('text-sky-400');
+                tasksIndicator?.classList.remove('bg-transparent');
+                tasksIndicator?.classList.add('bg-sky-400');
+                tasksContent?.classList.remove('hidden');
+                initProjectTasks(lead, isLead, isMember, isMentorOrAdmin);
             } else {
                 mentorTabBtn?.classList.remove('text-zinc-400', 'hover:text-amber-400');
                 mentorTabBtn?.classList.add('text-amber-400', 'font-bold');
@@ -3528,25 +3560,22 @@ const TeamsView = (() => {
                 mentorIcon?.classList.add('text-amber-400');
                 mentorIndicator?.classList.remove('bg-transparent');
                 mentorIndicator?.classList.add('bg-amber-400');
-
-                overviewTabBtn?.classList.remove('text-emerald-400', 'font-bold');
-                overviewTabBtn?.classList.add('text-zinc-400', 'hover:text-zinc-200');
-                overviewIcon?.classList.remove('text-emerald-400');
-                overviewIcon?.classList.add('text-zinc-500', 'group-hover:text-zinc-300');
-                overviewIndicator?.classList.remove('bg-emerald-500');
-                overviewIndicator?.classList.add('bg-transparent');
-
                 mentorContent?.classList.remove('hidden');
-                overviewContent?.classList.add('hidden');
                 initMentorChat(lead, isLead, isMember);
             }
         };
 
         if (overviewTabBtn) overviewTabBtn.onclick = () => switchTab('overview');
+        if (tasksTabBtn) tasksTabBtn.onclick = () => switchTab('tasks');
         if (mentorTabBtn) mentorTabBtn.onclick = () => switchTab('mentor_chat');
+
+        // Initial setup for tasks badge & tasks data
+        initProjectTasks(lead, isLead, isMember, isMentorOrAdmin);
 
         if (currentProjectTab === 'mentor_chat') {
             initMentorChat(lead, isLead, isMember);
+        } else if (currentProjectTab === 'tasks') {
+            switchTab('tasks');
         }
         const floatingBackBtn = document.getElementById('team-floating-back-btn');
         if (floatingBackBtn) floatingBackBtn.onclick = goBack;
