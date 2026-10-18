@@ -1,24 +1,37 @@
 /* ============================================
-   ICC Social Hub — User Profile Modal (Full Modal View)
+   ICC Social Hub — User Profile Modal (Redesigned from Reference UI)
    ============================================ */
 const UserProfileModal = (() => {
     let isOpen = false;
     let profile = null;
     let posts = [];
+    let projects = [];
 
     async function open(userId) {
+        if (!userId) return;
         isOpen = true;
-        profile = null; posts = [];
+        profile = null; 
+        posts = []; 
+        projects = [];
         mountLoading();
         document.body.style.overflow = 'hidden';
+
         try {
             if (!window.history.state?.modalOpen) {
                 window.history.pushState({ modalOpen: true, modal: 'user-profile' }, '');
             }
         } catch (e) {}
+
         try {
             profile = await ICCSupabase.fetchUserById(userId);
-            posts = await ICCSupabase.fetchPostsByUser(userId);
+            const [fetchedPosts, fetchedProjects] = await Promise.all([
+                ICCSupabase.fetchPostsByUser(userId),
+                (typeof ICCSupabase.fetchUserProjects === 'function') 
+                    ? ICCSupabase.fetchUserProjects(userId) 
+                    : []
+            ]);
+            posts = fetchedPosts || [];
+            projects = fetchedProjects || [];
             if (isOpen) mount();
         } catch (e) {
             console.error('Error fetching user profile:', e);
@@ -27,7 +40,10 @@ const UserProfileModal = (() => {
     }
 
     function close() {
-        isOpen = false; profile = null; posts = [];
+        isOpen = false; 
+        profile = null; 
+        posts = []; 
+        projects = [];
         const root = document.getElementById('modal-root');
         if (root) root.innerHTML = '';
         document.body.style.overflow = '';
@@ -35,238 +51,283 @@ const UserProfileModal = (() => {
 
     function mountLoading() {
         const root = document.getElementById('modal-root');
-        if (root) {
-            root.innerHTML = `
-            <div class="fixed inset-0 z-[2000] bg-zinc-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
-                <button id="user-profile-loading-back" class="absolute top-4 left-4 p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-full transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer" title="Go Back">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
-                    <span>Back</span>
-                </button>
-                <div class="flex flex-col items-center gap-3">
-                    <div class="spinner border-red-500 border-t-transparent w-8 h-8"></div>
-                    <p class="text-xs text-zinc-400 font-medium">Loading user profile...</p>
-                </div>
-            </div>`;
-            document.getElementById('user-profile-loading-back')?.addEventListener('click', close);
-        }
+        if (!root) return;
+        root.innerHTML = `
+        <div class="fixed inset-0 z-[2000] bg-[#0e1621]/95 backdrop-blur-md flex flex-col items-center justify-center p-4">
+            <button id="user-profile-loading-back" class="absolute top-4 left-4 p-2.5 text-[#708499] hover:text-white hover:bg-[#17212b] rounded-full transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+                <span>Back</span>
+            </button>
+            <div class="flex flex-col items-center gap-3">
+                <div class="w-8 h-8 rounded-full border-2 border-[#3390ec] border-t-transparent animate-spin"></div>
+                <p class="text-xs text-[#708499] font-medium">Loading profile...</p>
+            </div>
+        </div>`;
+        document.getElementById('user-profile-loading-back')?.addEventListener('click', close);
     }
 
     function render() {
         if (!isOpen || !profile) return '';
-        const teamLead = profile.team_id ? getLeadByTeamId(profile.team_id) : null;
-        const isMe = ICCSupabase.getUser()?.id === profile.id;
-        const email = profile.email || '';
 
-        let customTag = '';
-        if (profile.team_id && typeof TeamsView !== 'undefined' && typeof TeamsView.getMemberTags === 'function') {
-            const teamTags = TeamsView.getMemberTags(profile.team_id);
-            customTag = teamTags[profile.id] || '';
-        } else if (profile.team_id) {
-            try {
-                const local = JSON.parse(localStorage.getItem(`team_tags_${profile.team_id}`) || '{}');
-                customTag = local[profile.id] || '';
-            } catch(e) {}
-        }
-        const isLeadOfTeam = profile.role === 'lead' || Boolean(teamLead?.name && profile.full_name && profile.full_name.trim().toLowerCase() === teamLead.name.trim().toLowerCase());
-        const displayTag = customTag || (isLeadOfTeam ? 'Team Leader' : '');
+        const currentUserId = ICCSupabase.getUser()?.id;
+        const isMe = currentUserId === profile.id;
+        const initial = (profile.full_name || profile.username || '?').charAt(0).toUpperCase();
+
+        const linkedinUrl = profile.linkedin ? (profile.linkedin.startsWith('http') ? profile.linkedin : 'https://' + profile.linkedin) : null;
+        const githubUrl = profile.github ? (profile.github.startsWith('http') ? profile.github : 'https://' + profile.github) : null;
+        const email = profile.email ? String(profile.email).trim() : null;
+        const phone = profile.phone ? String(profile.phone).trim() : null;
+
+        const roleTick = (typeof ICC_CONFIG !== 'undefined' && ICC_CONFIG.getRoleTick) 
+            ? ICC_CONFIG.getRoleTick(profile) 
+            : '';
+
+        const defaultBio = profile.role === 'mentor' 
+            ? 'Official Project Mentor and Technical Reviewer for student innovation teams at ICC Social Hub.' 
+            : 'Innovator, builder, and creative developer at ICC Social Hub.';
+        const bioText = profile.bio ? String(profile.bio).trim() : defaultBio;
+
+        const skills = Array.isArray(profile.skills) 
+            ? profile.skills 
+            : (typeof profile.skills === 'string' ? profile.skills.split(',').map(s => s.trim()).filter(Boolean) : []);
 
         return `
-        <div class="fixed inset-0 z-[2000] bg-zinc-950 flex flex-col overflow-y-auto w-full h-full animate-fade-in" id="user-profile-overlay">
-            <!-- Full Modal Top Sticky Header Bar -->
-            <div class="sticky top-0 z-[2100] bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800/80 px-4 h-16 flex items-center justify-between">
-                <button id="user-profile-close" class="p-2 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-full transition-colors flex items-center gap-1.5 cursor-pointer" title="Go Back">
-                    <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
-                    <span class="text-xs font-bold uppercase tracking-wider">Back</span>
+        <div class="fixed inset-0 z-[2000] bg-[#0e1621] flex flex-col overflow-y-auto w-full h-full animate-fade-in" id="user-profile-overlay">
+            
+            <!-- Top Sticky Navigation Bar -->
+            <div class="sticky top-0 z-[2100] bg-[#0e1621]/90 backdrop-blur-xl px-4 sm:px-6 h-16 flex items-center justify-between border-b border-[#17212b]/80">
+                <button id="user-profile-close" class="p-2 text-[#708499] hover:text-white hover:bg-[#17212b] rounded-full transition-colors flex items-center gap-2 cursor-pointer active:scale-95">
+                    <svg class="w-5 h-5 text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+                    <span class="text-xs font-bold uppercase tracking-wider hidden sm:inline text-zinc-300">Back</span>
                 </button>
                 <div class="text-center px-2 min-w-0">
-                    <h2 class="font-heading font-bold text-sm text-white break-words max-w-[240px] sm:max-w-md line-clamp-1">${escapeHtml(profile.full_name || 'User Profile')}</h2>
-                    <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">User Profile</p>
+                    <h2 class="font-heading font-bold text-sm text-white truncate max-w-[200px] sm:max-w-xs">
+                        ${escapeHtml(profile.full_name || profile.username || 'Profile')}
+                    </h2>
                 </div>
                 <div>
-                    ${!isMe ? `<button id="user-msg-btn-header" class="p-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-full transition-all border border-red-500/30" title="Send Message">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                    </button>` : '<div class="w-9"></div>'}
+                    ${!isMe ? `
+                    <button id="user-msg-btn-header" class="p-2.5 bg-[#17212b] hover:bg-[#242f3d] text-[#3390ec] hover:text-white rounded-full transition-all cursor-pointer" title="Send Message">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.84-.84c.162-.835.34-1.666.425-2.498A8.026 8.026 0 013 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
+                    </button>
+                    ` : '<div class="w-9"></div>'}
                 </div>
             </div>
 
-            <!-- Full View Content Body -->
-            <div class="max-w-2xl mx-auto w-full px-4 py-6 space-y-6">
-                <!-- Hero Header Card -->
-                <div class="glass-card rounded-2xl overflow-hidden relative border border-zinc-800/80 shadow-2xl">
-                    <div class="h-32 sm:h-40 bg-gradient-to-r ${teamLead ? teamLead.gradient : 'from-red-600 via-rose-700 to-zinc-900'} relative">
-                        <div class="absolute inset-0 bg-black/20 backdrop-blur-[2px]"></div>
-                    </div>
-                    <div class="px-6 pb-6 pt-0 relative">
-                        <div class="-mt-16 sm:-mt-20 flex justify-center mb-4">
-                            <div class="avatar-ring p-1 bg-zinc-950 rounded-full shadow-xl"><div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden border-2 border-zinc-800 ${profile.avatar_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}" ${profile.avatar_url ? `data-full-image="${profile.avatar_url}"` : ''}>
-                                ${profile.avatar_url ? `<img src="${profile.avatar_url}" class="w-full h-full object-cover">` : `<span class="font-heading font-bold text-3xl sm:text-4xl text-red-500">${(profile.full_name || '?').charAt(0).toUpperCase()}</span>`}
-                            </div></div>
-                        </div>
+            <!-- Profile Content Body (Inspired by Reference Design) -->
+            <div class="max-w-xl mx-auto w-full px-5 py-6 sm:py-8 space-y-6">
 
-                        <div class="text-center space-y-2">
-                            <h1 class="font-heading font-bold text-xl sm:text-2xl text-white flex items-center justify-center gap-1.5 break-words px-2 leading-tight">${escapeHtml(profile.full_name || 'User')}${ICC_CONFIG.getRoleTick(profile) || (isLeadOfTeam ? ICC_CONFIG.VERIFIED_TICK : '')}</h1>
-                            ${profile.username ? `<p class="text-sm text-zinc-400 font-medium">@${escapeHtml(profile.username)}</p>` : ''}
-                            
-                            <!-- Prominent / Unique Leader Tag OR Member Tag below name -->
-                            ${profile.role === 'mentor' ? `
-                                <div class="inline-flex items-center justify-center gap-1.5 mt-1 text-xs font-extrabold text-amber-400 tracking-wide uppercase select-none">
-                                    ${ICC_CONFIG.MENTOR_TICK}
-                                    <span>Verified ICC Mentor</span>
-                                </div>
-                            ` : (isLeadOfTeam ? `
-                                <div class="inline-flex items-center justify-center gap-1.5 mt-1 text-xs font-extrabold text-amber-400 tracking-wide uppercase select-none">
-                                    <svg class="w-3.5 h-3.5 text-amber-400 fill-current flex-shrink-0" viewBox="0 0 20 20">
-                                        <path d="M2.5 14.5l1.5-7.5 4 4.5 4-6 4 6 4-4.5 1.5 7.5h-19z"/>
-                                    </svg>
-                                    <span>${escapeHtml(displayTag)}</span>
-                                </div>
-                            ` : (displayTag ? `
-                                <div class="inline-flex items-center justify-center mt-1 text-xs font-semibold text-emerald-400">
-                                    ${escapeHtml(displayTag)}
-                                </div>
-                            ` : ''))}
-
-                            <div class="flex flex-wrap items-center justify-center gap-2.5 pt-2">
-                                ${profile.year ? `<span class="text-xs font-semibold text-rose-400">${escapeHtml(profile.year)}</span>` : ''}
-                                ${profile.branch ? `<span class="text-xs font-semibold text-blue-400">${escapeHtml(profile.branch)}</span>` : ''}
-                                ${teamLead ? `<span class="text-xs text-zinc-300 font-medium">${teamLead.team}</span>` : ''}
-                                ${profile.role === 'mentor' ? `<span class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1">Mentor ${ICC_CONFIG.MENTOR_TICK}</span>` : ''}
-                                ${profile.role === 'lead' ? `<span class="text-xs font-bold uppercase tracking-wider text-red-400">${profile.role}</span>` : ''}
-                                ${profile.role === 'admin' ? `<span class="text-xs font-bold uppercase tracking-wider text-amber-400">Admin</span>` : ''}
-                            </div>
-                        </div>
+                <!-- 1. Circular Avatar (Top Left Aligned) -->
+                <div class="flex items-center justify-between">
+                    <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-[#17212b] overflow-hidden flex items-center justify-center text-3xl sm:text-4xl font-extrabold text-[#3390ec] shadow-xl flex-shrink-0 relative">
+                        ${profile.avatar_url ? 
+                            `<img src="${profile.avatar_url}" alt="${escapeHtml(profile.full_name || '')}" class="w-full h-full object-cover">` : 
+                            initial
+                        }
                     </div>
                 </div>
 
-                <!-- Contact & Social Details Card -->
-                <div class="glass-card rounded-2xl p-5 border border-zinc-800/80 space-y-3">
-                    <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Contact Information</h3>
-                    
-                    <div class="space-y-2.5">
-                        ${email ? `
-                        <div class="flex items-center gap-3 p-2.5 bg-zinc-950/60 rounded-xl border border-zinc-800/50">
-                            <div class="w-8 h-8 rounded-lg bg-zinc-900 flex items-center justify-center text-zinc-400 flex-shrink-0">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <p class="text-[10px] text-zinc-500 uppercase font-semibold">Email</p>
-                                <a href="mailto:${escapeHtml(email)}" class="text-xs font-medium text-zinc-200 hover:text-white truncate block">${escapeHtml(email)}</a>
-                            </div>
-                        </div>` : ''}
-
-                        ${profile.phone ? `
-                        <div class="flex items-center gap-3 p-2.5 bg-zinc-950/60 rounded-xl border border-zinc-800/50">
-                            <div class="w-8 h-8 rounded-lg bg-emerald-950/40 border border-emerald-800/40 flex items-center justify-center text-emerald-400 flex-shrink-0">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <p class="text-[10px] text-zinc-500 uppercase font-semibold">Phone Number</p>
-                                <a href="tel:${escapeHtml(profile.phone)}" class="text-xs font-medium text-emerald-400 hover:underline truncate block">${escapeHtml(profile.phone)}</a>
-                            </div>
-                        </div>` : ''}
-                    </div>
-
-                    ${(profile.linkedin || profile.github) ? `
-                    <div class="pt-3 border-t border-zinc-800/60 flex flex-wrap gap-2.5">
-                        ${profile.linkedin ? `
-                        <a href="${profile.linkedin.startsWith('http') ? profile.linkedin : 'https://' + profile.linkedin}" target="_blank" rel="noopener noreferrer" 
-                           class="flex-1 min-w-[140px] inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-950/40 border border-blue-800/40 hover:bg-blue-900/40 text-blue-400 rounded-xl text-xs font-semibold transition-all shadow-sm">
-                            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/></svg>
-                            LinkedIn Profile
-                        </a>` : ''}
-
-                        ${profile.github ? `
-                        <a href="${profile.github.startsWith('http') ? profile.github : 'https://' + profile.github}" target="_blank" rel="noopener noreferrer" 
-                           class="flex-1 min-w-[140px] inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-900 border border-zinc-700/80 hover:bg-zinc-800 text-zinc-200 rounded-xl text-xs font-semibold transition-all shadow-sm">
-                            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg>
-                            GitHub Profile
-                        </a>` : ''}
-                    </div>` : ''}
-                </div>
-
-                <!-- Bio & Skills Section -->
-                ${(profile.bio || (profile.skills && profile.skills.length)) ? `
-                <div class="glass-card rounded-2xl p-5 border border-zinc-800/80 space-y-4">
-                    ${profile.bio ? `
-                    <div>
-                        <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Bio</h3>
-                        <p class="text-sm text-zinc-300 leading-relaxed">${escapeHtml(profile.bio)}</p>
-                    </div>` : ''}
-
-                    ${(profile.skills && profile.skills.length) ? `
-                    <div ${profile.bio ? 'class="pt-3 border-t border-zinc-800/60"' : ''}>
-                        <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Skills & Expertise</h3>
-                        <div class="flex flex-wrap gap-2">
-                            ${profile.skills.map(s => `<span class="text-xs text-zinc-300 font-medium">${escapeHtml(s)}</span>`).join('<span class="text-zinc-600 mx-1">•</span>')}
-                        </div>
-                    </div>` : ''}
-                </div>` : ''}
-
-                <!-- Super Admin Controls (Assign/Revoke Mentor) -->
-                ${(typeof ICCSupabase.isSuperAdmin === 'function' && ICCSupabase.isSuperAdmin() && !isMe) ? `
-                <div class="glass-card rounded-2xl p-4 border border-amber-500/30 bg-amber-500/5 space-y-3">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                            <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Super Admin Controls</span>
-                        </div>
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${profile.role === 'mentor' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : (profile.role === 'super_admin' ? 'bg-amber-500/20 text-amber-300' : (profile.role === 'admin' ? 'bg-blue-500/20 text-blue-400' : 'bg-zinc-800 text-zinc-400'))}">
-                            Role: ${profile.role === 'mentor' ? '🎓 Mentor' : (profile.role === 'super_admin' ? '🛡️ Super Admin' : (profile.role === 'admin' ? '👑 Admin' : 'Member'))}
+                <!-- 2. Name & Verified Checkmark & Username -->
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h1 class="font-heading font-extrabold text-2xl sm:text-3xl text-white tracking-tight">
+                            ${escapeHtml(profile.full_name || profile.username || 'User')}
+                        </h1>
+                        <span class="inline-flex items-center">
+                            ${roleTick || (profile.role === 'lead' ? (ICC_CONFIG.VERIFIED_TICK || '✔') : '')}
                         </span>
                     </div>
-                    <div class="flex items-center gap-2 pt-1">
+                    <div class="flex items-center gap-2 text-xs text-[#708499] font-medium flex-wrap">
+                        <span>@${escapeHtml(profile.username || 'user')}</span>
+                        ${profile.role === 'mentor' ? `
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300">🎓 Mentor</span>
+                        ` : ''}
+                        ${profile.role === 'lead' ? `
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#3390ec]/15 text-[#3390ec]">Team Lead</span>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- 3. Bio Description Paragraph -->
+                <p class="text-sm sm:text-base text-zinc-300 leading-relaxed font-normal">
+                    ${escapeHtml(bioText)}
+                </p>
+
+                <!-- 4. Key Metrics / Stats Row (Reference: 600 Followers 100 Post) -->
+                <div class="flex items-center gap-8 py-1">
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-lg sm:text-xl font-heading font-extrabold text-white">${projects.length}</span>
+                        <span class="text-xs sm:text-sm font-medium text-[#708499]">Projects</span>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-lg sm:text-xl font-heading font-extrabold text-white">${posts.length}</span>
+                        <span class="text-xs sm:text-sm font-medium text-[#708499]">Posts</span>
+                    </div>
+                    ${(profile.branch || profile.year) ? `
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-base sm:text-lg font-heading font-bold text-[#3390ec]">${escapeHtml(profile.branch || '')}</span>
+                        <span class="text-xs sm:text-sm font-medium text-[#708499]">${escapeHtml(profile.year || '')}</span>
+                    </div>
+                    ` : ''}
+                </div>
+
+                <!-- 5. Full-Width Primary Action Button (Reference: + Follow) -->
+                <div>
+                    ${!isMe ? `
+                    <button id="user-msg-btn" data-user-id="${profile.id}" class="w-full py-3.5 bg-white hover:bg-zinc-100 text-zinc-950 font-heading font-bold rounded-full text-sm sm:text-base transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4 text-zinc-950 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                        <span>Send Message</span>
+                    </button>
+                    ` : `
+                    <button onclick="UserProfileModal.close(); window.location.hash='#profile';" class="w-full py-3.5 bg-white hover:bg-zinc-100 text-zinc-950 font-heading font-bold rounded-full text-sm sm:text-base transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4 text-zinc-950" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
+                        <span>Edit Your Profile</span>
+                    </button>
+                    `}
+                </div>
+
+                <!-- 6. Contact & Social Links (Always visible pills) -->
+                ${(linkedinUrl || githubUrl || email || phone) ? `
+                <div class="flex flex-wrap items-center gap-2 pt-1">
+                    ${linkedinUrl ? `
+                        <a href="${linkedinUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#17212b] hover:bg-[#242f3d] text-[#3390ec] text-xs font-semibold transition-all">
+                            <svg class="w-3.5 h-3.5 fill-current flex-shrink-0" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                            <span>LinkedIn</span>
+                        </a>
+                    ` : ''}
+
+                    ${githubUrl ? `
+                        <a href="${githubUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#17212b] hover:bg-[#242f3d] text-zinc-200 text-xs font-semibold transition-all">
+                            <svg class="w-3.5 h-3.5 fill-current flex-shrink-0" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg>
+                            <span>GitHub</span>
+                        </a>
+                    ` : ''}
+
+                    ${email ? `
+                        <a href="mailto:${email}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#17212b] hover:bg-[#242f3d] text-zinc-300 text-xs font-semibold transition-all">
+                            <svg class="w-3.5 h-3.5 text-sky-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                            <span class="truncate max-w-[150px]">${escapeHtml(email)}</span>
+                        </a>
+                    ` : ''}
+
+                    ${phone ? `
+                        <a href="tel:${phone}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#17212b] hover:bg-[#242f3d] text-zinc-300 text-xs font-semibold transition-all">
+                            <svg class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
+                            <span>${escapeHtml(phone)}</span>
+                        </a>
+                    ` : ''}
+                </div>
+                ` : ''}
+
+                <!-- Skills tags if present -->
+                ${skills.length > 0 ? `
+                <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                    ${skills.map(s => `
+                        <span class="px-3 py-1 rounded-lg bg-[#17212b] text-zinc-300 text-xs font-medium">${escapeHtml(s)}</span>
+                    `).join('')}
+                </div>
+                ` : ''}
+
+                <!-- Super Admin Mentor Controls -->
+                ${(typeof ICCSupabase.isSuperAdmin === 'function' && ICCSupabase.isSuperAdmin() && !isMe) ? `
+                <div class="bg-[#17212b] rounded-2xl p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Super Admin Controls</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400">
+                            ${profile.role === 'mentor' ? '🎓 Mentor' : 'Member'}
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2">
                         ${profile.role !== 'mentor' ? `
-                            <button id="modal-assign-mentor-btn" class="flex-1 py-2.5 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold rounded-xl text-xs transition-all shadow-md shadow-amber-500/20 active:scale-95 cursor-pointer flex items-center justify-center gap-1.5">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
-                                <span>Assign as Mentor</span>
+                            <button id="modal-assign-mentor-btn" class="flex-1 py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-xl text-xs transition-all active:scale-95 cursor-pointer">
+                                Assign as Mentor
                             </button>
                         ` : `
-                            <button id="modal-revoke-mentor-btn" class="flex-1 py-2.5 px-4 bg-red-500/15 hover:bg-red-500 text-red-400 hover:text-white font-bold border border-red-500/30 rounded-xl text-xs transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                                <span>Revoke Mentor Status</span>
+                            <button id="modal-revoke-mentor-btn" class="flex-1 py-2.5 px-4 bg-red-500/15 hover:bg-red-500 text-red-400 hover:text-white font-bold rounded-xl text-xs transition-all active:scale-95 cursor-pointer">
+                                Revoke Mentor Status
                             </button>
                         `}
                     </div>
                 </div>
                 ` : ''}
 
-                <!-- Direct Action Button -->
-                ${!isMe ? `
-                <button id="user-msg-btn" class="w-full py-3.5 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-semibold rounded-2xl shadow-xl shadow-red-900/20 transition-all flex items-center justify-center gap-2" data-user-id="${profile.id}">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                    Send Direct Message
-                </button>` : ''}
-
-                <!-- User Posts Section -->
-                <div class="glass-card rounded-2xl p-5 border border-zinc-800/80 space-y-4">
+                <!-- 7. "My Work" Section (Reference: My Work Grid) -->
+                <div class="space-y-3.5 pt-2">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Posts (${posts.length})</h3>
+                        <h3 class="font-heading font-extrabold text-lg sm:text-xl text-white">
+                            My Work
+                        </h3>
+                        <span class="text-xs font-semibold text-[#708499]">${projects.length} Team${projects.length === 1 ? '' : 's'}</span>
                     </div>
+
+                    ${projects.length > 0 ? `
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                        ${projects.map(p => `
+                        <a href="#teams/${p.id}" class="user-profile-project-card group block bg-[#17212b] hover:bg-[#242f3d] rounded-2xl p-3.5 transition-all shadow-md active:scale-95 cursor-pointer" title="Open ${escapeHtml(p.name)}">
+                            <div class="aspect-[4/3] rounded-xl bg-gradient-to-br ${p.gradient || 'from-blue-600 to-indigo-600'} p-3 flex flex-col justify-between shadow-inner relative overflow-hidden mb-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-black/30 backdrop-blur-md flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                                    ${p.initials}
+                                </div>
+                                <span class="text-[9px] font-bold uppercase tracking-wider text-white/95 bg-black/40 px-2 py-0.5 rounded-full inline-block backdrop-blur-xs w-max">
+                                    ${p.is_lead ? 'Team Lead' : 'Project'}
+                                </span>
+                            </div>
+                            <h4 class="font-heading font-bold text-sm text-white truncate group-hover:text-[#3390ec] transition-colors">
+                                ${escapeHtml(p.name)}
+                            </h4>
+                            <p class="text-[11px] text-[#708499] truncate mt-0.5">
+                                ${p.lead_name ? `Lead: ${escapeHtml(p.lead_name)}` : 'Innovation Team'}
+                            </p>
+                        </a>
+                        `).join('')}
+                    </div>
+                    ` : `
+                    <div class="bg-[#17212b] rounded-2xl p-6 text-center space-y-1.5">
+                        <p class="text-xs text-[#708499]">No projects joined yet.</p>
+                    </div>
+                    `}
+                </div>
+
+                <!-- 8. Posts Section (Reference: Thumbnail Grid) -->
+                <div class="space-y-3.5 pt-2">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-heading font-extrabold text-lg sm:text-xl text-white">
+                            Posts
+                        </h3>
+                        <span class="text-xs font-semibold text-[#708499]">${posts.length} Post${posts.length === 1 ? '' : 's'}</span>
+                    </div>
+
                     ${posts.length > 0 ? `
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div class="grid grid-cols-3 gap-2 sm:gap-3">
                         ${posts.map(p => `
-                        <a href="#post/${p.id}" class="user-profile-post-thumb group relative aspect-square bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden block">
+                        <a href="#post/${p.id}" class="user-profile-post-thumb group relative aspect-square bg-[#17212b] rounded-xl overflow-hidden block">
                             ${p.image_url ? `
-                            <img src="${p.image_url}" alt="" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-                            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2 text-center text-xs font-medium text-white">
-                                View Post
-                            </div>` : `
-                            <div class="w-full h-full p-3 flex flex-col justify-between group-hover:bg-zinc-800/60 transition-colors">
-                                <p class="text-xs text-zinc-400 line-clamp-4 leading-relaxed">${escapeHtml(p.caption || 'Post')}</p>
-                                <span class="text-[10px] text-red-400 font-semibold">Read →</span>
-                            </div>`}
-                        </a>`).join('')}
-                    </div>` : `
-                    <p class="text-xs text-zinc-500 text-center py-6">No posts created yet.</p>`}
+                                <img src="${p.image_url}" alt="" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2 text-center text-xs font-medium text-white">
+                                    View
+                                </div>
+                            ` : `
+                                <div class="w-full h-full p-2.5 flex flex-col justify-between group-hover:bg-[#242f3d] transition-colors">
+                                    <p class="text-xs text-zinc-300 line-clamp-3 leading-relaxed">${escapeHtml(p.caption || 'Post')}</p>
+                                    <span class="text-[10px] text-[#3390ec] font-semibold">Read →</span>
+                                </div>
+                            `}
+                        </a>
+                        `).join('')}
+                    </div>
+                    ` : `
+                    <div class="bg-[#17212b] rounded-2xl p-6 text-center">
+                        <p class="text-xs text-[#708499]">No posts published yet.</p>
+                    </div>
+                    `}
                 </div>
 
                 <!-- Footer Credit -->
-                <div class="py-6 text-center border-t border-zinc-800/50">
-                    <p class="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-medium mb-3">Crafted with ❤️ by</p>
-                    <a href="https://saravanantm1920.wixsite.com/my-site-4" target="_blank" 
-                       class="inline-flex items-center gap-2 px-4 py-1.5 bg-zinc-800/50 hover:bg-red-500/10 text-zinc-400 hover:text-red-500 rounded-full  hover:border-red-500/50 transition-all duration-300 group">
-                        <span class="text-xs font-bold tracking-tight">T M Saravanan</span>
-                        <svg class="w-3 h-3 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+                <div class="py-6 text-center text-xs text-[#708499]">
+                    <p class="text-[10px] uppercase tracking-[0.2em] font-medium mb-2">Crafted with ❤️ by</p>
+                    <a href="https://saravanantm1920.wixsite.com/my-site-4" target="_blank" rel="noopener noreferrer" 
+                       class="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#17212b] hover:bg-[#242f3d] text-zinc-300 hover:text-white rounded-full transition-all">
+                        <span class="text-xs font-bold">T M Saravanan</span>
                     </a>
                 </div>
             </div>
@@ -293,6 +354,9 @@ const UserProfileModal = (() => {
         });
         document.querySelectorAll('.user-profile-post-thumb').forEach(thumb => {
             thumb.addEventListener('click', () => close());
+        });
+        document.querySelectorAll('.user-profile-project-card').forEach(card => {
+            card.addEventListener('click', () => close());
         });
 
         // Super Admin Mentor Controls
