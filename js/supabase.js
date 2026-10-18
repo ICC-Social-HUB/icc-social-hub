@@ -2485,13 +2485,17 @@ const ICCSupabase = (() => {
 
             // Log initial status in status history
             if (data?.id) {
-                await client.from('project_application_status_history').insert([{
-                    application_id: data.id,
-                    changed_by: currentUser.id,
-                    previous_status: null,
-                    new_status: 'Pending Review',
-                    comment: 'Initial application submitted for mentor review.'
-                }]).catch(e => console.warn('Could not log status history:', e));
+                try {
+                    await client.from('project_application_status_history').insert([{
+                        application_id: data.id,
+                        changed_by: currentUser.id,
+                        previous_status: null,
+                        new_status: 'Pending Review',
+                        comment: 'Initial application submitted for mentor review.'
+                    }]);
+                } catch (e) {
+                    console.warn('Could not log status history:', e);
+                }
             }
 
             // Notify applicant
@@ -2700,23 +2704,31 @@ const ICCSupabase = (() => {
             if (error) throw error;
 
             // 2. Post the mentor's comment to the comment thread
-            await client.from('project_application_comments').insert([{
-                application_id: applicationId,
-                author_id: currentUser.id,
-                content: cleanComment,
-                is_mentor_feedback: true,
-                created_at: new Date().toISOString()
-            }]).catch(e => console.warn('Could not post feedback comment:', e));
+            try {
+                await client.from('project_application_comments').insert([{
+                    application_id: applicationId,
+                    author_id: currentUser.id,
+                    content: cleanComment,
+                    is_mentor_feedback: true,
+                    created_at: new Date().toISOString()
+                }]);
+            } catch (e) {
+                console.warn('Could not post feedback comment:', e);
+            }
 
             // 3. Log into status history
-            await client.from('project_application_status_history').insert([{
-                application_id: applicationId,
-                changed_by: currentUser.id,
-                previous_status: prevStatus,
-                new_status: 'Changes Requested',
-                comment: cleanComment,
-                created_at: new Date().toISOString()
-            }]).catch(e => console.warn('Could not log status history:', e));
+            try {
+                await client.from('project_application_status_history').insert([{
+                    application_id: applicationId,
+                    changed_by: currentUser.id,
+                    previous_status: prevStatus,
+                    new_status: 'Changes Requested',
+                    comment: cleanComment,
+                    created_at: new Date().toISOString()
+                }]);
+            } catch (e) {
+                console.warn('Could not log status history:', e);
+            }
 
             // 4. Notify applicant
             createNotification({
@@ -2792,23 +2804,31 @@ const ICCSupabase = (() => {
 
             // Log status history
             const histComment = note ? `Applicant submitted revision #${nextRevNumber}: ${String(note).trim()}` : `Applicant submitted revision #${nextRevNumber} for mentor review.`;
-            await client.from('project_application_status_history').insert([{
-                application_id: applicationId,
-                changed_by: currentUser.id,
-                previous_status: 'Changes Requested',
-                new_status: 'Pending Review',
-                comment: histComment,
-                created_at: new Date().toISOString()
-            }]).catch(e => console.warn('History err:', e));
+            try {
+                await client.from('project_application_status_history').insert([{
+                    application_id: applicationId,
+                    changed_by: currentUser.id,
+                    previous_status: 'Changes Requested',
+                    new_status: 'Pending Review',
+                    comment: histComment,
+                    created_at: new Date().toISOString()
+                }]);
+            } catch (e) {
+                console.warn('History err:', e);
+            }
 
             if (note && String(note).trim()) {
-                await client.from('project_application_comments').insert([{
-                    application_id: applicationId,
-                    author_id: currentUser.id,
-                    content: `📝 Revision Note: ${String(note).trim()}`,
-                    is_mentor_feedback: false,
-                    created_at: new Date().toISOString()
-                }]).catch(e => console.warn('Comment err:', e));
+                try {
+                    await client.from('project_application_comments').insert([{
+                        application_id: applicationId,
+                        author_id: currentUser.id,
+                        content: `📝 Revision Note: ${String(note).trim()}`,
+                        is_mentor_feedback: false,
+                        created_at: new Date().toISOString()
+                    }]);
+                } catch (e) {
+                    console.warn('Comment err:', e);
+                }
             }
 
             // Notify reviewer if known
@@ -2921,11 +2941,15 @@ const ICCSupabase = (() => {
             await client.from('profiles').update(profileUpdates).eq('id', appData.applicant_id);
 
             // Add applicant to team_memberships
-            await client.from('team_memberships').upsert([{
-                user_id: appData.applicant_id,
-                team_id: newLead.id,
-                created_at: new Date().toISOString()
-            }]).catch(e => console.warn('Membership upsert err:', e));
+            try {
+                await client.from('team_memberships').upsert([{
+                    user_id: appData.applicant_id,
+                    team_id: newLead.id,
+                    created_at: new Date().toISOString()
+                }]);
+            } catch (e) {
+                console.warn('Membership upsert err:', e);
+            }
 
             // Update application status to 'Approved'
             const { data: updatedApp, error: appUpdateErr } = await client
@@ -2945,14 +2969,18 @@ const ICCSupabase = (() => {
             if (appUpdateErr) throw appUpdateErr;
 
             // Log status history
-            await client.from('project_application_status_history').insert([{
-                application_id: applicationId,
-                changed_by: currentUser.id,
-                previous_status: appData.status,
-                new_status: 'Approved',
-                comment: `Application approved! Live project initialized with Code: ${projectCode}`,
-                created_at: new Date().toISOString()
-            }]).catch(e => console.warn('History err:', e));
+            try {
+                await client.from('project_application_status_history').insert([{
+                    application_id: applicationId,
+                    changed_by: currentUser.id,
+                    previous_status: appData.status,
+                    new_status: 'Approved',
+                    comment: `Application approved! Live project initialized with Code: ${projectCode}`,
+                    created_at: new Date().toISOString()
+                }]);
+            } catch (e) {
+                console.warn('History err:', e);
+            }
 
             // Send notification to applicant
             createNotification({
