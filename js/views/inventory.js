@@ -91,7 +91,7 @@ const InventoryView = (() => {
                             <p class="text-zinc-500 text-sm">Hardware, components, and tools for your innovation projects.</p>
                         </div>
                         ${isAdmin ? `
-                            <button onclick="InventoryView.openAddModal()" class="flex items-center gap-2 px-6 py-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs font-bold hover:bg-emerald-500/20 transition-all text-emerald-400">
+                            <button onclick="InventoryView.openAddModal()" class="flex items-center gap-2 px-6 py-2.5 bg-emerald-500/15 rounded-xl text-xs font-bold hover:bg-emerald-500/20 transition-all text-emerald-400">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                 Add New Component
                             </button>
@@ -187,8 +187,8 @@ const InventoryView = (() => {
                                     <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                                 </div>
                             `}
-                            <div class="absolute top-3 left-3 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg text-[10px] font-bold uppercase tracking-wider text-zinc-300 border border-white/5">${item.category}</div>
-                            <div class="absolute bottom-3 right-3 px-2.5 py-1 ${item.available_stock > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'} backdrop-blur-md rounded-lg text-[10px] font-bold border border-white/5">
+                            <div class="absolute top-3 left-3 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg text-[10px] font-bold uppercase tracking-wider text-zinc-300">${item.category}</div>
+                            <div class="absolute bottom-3 right-3 px-2.5 py-1 ${item.available_stock > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'} backdrop-blur-md rounded-lg text-[10px] font-bold">
                                 ${item.available_stock} Available
                             </div>
                         </div>
@@ -263,10 +263,10 @@ const InventoryView = (() => {
                 <h2 class="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-4">Currently Borrowed & History</h2>
                 ${activeRequests.map(req => {
                     const statusColors = {
-                        'pending': 'text-amber-400 bg-amber-400/10 border-amber-400/20',
-                        'taken': 'text-blue-400 bg-blue-400/10 border-blue-400/20',
-                        'completed': 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-                        'cancelled': 'text-zinc-500 bg-zinc-500/10 border-zinc-500/20'
+                        'pending': 'text-amber-400 bg-amber-400/15',
+                        'taken': 'text-blue-400 bg-blue-400/15',
+                        'completed': 'text-emerald-400 bg-emerald-400/15',
+                        'cancelled': 'text-zinc-500 bg-zinc-500/15'
                     };
                     return `
                         <div class="p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -286,7 +286,7 @@ const InventoryView = (() => {
                                 </div>
                             </div>
                             <div class="flex items-center justify-between sm:justify-end gap-3">
-                                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusColors[req.status] || ''}">
+                                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusColors[req.status] || ''}">
                                     ${req.status}
                                 </span>
                                 ${req.status === 'pending' ? `
@@ -352,10 +352,10 @@ const InventoryView = (() => {
                     <div class="grid grid-cols-1 gap-4">
                         ${filteredRequests.length > 0 ? filteredRequests.map(req => {
                             const statusStyle = 
-                                req.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                                req.status === 'taken' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                                req.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                'bg-red-500/10 text-red-500 border-red-500/20';
+                                req.status === 'pending' ? 'bg-amber-500/15 text-amber-400' :
+                                req.status === 'taken' ? 'bg-blue-500/15 text-blue-400' :
+                                req.status === 'completed' ? 'bg-emerald-500/15 text-emerald-400' :
+                                'bg-red-500/15 text-red-400';
                             
                             const isLead = req.profiles?.role === 'lead';
                             
@@ -380,10 +380,10 @@ const InventoryView = (() => {
                                                     ${isLead ? `
                                                         <span class="text-[10px] font-black uppercase tracking-widest text-emerald-500">Verified Lead</span>
                                                     ` : `
-                                                        <span class="text-[11px] font-medium text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">USN: ${req.profiles?.usn || 'N/A'}</span>
-                                                        <span class="text-[11px] font-medium text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">Sec: ${req.profiles?.section || 'N/A'}</span>
+                                                        <span class="text-[11px] font-medium text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded ">USN: ${req.profiles?.usn || 'N/A'}</span>
+                                                        <span class="text-[11px] font-medium text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded ">Sec: ${req.profiles?.section || 'N/A'}</span>
                                                     `}
-                                                    <span class="text-[11px] font-medium text-emerald-400/80 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10">${req.profiles?.phone || 'No Phone'}</span>
+                                                    <span class="text-[11px] font-medium text-emerald-400/80 bg-emerald-500/5 px-2 py-0.5 rounded ">${req.profiles?.phone || 'No Phone'}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -416,7 +416,7 @@ const InventoryView = (() => {
 
                                         <!-- Status & Actions -->
                                         <div class="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-3 shrink-0">
-                                            <div class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border ${statusStyle}">
+                                            <div class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter ${statusStyle}">
                                                 ${req.status}
                                             </div>
                                             <div class="flex items-center gap-2">
@@ -480,7 +480,7 @@ const InventoryView = (() => {
                                                     </div>
                                                 ` : `
                                                     <div class="flex items-start gap-3 p-3 bg-zinc-900/60 rounded-xl border border-zinc-800/80">
-                                                        <div class="w-9 h-9 rounded-lg ${req.returned_at ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : req.status === 'taken' ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400 animate-pulse' : 'bg-zinc-900 border border-zinc-800 text-zinc-600'} flex items-center justify-center font-bold text-xs shrink-0">
+                                                        <div class="w-9 h-9 rounded-lg ${req.returned_at ? 'bg-emerald-500/15 text-emerald-400' : req.status === 'taken' ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400 animate-pulse' : 'bg-zinc-900 border border-zinc-800 text-zinc-600'} flex items-center justify-center font-bold text-xs shrink-0">
                                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                                         </div>
                                                         <div class="min-w-0">
@@ -546,7 +546,7 @@ const InventoryView = (() => {
 
                 <div class="flex items-center justify-between">
                     <h2 class="text-sm font-bold text-zinc-500 uppercase tracking-widest">Stock Control</h2>
-                    <span class="text-[10px] text-zinc-600 bg-zinc-900 px-2 py-1 rounded-lg border border-zinc-800">${filteredInventory.length} of ${inventory.length} components</span>
+                    <span class="text-[10px] text-zinc-400 bg-zinc-900/80 px-2.5 py-1 rounded-lg font-medium">${filteredInventory.length} of ${inventory.length} components</span>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     ${filteredInventory.length > 0 ? filteredInventory.map(item => `
@@ -664,7 +664,7 @@ const InventoryView = (() => {
             <div class="fixed inset-0 z-[2000] flex items-center justify-center p-4 animate-fade-in">
                 <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="InventoryView.closeModal()"></div>
                 <div id="borrow-confirm-box" class="relative w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl animate-slide-up text-center">
-                    <div class="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <div class="w-14 h-14 bg-emerald-500/15 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
                         <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                         </svg>
@@ -719,7 +719,7 @@ const InventoryView = (() => {
         // Show success state IN THE SAME MODAL BOX
         if (box) {
             box.innerHTML = `
-                <div class="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <div class="w-14 h-14 bg-emerald-500/15 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                     </svg>

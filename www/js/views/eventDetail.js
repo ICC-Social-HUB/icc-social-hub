@@ -72,7 +72,7 @@ const EventDetailView = (() => {
 
                 <div class="animate-fade-in" style="animation-delay: 0.1s">
                     <div class="flex items-center gap-3 mb-4">
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider ${currentEvent.status === 'upcoming' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider ${currentEvent.status === 'upcoming' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-800/80 text-zinc-400'}">
                             ${currentEvent.status === 'upcoming' ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>' : ''}
                             ${currentEvent.status}
                         </span>

@@ -153,15 +153,15 @@ const MentorDashboardView = (() => {
 
     function renderStatusPill(status) {
         if (status === 'Pending Review') {
-            return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>Pending Review</span>`;
+            return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>Pending Review</span>`;
         }
         if (status === 'Changes Requested') {
-            return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">⚠️ Changes Requested</span>`;
+            return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-400">⚠️ Changes Requested</span>`;
         }
         if (status === 'Approved') {
-            return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">✓ Approved</span>`;
+            return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400">✓ Approved</span>`;
         }
-        return `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-400 border border-zinc-700">${escapeHtml(status)}</span>`;
+        return `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-zinc-800/80 text-zinc-400">${escapeHtml(status)}</span>`;
     }
 
     function renderApplicationCard(app) {
@@ -177,8 +177,8 @@ const MentorDashboardView = (() => {
                     <div class="flex items-center gap-2 flex-wrap mb-1">
                         <h4 class="font-heading font-bold text-base text-white group-hover:text-emerald-400 transition-colors break-words">${escapeHtml(app.project_name)}</h4>
                         ${renderStatusPill(app.status)}
-                        <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-900 border border-zinc-800 text-zinc-400">Rev #${app.revision_number || 1}</span>
-                        ${app.project_code ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">${escapeHtml(app.project_code)}</span>` : ''}
+                        <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-900/80 text-zinc-400">Rev #${app.revision_number || 1}</span>
+                        ${app.project_code ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400">${escapeHtml(app.project_code)}</span>` : ''}
                     </div>
                     <p class="text-xs text-zinc-400">Team: <span class="text-zinc-200 font-semibold">${escapeHtml(app.team_name || app.project_name)}</span> · Submitted on ${dateStr}</p>
                 </div>
@@ -201,7 +201,7 @@ const MentorDashboardView = (() => {
 
                 ${specialties.length > 0 ? `
                 <div class="flex items-center gap-1.5 flex-wrap">
-                    ${specialties.slice(0, 3).map(s => `<span class="px-2 py-0.5 rounded-md text-[10px] bg-zinc-900 border border-zinc-800 text-zinc-400">${escapeHtml(s)}</span>`).join('')}
+                    ${specialties.slice(0, 3).map(s => `<span class="px-2 py-0.5 rounded-md text-[10px] bg-zinc-900/80 text-zinc-400">${escapeHtml(s)}</span>`).join('')}
                     ${specialties.length > 3 ? `<span class="text-[10px] text-zinc-500">+${specialties.length - 3}</span>` : ''}
                 </div>
                 ` : ''}
@@ -224,8 +224,8 @@ const MentorDashboardView = (() => {
                 <div class="min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
                         <h4 class="font-heading font-bold text-sm sm:text-base text-white truncate">${escapeHtml(project.project_name || project.team)}</h4>
-                        <span class="px-2 py-0.5 rounded-md font-mono text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">${escapeHtml(project.project_code || 'PRJ-2026-XXXX')}</span>
-                        <span class="px-2 py-0.5 rounded-md text-[10px] font-medium bg-zinc-900 border border-zinc-800 text-zinc-400">${escapeHtml(project.team)}</span>
+                        <span class="px-2 py-0.5 rounded-md font-mono text-[10px] font-bold bg-emerald-500/15 text-emerald-400">${escapeHtml(project.project_code || 'PRJ-2026-XXXX')}</span>
+                        <span class="px-2 py-0.5 rounded-md text-[10px] font-medium bg-zinc-900/80 text-zinc-400">${escapeHtml(project.team)}</span>
                     </div>
                     <p class="text-xs text-zinc-400 mt-0.5">Project Lead: <span class="text-zinc-200 font-medium">${escapeHtml(project.name)}</span> · Milestone: <span class="text-emerald-400 font-semibold">${progress}%</span></p>
                 </div>
@@ -258,7 +258,7 @@ const MentorDashboardView = (() => {
                         <div>
                             <div class="flex items-center gap-2">
                                 <h1 class="font-heading font-bold text-xl sm:text-2xl text-white tracking-tight">Mentor Dashboard</h1>
-                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">Mentor & Super Admin</span>
+                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300">Mentor & Super Admin</span>
                             </div>
                             <p class="text-xs text-zinc-400 mt-0.5">Project Application Approvals, Revision Tracking & Complete 360° Innovation Audits</p>
                         </div>
@@ -296,10 +296,10 @@ const MentorDashboardView = (() => {
                     ${activeTab === 'applications' ? `
                     <!-- Status Filter Pills for Applications -->
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <button onclick="MentorDashboardView.setFilter('all')" class="px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${applicationFilter === 'all' ? 'bg-zinc-800 text-white border border-zinc-700' : 'text-zinc-400 hover:text-white bg-zinc-950 border border-zinc-800/80'}">All (${applications.length})</button>
-                        <button onclick="MentorDashboardView.setFilter('Pending Review')" class="px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${applicationFilter === 'Pending Review' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'text-zinc-400 hover:text-white bg-zinc-950 border border-zinc-800/80'}">Pending Review (${summary.pending})</button>
-                        <button onclick="MentorDashboardView.setFilter('Changes Requested')" class="px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${applicationFilter === 'Changes Requested' ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40' : 'text-zinc-400 hover:text-white bg-zinc-950 border border-zinc-800/80'}">Changes Requested (${summary.changesRequested})</button>
-                        <button onclick="MentorDashboardView.setFilter('Approved')" class="px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${applicationFilter === 'Approved' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'text-zinc-400 hover:text-white bg-zinc-950 border border-zinc-800/80'}">Approved (${summary.approved})</button>
+                        <button onclick="MentorDashboardView.setFilter('all')" class="px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${applicationFilter === 'all' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white bg-zinc-950/60'}">All (${applications.length})</button>
+                        <button onclick="MentorDashboardView.setFilter('Pending Review')" class="px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${applicationFilter === 'Pending Review' ? 'bg-amber-500/15 text-amber-300' : 'text-zinc-400 hover:text-white bg-zinc-950/60'}">Pending Review (${summary.pending})</button>
+                        <button onclick="MentorDashboardView.setFilter('Changes Requested')" class="px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${applicationFilter === 'Changes Requested' ? 'bg-orange-500/20 text-orange-300' : 'text-zinc-400 hover:text-white bg-zinc-950/60'}">Changes Requested (${summary.changesRequested})</button>
+                        <button onclick="MentorDashboardView.setFilter('Approved')" class="px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${applicationFilter === 'Approved' ? 'bg-emerald-500/15 text-emerald-300' : 'text-zinc-400 hover:text-white bg-zinc-950/60'}">Approved (${summary.approved})</button>
                     </div>
 
                     <!-- Applications List -->
@@ -403,7 +403,7 @@ const MentorDashboardView = (() => {
                             <div class="flex items-center gap-2 flex-wrap">
                                 <h1 class="font-heading font-bold text-sm sm:text-base text-white truncate max-w-xs sm:max-w-md">${escapeHtml(app.project_name)}</h1>
                                 ${renderStatusPill(app.status)}
-                                <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-zinc-800 text-zinc-400 border border-zinc-700">Rev #${app.revision_number || 1}</span>
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-zinc-800/80 text-zinc-400">Rev #${app.revision_number || 1}</span>
                             </div>
                             <p class="text-[11px] text-zinc-400 truncate">Applicant: <strong class="text-zinc-200">${escapeHtml(applicant.full_name || 'Applicant')}</strong> (${escapeHtml(applicant.email || '')})</p>
                         </div>
@@ -422,7 +422,7 @@ const MentorDashboardView = (() => {
                             <span>Approve Project</span>
                         </button>
                     ` : `
-                        <div class="px-3.5 py-1.5 bg-zinc-900 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-bold flex items-center gap-2">
+                        <div class="px-3.5 py-1.5 bg-emerald-500/15 text-emerald-400 rounded-xl text-xs font-bold flex items-center gap-2">
                             <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
                             <span>Live (Code: ${escapeHtml(app.project_code || '')})</span>
                         </div>
@@ -470,7 +470,7 @@ const MentorDashboardView = (() => {
                                 </span>
                                 ${([...history].reverse().find(h => (h.new_status || h.to_status) === 'Changes Requested')?.created_at) ? `<span class="text-[10px] text-zinc-400 font-mono">${new Date([...history].reverse().find(h => (h.new_status || h.to_status) === 'Changes Requested').created_at).toLocaleString()}</span>` : ''}
                             </div>
-                            <div class="text-xs text-zinc-100 bg-zinc-950/80 p-3 rounded-xl border border-rose-500/30 italic whitespace-pre-wrap">
+                            <div class="text-xs text-zinc-100 bg-zinc-950/80 p-3 rounded-xl italic whitespace-pre-wrap">
                                 "${escapeHtml(([...history].reverse().find(h => (h.new_status || h.to_status) === 'Changes Requested' && (h.comment || h.notes))?.comment) || ([...comments].reverse().find(c => c.is_mentor_feedback && (c.content || c.comment))?.content) || 'A mentor requested revisions on this proposal. Waiting for the applicant to resubmit.')}"
                             </div>
                         </div>
@@ -485,7 +485,7 @@ const MentorDashboardView = (() => {
                             <div>
                                 <h3 class="font-bold text-sm text-white">${escapeHtml(applicant.full_name || 'Applicant')}</h3>
                                 <p class="text-xs text-zinc-400">${escapeHtml(applicant.email || 'No email provided')}</p>
-                                <span class="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-800 text-zinc-300 border border-zinc-700 mt-1 capitalize">${escapeHtml(applicant.role || 'Member')}</span>
+                                <span class="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-800/80 text-zinc-300 mt-1 capitalize">${escapeHtml(applicant.role || 'Member')}</span>
                             </div>
                         </div>
                         <div class="text-right text-xs text-zinc-400 space-y-0.5">
@@ -520,7 +520,7 @@ const MentorDashboardView = (() => {
                             <div class="space-y-2 pt-2 border-t border-zinc-800/60">
                                 <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Tech Stack & Domains</h3>
                                 <div class="flex items-center gap-1.5 flex-wrap">
-                                    ${app.specialties.map(s => `<span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-800 border border-zinc-700 text-zinc-200">${escapeHtml(s)}</span>`).join('')}
+                                    ${app.specialties.map(s => `<span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-800/80 text-zinc-200">${escapeHtml(s)}</span>`).join('')}
                                 </div>
                             </div>
                         ` : ''}
@@ -569,7 +569,7 @@ const MentorDashboardView = (() => {
                             <div class="w-2.5 h-2.5 rounded-full bg-emerald-400"></div>
                             <h3 class="font-bold text-xs uppercase tracking-wider text-white">Discussion Thread</h3>
                         </div>
-                        <span id="mentor-comments-count-pill" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 border border-zinc-700 text-zinc-300">
+                        <span id="mentor-comments-count-pill" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800/80 text-zinc-300">
                             ${comments.length} message${comments.length === 1 ? '' : 's'}
                         </span>
                     </div>
@@ -590,7 +590,7 @@ const MentorDashboardView = (() => {
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-2">
                                         <span class="font-bold ${isFeedback ? 'text-emerald-400' : 'text-white'}">${escapeHtml(authorName)}</span>
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isFeedback ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">${roleBadge}</span>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isFeedback ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-800 text-zinc-400'}">${roleBadge}</span>
                                         ${isAuthorMe ? `<span class="text-[10px] text-zinc-500">(You)</span>` : ''}
                                     </div>
                                     <span class="text-[10px] text-zinc-500">${c.created_at ? new Date(c.created_at).toLocaleString() : ''}</span>
@@ -791,9 +791,9 @@ const MentorDashboardView = (() => {
                 <div class="p-4 sm:p-5 border-b border-zinc-800 flex items-center justify-between gap-3 bg-zinc-900/60">
                     <div class="min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">360° Mentor Audit</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-300">360° Mentor Audit</span>
                             <h3 class="font-heading font-bold text-lg text-white break-words">${escapeHtml(project.project_name || project.team)}</h3>
-                            <span class="px-2.5 py-0.5 rounded-md font-mono text-xs font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">${escapeHtml(project.project_code || 'PRJ-2026-XXXX')}</span>
+                            <span class="px-2.5 py-0.5 rounded-md font-mono text-xs font-bold bg-emerald-500/15 text-emerald-400">${escapeHtml(project.project_code || 'PRJ-2026-XXXX')}</span>
                         </div>
                         <p class="text-xs text-zinc-400 mt-0.5">Team: <strong class="text-white">${escapeHtml(project.team)}</strong> · Created: ${project.created_at ? new Date(project.created_at).toLocaleDateString() : 'N/A'}</p>
                     </div>

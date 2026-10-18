@@ -12,7 +12,7 @@ const DownloadView = (() => {
 
                 <div class="grid md:grid-cols-2 gap-12 items-center">
                     <div class="space-y-6 text-center md:text-left">
-                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-crimson/10 border border-crimson/20 text-crimson text-xs font-bold uppercase tracking-wider">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-crimson/15 text-crimson text-xs font-bold uppercase tracking-wider">
                             <span class="relative flex h-2 w-2">
                                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-crimson opacity-75"></span>
                                 <span class="relative inline-flex rounded-full h-2 w-2 bg-crimson"></span>

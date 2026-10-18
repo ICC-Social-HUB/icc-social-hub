@@ -109,24 +109,24 @@ const UserProfileModal = (() => {
                             
                             <!-- Prominent / Unique Leader Tag OR Member Tag below name -->
                             ${isLeadOfTeam ? `
-                                <div class="inline-flex items-center justify-center gap-1.5 px-3 py-1 mt-1 text-xs font-extrabold text-amber-300 bg-gradient-to-r from-amber-500/25 via-yellow-500/20 to-amber-500/25 border border-amber-400/60 rounded-full shadow-[0_0_15px_rgba(251,191,36,0.3)] tracking-wide uppercase select-none">
+                                <div class="inline-flex items-center justify-center gap-1.5 px-3 py-1 mt-1 text-xs font-extrabold text-amber-300 bg-amber-500/20 rounded-full shadow-[0_0_15px_rgba(251,191,36,0.3)] tracking-wide uppercase select-none">
                                     <svg class="w-3.5 h-3.5 text-amber-400 fill-current flex-shrink-0" viewBox="0 0 20 20">
                                         <path d="M2.5 14.5l1.5-7.5 4 4.5 4-6 4 6 4-4.5 1.5 7.5h-19z"/>
                                     </svg>
                                     <span>${escapeHtml(displayTag)}</span>
                                 </div>
                             ` : (displayTag ? `
-                                <div class="inline-flex items-center justify-center px-3 py-1 mt-1 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                                <div class="inline-flex items-center justify-center px-3 py-1 mt-1 text-xs font-semibold text-emerald-400 bg-emerald-500/15 rounded-full">
                                     ${escapeHtml(displayTag)}
                                 </div>
                             ` : '')}
 
                             <div class="flex flex-wrap items-center justify-center gap-2 pt-2">
-                                ${profile.year ? `<span class="px-3 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full text-xs font-semibold">${escapeHtml(profile.year)}</span>` : ''}
-                                ${profile.branch ? `<span class="px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full text-xs font-semibold">${escapeHtml(profile.branch)}</span>` : ''}
-                                ${teamLead ? `<span class="px-3 py-1 bg-zinc-800/90 border border-zinc-700/80 rounded-full text-xs text-zinc-200 font-medium">${teamLead.team}</span>` : ''}
-                                ${profile.role === 'lead' ? `<span class="px-3 py-1 bg-red-600/20 text-red-400 border border-red-500/30 rounded-full text-xs font-bold uppercase tracking-wider">${profile.role}</span>` : ''}
-                                ${profile.role === 'admin' ? `<span class="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full text-xs font-bold uppercase tracking-wider">Admin</span>` : ''}
+                                ${profile.year ? `<span class="px-3 py-1 bg-rose-500/15 text-rose-300 rounded-full text-xs font-semibold">${escapeHtml(profile.year)}</span>` : ''}
+                                ${profile.branch ? `<span class="px-3 py-1 bg-blue-500/15 text-blue-300 rounded-full text-xs font-semibold">${escapeHtml(profile.branch)}</span>` : ''}
+                                ${teamLead ? `<span class="px-3 py-1 bg-zinc-800/80 rounded-full text-xs text-zinc-200 font-medium">${teamLead.team}</span>` : ''}
+                                ${profile.role === 'lead' ? `<span class="px-3 py-1 bg-red-600/15 text-red-400 rounded-full text-xs font-bold uppercase tracking-wider">${profile.role}</span>` : ''}
+                                ${profile.role === 'admin' ? `<span class="px-3 py-1 bg-amber-500/15 text-amber-300 rounded-full text-xs font-bold uppercase tracking-wider">Admin</span>` : ''}
                             </div>
                         </div>
                     </div>
@@ -191,7 +191,7 @@ const UserProfileModal = (() => {
                     <div ${profile.bio ? 'class="pt-3 border-t border-zinc-800/60"' : ''}>
                         <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Skills & Expertise</h3>
                         <div class="flex flex-wrap gap-2">
-                            ${profile.skills.map(s => `<span class="px-3 py-1 bg-zinc-800/90 border border-zinc-700/80 rounded-lg text-xs text-zinc-300 font-medium">${escapeHtml(s)}</span>`).join('')}
+                            ${profile.skills.map(s => `<span class="px-3 py-1 bg-zinc-800/80 rounded-lg text-xs text-zinc-300 font-medium">${escapeHtml(s)}</span>`).join('')}
                         </div>
                     </div>` : ''}
                 </div>` : ''}
@@ -230,7 +230,7 @@ const UserProfileModal = (() => {
                 <div class="py-6 text-center border-t border-zinc-800/50">
                     <p class="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-medium mb-3">Crafted with ❤️ by</p>
                     <a href="https://saravanantm1920.wixsite.com/my-site-4" target="_blank" 
-                       class="inline-flex items-center gap-2 px-4 py-1.5 bg-zinc-800/50 hover:bg-red-500/10 text-zinc-400 hover:text-red-500 rounded-full border border-zinc-700/50 hover:border-red-500/50 transition-all duration-300 group">
+                       class="inline-flex items-center gap-2 px-4 py-1.5 bg-zinc-800/50 hover:bg-red-500/10 text-zinc-400 hover:text-red-500 rounded-full  hover:border-red-500/50 transition-all duration-300 group">
                         <span class="text-xs font-bold tracking-tight">T M Saravanan</span>
                         <svg class="w-3 h-3 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
                     </a>

@@ -35,7 +35,7 @@ const JoinTeamModal = (() => {
                 <div class="p-6">
                     <div class="flex items-center justify-between mb-6">
                         <div>
-                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-1">Project Application</span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-1">Project Application</span>
                             <h3 class="font-heading font-bold text-xl text-white">${currentTeam.project_name || currentTeam.team}</h3>
                             <p class="text-zinc-400 text-xs mt-1">Team: <span class="text-zinc-300 font-semibold">${currentTeam.team}</span> · Lead: <span class="text-zinc-300 font-medium">${currentTeam.name}${ICC_CONFIG.VERIFIED_TICK}</span></p>
                         </div>

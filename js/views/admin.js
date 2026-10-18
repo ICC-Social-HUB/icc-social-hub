@@ -558,7 +558,7 @@ const AdminView = (() => {
             <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-3 border-b border-zinc-800/60">
                 <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300">
                             🛡️ Change Request
                         </span>
                         <span class="text-[12px] text-zinc-300 font-medium">
@@ -582,7 +582,7 @@ const AdminView = (() => {
                     </div>
                 ` : `
                     <div class="flex items-center gap-2 flex-shrink-0">
-                        <span class="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-[10px] font-semibold">
+                        <span class="px-2.5 py-1 bg-amber-500/15 text-amber-400 rounded-lg text-[10px] font-semibold">
                             ⏳ Awaiting Super Admin Approval
                         </span>
                         ${isMyRequest ? `
@@ -617,7 +617,7 @@ const AdminView = (() => {
     function renderPermissionDenied(msg = 'You do not have permission to access this section.') {
         return `
         <div class="glass-card rounded-2xl p-8 text-center max-w-md mx-auto my-12 border border-zinc-800">
-            <div class="w-14 h-14 rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 flex items-center justify-center text-2xl mx-auto mb-4">
+            <div class="w-14 h-14 rounded-2xl bg-red-500/15 text-red-400 flex items-center justify-center text-2xl mx-auto mb-4">
                 🔒
             </div>
             <h3 class="font-heading font-semibold text-lg text-white mb-2">Access Restricted</h3>
@@ -655,7 +655,7 @@ const AdminView = (() => {
                         <button class="admin-tab flex items-center gap-1.5 ${activeTab === t.id ? 'active' : ''}" data-tab="${t.id}">
                             <span class="text-xs">${t.icon}</span>
                             <span>${t.label}</span>
-                            ${t.badge ? `<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">${t.badge}</span>` : ''}
+                            ${t.badge ? `<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-300">${t.badge}</span>` : ''}
                         </button>
                     `).join('')}
                 </div>
@@ -665,7 +665,7 @@ const AdminView = (() => {
                 <div class="mt-16 mb-12 py-8 border-t border-zinc-800/50 text-center animate-fade-in">
                     <p class="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-medium mb-3">Crafted with ❤️ by</p>
                     <a href="https://saravanantm1920.wixsite.com/my-site-4" target="_blank" 
-                       class="inline-flex items-center gap-2 px-5 py-2 bg-zinc-800/50 hover:bg-red-500/10 text-zinc-300 hover:text-red-500 rounded-full border border-zinc-700/50 hover:border-red-500/50 transition-all duration-300 group shadow-lg">
+                       class="inline-flex items-center gap-2 px-5 py-2 bg-zinc-800/50 hover:bg-red-500/10 text-zinc-300 hover:text-red-500 rounded-full  hover:border-red-500/50 transition-all duration-300 group shadow-lg">
                         <span class="text-sm font-bold tracking-tight">T M Saravanan</span>
                         <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
                     </a>
@@ -753,7 +753,7 @@ const AdminView = (() => {
                         <div>
                             <div class="flex items-center gap-2">
                                 <h3 class="font-heading font-bold text-base text-white">Access Control & Role Governance</h3>
-                                <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">Super Admin Only</span>
+                                <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300">Super Admin Only</span>
                             </div>
                             <p class="text-[11px] text-zinc-400 mt-0.5">Toggle granular feature permissions, appoint new admins & mentors, and govern club privileges.</p>
                         </div>
@@ -961,7 +961,7 @@ const AdminView = (() => {
                             return `
                             <div class="flex items-center justify-between gap-3 p-3 bg-zinc-950/70 hover:bg-zinc-900 border border-zinc-800/80 rounded-xl transition-colors">
                                 <div class="flex items-center gap-3 min-w-0">
-                                    <div class="w-9 h-9 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700/60 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                    <div class="w-9 h-9 rounded-full bg-zinc-800/80 text-zinc-300/60 flex items-center justify-center font-bold text-xs flex-shrink-0">
                                         ${fullName.charAt(0).toUpperCase()}
                                     </div>
                                     <div class="min-w-0">
@@ -975,7 +975,7 @@ const AdminView = (() => {
                                 </div>
                                 <div class="flex-shrink-0">
                                     ${isAlreadyAdmin ? `
-                                        <span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold ${u.role === 'mentor' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : (u.role === 'super_admin' || u.role === 'superadmin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-blue-500/20 text-blue-300 border border-blue-500/40')}">
+                                        <span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold ${u.role === 'mentor' ? 'bg-emerald-500/15 text-emerald-300' : (u.role === 'super_admin' || u.role === 'superadmin' ? 'bg-amber-500/15 text-amber-300' : 'bg-blue-500/15 text-blue-300')}">
                                             ${u.role === 'super_admin' || u.role === 'superadmin' ? '🛡️ Super Admin' : (u.role === 'mentor' ? '🎓 Mentor' : '👑 Admin')}
                                         </span>
                                     ` : `
@@ -1000,7 +1000,7 @@ const AdminView = (() => {
                     <div>
                         <h4 class="font-heading font-semibold text-sm text-white flex items-center gap-2">
                             <span>🛡️ Active Administrators & Feature Access</span>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700">${allAdmins.length}</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800/80 text-zinc-300">${allAdmins.length}</span>
                         </h4>
                         <p class="text-[11px] text-zinc-400">Configure feature access for standard administrators. Super Administrator access is permanent and immutable.</p>
                     </div>
@@ -1008,8 +1008,8 @@ const AdminView = (() => {
                     <!-- Role Filter Pills -->
                     <div class="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800 flex-wrap">
                         <button class="admin-role-filter px-3 py-1 rounded-lg text-[11px] font-medium transition-all ${accessRoleFilter === 'all' ? 'bg-zinc-800 text-white font-semibold' : 'text-zinc-500 hover:text-zinc-300'}" data-filter="all">All (${allAdmins.length})</button>
-                        <button class="admin-role-filter px-3 py-1 rounded-lg text-[11px] font-medium transition-all ${accessRoleFilter === 'super_admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold' : 'text-zinc-500 hover:text-zinc-300'}" data-filter="super_admin">Super Admins (${superAdminsCount})</button>
-                        <button class="admin-role-filter px-3 py-1 rounded-lg text-[11px] font-medium transition-all ${accessRoleFilter === 'admin' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30 font-semibold' : 'text-zinc-500 hover:text-zinc-300'}" data-filter="admin">Admins (${standardAdminsCount})</button>
+                        <button class="admin-role-filter px-3 py-1 rounded-lg text-[11px] font-medium transition-all ${accessRoleFilter === 'super_admin' ? 'bg-amber-500/15 text-amber-300 font-semibold' : 'text-zinc-500 hover:text-zinc-300'}" data-filter="super_admin">Super Admins (${superAdminsCount})</button>
+                        <button class="admin-role-filter px-3 py-1 rounded-lg text-[11px] font-medium transition-all ${accessRoleFilter === 'admin' ? 'bg-blue-500/15 text-blue-300 font-semibold' : 'text-zinc-500 hover:text-zinc-300'}" data-filter="admin">Admins (${standardAdminsCount})</button>
                         <button class="admin-role-filter px-3 py-1 rounded-lg text-[11px] font-medium transition-all ${accessRoleFilter === 'mentor' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold' : 'text-zinc-500 hover:text-zinc-300'}" data-filter="mentor">Mentors (${mentorsCount})</button>
                     </div>
                 </div>
@@ -1040,14 +1040,14 @@ const AdminView = (() => {
                                         <div class="flex items-center gap-2 flex-wrap">
                                             <h5 class="text-sm font-semibold text-white break-words">${escapeHtml(fullName)}</h5>
                                             ${isSuper ? `
-                                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">🛡️ Super Admin</span>
+                                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-300">🛡️ Super Admin</span>
                                             ` : (isMentorRole ? `
-                                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">🎓 Mentor</span>
+                                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-300">🎓 Mentor</span>
                                             ` : `
-                                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40">👑 Admin</span>
+                                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/15 text-blue-300">👑 Admin</span>
                                             `)}
                                             ${isMe ? `
-                                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">You</span>
+                                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-400">You</span>
                                             ` : ''}
                                         </div>
                                         <p class="text-[11px] text-zinc-400 font-mono truncate">${escapeHtml(u.email || 'No email')} · @${escapeHtml(u.username || 'user')}</p>
@@ -1057,7 +1057,7 @@ const AdminView = (() => {
                                 <!-- Action Buttons -->
                                 <div class="flex items-center gap-2">
                                     ${isSuper ? `
-                                        <span class="text-[10px] text-amber-400/90 font-medium px-2.5 py-1 bg-amber-500/10 rounded-lg border border-amber-500/30 flex items-center gap-1.5">
+                                        <span class="text-[10px] text-amber-400/90 font-medium px-2.5 py-1 bg-amber-500/15 rounded-lg flex items-center gap-1.5">
                                             🔒 Permanent Super Admin
                                         </span>
                                     ` : (isMentorRole ? `
@@ -1073,7 +1073,7 @@ const AdminView = (() => {
                                                 Revoke Admin
                                             </button>
                                         ` : `
-                                            <span class="text-[10px] text-zinc-500 px-2.5 py-1 bg-zinc-950 rounded-lg border border-zinc-800/80">Active User</span>
+                                            <span class="text-[10px] text-zinc-500 px-2.5 py-1 bg-zinc-900/80 rounded-lg">Active User</span>
                                         `}
                                     `)}
                                 </div>
@@ -1414,7 +1414,7 @@ const AdminView = (() => {
                                 <p class="text-[11px] text-zinc-400">Review and authorize administrator modification requests</p>
                             </div>
                         </div>
-                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${pendingEditRequests.length > 0 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse' : 'bg-zinc-800 text-zinc-500'}">
+                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${pendingEditRequests.length > 0 ? 'bg-amber-500/15 text-amber-300 animate-pulse' : 'bg-zinc-800 text-zinc-500'}">
                             ${pendingEditRequests.length} Pending
                         </span>
                     </div>
@@ -1441,7 +1441,7 @@ const AdminView = (() => {
                                 <p class="text-[10px] text-zinc-400">Awaiting Super Admin review and authorization</p>
                             </div>
                         </div>
-                        <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                        <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-blue-500/15 text-blue-300">
                             ${pendingEditRequests.length} Pending
                         </span>
                     </div>
@@ -1547,15 +1547,15 @@ const AdminView = (() => {
                                     <div class="flex-1 min-w-0">
                                         <div class="flex flex-wrap items-center gap-2">
                                             <h4 class="text-sm font-semibold text-white break-words">${escapeHtml(fullName || 'Anonymous')}</h4>
-                                            ${isVerified ? `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Excel Verified</span>` : `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20">Unverified</span>`}
-                                            ${isManuallyUpdated ? `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">Manually Updated</span>` : ''}
+                                            ${isVerified ? `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400">Excel Verified</span>` : `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-red-500/15 text-red-400">Unverified</span>`}
+                                            ${isManuallyUpdated ? `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-blue-500/15 text-blue-400">Manually Updated</span>` : ''}
                                             ${(() => {
                                                 const att = attendanceMap[u.id];
                                                 if (att && att.total > 0) {
-                                                    const col = att.percent >= 75 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : att.percent >= 50 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20';
-                                                    return `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${col}" title="Attendance: ${att.present}/${att.total} days">Att: ${att.percent}%</span>`;
+                                                    const col = att.percent >= 75 ? 'bg-emerald-500/15 text-emerald-400' : att.percent >= 50 ? 'bg-amber-500/15 text-amber-400' : 'bg-red-500/15 text-red-400';
+                                                    return `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${col}" title="Attendance: ${att.present}/${att.total} days">Att: ${att.percent}%</span>`;
                                                 }
-                                                return `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-zinc-800 text-zinc-500 border border-zinc-700/30">Att: 0%</span>`;
+                                                return `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-zinc-800/80 text-zinc-500">Att: 0%</span>`;
                                             })()}
                                         </div>
                                         <p class="text-[11px] text-zinc-500 truncate">@${escapeHtml(u.username || '—')}</p>

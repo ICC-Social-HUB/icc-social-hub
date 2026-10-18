@@ -520,7 +520,7 @@ const TeamsView = (() => {
                             <div class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 sm:p-5 space-y-4 backdrop-blur-xl">
                                 <div class="flex items-center justify-between border-b border-zinc-800/60 pb-2.5">
                                     <div class="flex items-center gap-2">
-                                        <div class="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                        <div class="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400">
                                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
                                         </div>
                                         <h3 class="font-heading font-bold text-xs uppercase tracking-wider text-zinc-300">Links & Resources</h3>
@@ -565,7 +565,7 @@ const TeamsView = (() => {
                             <div class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 sm:p-5 space-y-3.5 backdrop-blur-xl">
                                 <h3 class="font-heading font-bold text-xs uppercase tracking-wider text-zinc-400">Applicant & Leadership</h3>
                                 <div class="flex items-center gap-3 p-3 bg-zinc-950/70 border border-zinc-800/80 rounded-xl">
-                                    <div class="w-10 h-10 rounded-full bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                    <div class="w-10 h-10 rounded-full bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold text-sm flex-shrink-0">
                                         ${profile?.full_name?.charAt(0) || 'U'}
                                     </div>
                                     <div class="min-w-0 flex-1">
@@ -868,9 +868,9 @@ const TeamsView = (() => {
             const normStatus = (st) => String(st || '').toLowerCase().replace(/[\s_-]+/g, '_');
             const statusBadge = (status) => {
                 const s = normStatus(status);
-                if (s === 'approved') return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">✓ Approved</span>`;
-                if (s === 'changes_requested') return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">⚠️ Changes Requested</span>`;
-                return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block mr-1 animate-pulse"></span>Pending Review</span>`;
+                if (s === 'approved') return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400">✓ Approved</span>`;
+                if (s === 'changes_requested') return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-400">⚠️ Changes Requested</span>`;
+                return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block mr-1 animate-pulse"></span>Pending Review</span>`;
             };
 
             const activeAppStatusKey = normStatus(activeApp.status);
@@ -943,7 +943,7 @@ const TeamsView = (() => {
                                         </span>
                                         <span class="text-[11px] text-zinc-400 font-medium">Reviewer: <strong class="text-zinc-200">${escapeHtml(mentorChangerName)}</strong></span>
                                     </div>
-                                    <div class="text-xs sm:text-sm text-zinc-100 leading-relaxed italic bg-zinc-900/80 p-3.5 rounded-xl border border-zinc-800 whitespace-pre-wrap font-sans">
+                                    <div class="text-xs sm:text-sm text-zinc-100 leading-relaxed italic bg-zinc-900/80 p-3.5 rounded-xl whitespace-pre-wrap font-sans">
 "${escapeHtml(mentorChangeComment || 'Please review mentor recommendations, revise the proposal overview, architecture, or resource links, and resubmit for review.')}"
                                     </div>
                                 </div>
@@ -970,7 +970,7 @@ const TeamsView = (() => {
                                     </p>
                                 </div>
                                 ${activeApp.project_code ? `
-                                    <div class="px-4 py-2 bg-zinc-900 border border-emerald-500/40 rounded-xl flex items-center gap-2.5">
+                                    <div class="px-4 py-2 bg-emerald-500/15 rounded-xl flex items-center gap-2.5">
                                         <span class="text-xs text-zinc-400 font-medium">Project Code:</span>
                                         <span class="font-mono font-bold text-emerald-400 text-sm tracking-wide">${escapeHtml(activeApp.project_code)}</span>
                                     </div>
@@ -1066,7 +1066,7 @@ const TeamsView = (() => {
                                     <p class="text-xs text-zinc-400 mt-0.5">Team: <span class="text-zinc-200 font-semibold">${escapeHtml(activeApp.team_name || activeApp.project_name)}</span></p>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <span class="px-2.5 py-1 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-xl text-[11px] font-mono">
+                                    <span class="px-2.5 py-0.5 bg-zinc-900/80 text-zinc-400 rounded-full text-[11px] font-mono">
                                         Revision #${activeApp.revision_number || 1}
                                     </span>
                                     ${statusBadge(activeApp.status)}
@@ -1084,7 +1084,7 @@ const TeamsView = (() => {
                                 <div class="pt-2 border-t border-zinc-800/60">
                                     <h4 class="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Domains & Specialties</h4>
                                     <div class="flex flex-wrap gap-1.5">
-                                        ${activeApp.specialties.map(s => `<span class="px-2.5 py-1 bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-lg text-xs font-medium">${escapeHtml(s)}</span>`).join('')}
+                                        ${activeApp.specialties.map(s => `<span class="px-2.5 py-1 bg-zinc-900/80 text-zinc-300 rounded-lg text-xs font-medium">${escapeHtml(s)}</span>`).join('')}
                                     </div>
                                 </div>
                             ` : ''}
@@ -1106,7 +1106,7 @@ const TeamsView = (() => {
                                     <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                                     <span>Mentor Review Discussion & Comments</span>
                                 </h4>
-                                <span id="comments-count-pill" class="px-2.5 py-0.5 bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-full text-[10px] font-bold">
+                                <span id="comments-count-pill" class="px-2.5 py-0.5 bg-zinc-800/80 text-zinc-300 rounded-full text-[10px] font-bold">
                                     ${comments.length} message${comments.length === 1 ? '' : 's'}
                                 </span>
                             </div>
@@ -1126,7 +1126,7 @@ const TeamsView = (() => {
                                         <div class="flex items-center justify-between text-xs">
                                             <div class="flex items-center gap-2">
                                                 <span class="font-bold text-white">${escapeHtml(authorName)}</span>
-                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isFeedback ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isFeedback ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-800/80 text-zinc-400'}">
                                                     ${roleBadge}
                                                 </span>
                                             </div>
@@ -1342,7 +1342,7 @@ const TeamsView = (() => {
                     <div class="flex items-center justify-between text-xs">
                         <div class="flex items-center gap-2">
                             <span class="font-bold text-white">${escapeHtml(authorName)}</span>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isFeedback ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isFeedback ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-800/80 text-zinc-400'}">
                                 ${roleBadge}
                             </span>
                         </div>
@@ -1425,7 +1425,7 @@ const TeamsView = (() => {
 
             <!-- Member Tag below the name: Simple text for all members including leader -->
             ${tag ? `
-                <span class="inline-flex items-center justify-center px-1.5 py-0.5 mt-0.5 text-[9px] sm:text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full max-w-full break-words text-center leading-tight">
+                <span class="inline-flex items-center justify-center px-2 py-0.5 mt-0.5 text-[9px] sm:text-[10px] font-medium text-emerald-400 bg-emerald-500/15 rounded-full max-w-full break-words text-center leading-tight">
                     ${escapeHtml(tag)}
                 </span>
             ` : ''}
@@ -1774,7 +1774,7 @@ const TeamsView = (() => {
                 <div class="min-w-0">
                     <div class="flex items-center gap-2">
                         <p class="text-xs sm:text-sm font-bold text-white group-hover:text-emerald-400 transition-colors truncate leading-tight">${escapeHtml(link.name || 'Project Resource')}</p>
-                        ${badgeText ? `<span class="px-1.5 py-0.2 text-[9px] font-semibold rounded bg-zinc-900 text-zinc-400 border border-zinc-800">${badgeText}</span>` : ''}
+                        ${badgeText ? `<span class="px-1.5 py-0.5 text-[9px] font-semibold rounded-md bg-zinc-900/80 text-zinc-400">${badgeText}</span>` : ''}
                     </div>
                     <p class="text-[11px] text-zinc-500 truncate mt-1 group-hover:text-zinc-400 transition-colors">${escapeHtml(displayUrl)}</p>
                 </div>
@@ -1803,7 +1803,7 @@ const TeamsView = (() => {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
                     </svg>
                     <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400">Project Links & Resources</h3>
-                    ${validLinks.length > 0 ? `<span class="px-2 py-0.5 bg-zinc-900 border border-zinc-800 rounded-full text-[10px] font-semibold text-zinc-400">${validLinks.length}</span>` : ''}
+                    ${validLinks.length > 0 ? `<span class="px-2 py-0.5 bg-zinc-900/80 rounded-full text-[10px] font-semibold text-zinc-400">${validLinks.length}</span>` : ''}
                 </div>
                 ${isLead ? `
                 <button id="manage-links-btn" type="button" class="flex items-center gap-1.5 px-3 py-1 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-emerald-400 border border-zinc-800 hover:border-emerald-500/40 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-sm active:scale-95" title="Manage Project Links">
@@ -1884,7 +1884,7 @@ const TeamsView = (() => {
                                         if (!user) return `<button id="team-join-btn" class="join-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs sm:text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/30 cursor-pointer shadow-md active:scale-95 flex-shrink-0"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg><span>Join Team</span></button>`;
                                         if (isMember || isLead) return `
                                             <div class="inline-flex items-center gap-2 flex-wrap">
-                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600/15 border border-emerald-600/30 rounded-xl text-emerald-400 text-xs font-semibold">
+                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600/15 rounded-xl text-emerald-400 text-xs font-semibold">
                                                     <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                                     <span>${isLead ? "Team Leader" : "Team Member"}</span>
                                                 </span>
@@ -1893,16 +1893,16 @@ const TeamsView = (() => {
                                                     <span>Team Chat</span>
                                                 </button>
                                             </div>`;
-                                        if (profile?.memberships?.length > 0 || profile?.role === 'lead') return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-500 text-xs font-medium"><svg class="w-3.5 h-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span>In Another Project</span></span>`;
+                                        if (profile?.memberships?.length > 0 || profile?.role === 'lead') return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900/80 rounded-xl text-zinc-500 text-xs font-medium"><svg class="w-3.5 h-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span>In Another Project</span></span>`;
                                         if (isPending) return `
                                             <div class="inline-flex items-center gap-2">
-                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/15 border border-amber-500/30 rounded-xl text-amber-400 text-xs font-semibold">
+                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/15 rounded-xl text-amber-400 text-xs font-semibold">
                                                     <svg class="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                                     <span>Pending</span>
                                                 </span>
                                                 <button id="team-cancel-btn" class="text-xs text-zinc-500 hover:text-red-400 transition-colors underline decoration-dotted cursor-pointer">Cancel</button>
                                             </div>`;
-                                        if (profile?.pending_teams?.length > 0) return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-500 text-xs font-medium">Pending Elsewhere</span>`;
+                                        if (profile?.pending_teams?.length > 0) return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900/80 rounded-xl text-zinc-500 text-xs font-medium">Pending Elsewhere</span>`;
 
                                         return `<button id="team-join-btn" class="join-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs sm:text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/30 cursor-pointer shadow-md active:scale-95 flex-shrink-0">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
@@ -1911,9 +1911,9 @@ const TeamsView = (() => {
                                     })()}
                                 </div>
                                 <div class="flex items-center flex-wrap gap-2 mt-1.5 text-xs">
-                                    <span class="px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded-full font-semibold text-zinc-400">Team: <span class="text-zinc-200 font-bold">${lead.team}</span></span>
+                                    <span class="px-2.5 py-0.5 bg-zinc-900/80 rounded-full font-semibold text-zinc-400">Team: <span class="text-zinc-200 font-bold">${lead.team}</span></span>
                                     ${canSeeCode ? `
-                                        <span class="px-2.5 py-0.5 bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 rounded-full font-mono font-bold text-xs flex items-center gap-1.5 shadow-sm" title="Unique Project Code (Visible to Project Lead, Members, Mentors, and Admins)">
+                                        <span class="px-2.5 py-0.5 bg-emerald-500/15 text-emerald-300 rounded-full font-mono font-bold text-xs flex items-center gap-1.5" title="Unique Project Code (Visible to Project Lead, Members, Mentors, and Admins)">
                                             <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/></svg>
                                             <span>Code: ${escapeHtml(lead.project_code)}</span>
                                         </span>
@@ -1955,7 +1955,7 @@ const TeamsView = (() => {
                                 <div>
                                     <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-2">Specialties & Tech Stack</h3>
                                     <div class="flex flex-wrap gap-2">
-                                        ${(lead.specialties || []).map(s => `<span class="specialty-pill px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-400">${s}</span>`).join('')}
+                                        ${(lead.specialties || []).map(s => `<span class="specialty-pill px-3 py-1.5 bg-zinc-900/80 rounded-lg text-xs text-zinc-400">${s}</span>`).join('')}
                                     </div>
                                 </div>
                             </div>
@@ -2052,9 +2052,9 @@ const TeamsView = (() => {
                                 <div class="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-zinc-800/60">
                                     <div class="flex items-center gap-2">
                                         <h3 class="font-heading font-bold text-sm text-white tracking-tight">Active Workforce</h3>
-                                        <span id="team-member-count" class="px-2 py-0.5 bg-red-600/15 text-red-400 border border-red-500/20 rounded-full text-[11px] font-bold">${teamMembers.length}</span>
+                                        <span id="team-member-count" class="px-2 py-0.5 bg-red-600/15 text-red-400 rounded-full text-[11px] font-bold">${teamMembers.length}</span>
                                     </div>
-                                    <div class="flex items-center gap-1.5 px-2.5 py-0.5 bg-zinc-900/80 border border-zinc-800 rounded-full flex-shrink-0">
+                                    <div class="flex items-center gap-1.5 px-2.5 py-0.5 bg-zinc-900/80 rounded-full flex-shrink-0">
                                         <span class="relative flex h-2 w-2">
                                             <span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                             <span class="relative rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -2094,10 +2094,10 @@ const TeamsView = (() => {
                                     </div>
                                     <div class="p-3">
                                         <div class="flex items-center gap-2 mb-2">
-                                            <span class="px-2 py-0.5 bg-red-600/10 text-red-400 border border-red-500/20 rounded text-[9px] font-bold uppercase tracking-wider">${m.disc_tag || 'No Tag'}</span>
+                                            <span class="px-2 py-0.5 bg-red-600/10 text-red-400 rounded text-[9px] font-bold uppercase tracking-wider">${m.disc_tag || 'No Tag'}</span>
                                             <span class="text-[10px] text-zinc-500 italic">DISC Personality</span>
                                         </div>
-                                        <p class="text-[11px] text-zinc-400 leading-relaxed italic bg-zinc-900/30 p-2 rounded-lg border border-zinc-800/50">"${m.summary || 'No summary provided.'}"</p>
+                                        <p class="text-[11px] text-zinc-400 leading-relaxed italic bg-zinc-900/30 p-2 rounded-lg">"${m.summary || 'No summary provided.'}"</p>
                                     </div>
                                 </div>
                                 `).join('')}
@@ -2140,7 +2140,7 @@ const TeamsView = (() => {
                 <div class="bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl animate-zoom-in">
                     <div class="p-4 sm:p-5 border-b border-zinc-800 flex items-center justify-between">
                         <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                            <div class="w-8 h-8 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
                             </div>
                             <div>
@@ -2343,10 +2343,10 @@ const TeamsView = (() => {
                                     </div>
                                     <div class="p-3">
                                         <div class="flex items-center gap-2 mb-2">
-                                            <span class="px-2 py-0.5 bg-red-600/10 text-red-400 border border-red-500/20 rounded text-[9px] font-bold uppercase tracking-wider">${m.disc_tag || 'No Tag'}</span>
+                                            <span class="px-2 py-0.5 bg-red-600/10 text-red-400 rounded text-[9px] font-bold uppercase tracking-wider">${m.disc_tag || 'No Tag'}</span>
                                             <span class="text-[10px] text-zinc-500 italic">DISC Personality</span>
                                         </div>
-                                        <p class="text-[11px] text-zinc-400 leading-relaxed italic bg-zinc-900/30 p-2 rounded-lg border border-zinc-800/50">"${m.summary || 'No summary provided.'}"</p>
+                                        <p class="text-[11px] text-zinc-400 leading-relaxed italic bg-zinc-900/30 p-2 rounded-lg">"${m.summary || 'No summary provided.'}"</p>
                                     </div>
                                 </div>
                                 `).join('')}

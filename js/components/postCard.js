@@ -34,8 +34,8 @@ const PostCard = (() => {
                         <button class="user-link font-bold text-[15px] hover:text-crimson transition-colors truncate tracking-tight" data-user-id="${p.id || post.user_id}">
                             ${p.username || p.full_name || 'Anonymous'}
                         </button>
-                        ${isAnnounce ? '<span class="px-2 py-0.5 bg-crimson/10 text-crimson border border-crimson/20 rounded-full text-[10px] font-bold uppercase tracking-wider">Official</span>' : ''}
-                        ${isRequest ? (isResolved ? '<span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[10px] font-bold uppercase tracking-wider">Resolved</span>' : '<span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full text-[10px] font-bold uppercase tracking-wider">Request</span>') : ''}
+                        ${isAnnounce ? '<span class="px-2 py-0.5 bg-crimson/15 text-crimson rounded-full text-[10px] font-bold uppercase tracking-wider">Official</span>' : ''}
+                        ${isRequest ? (isResolved ? '<span class="px-2 py-0.5 bg-emerald-500/15 text-emerald-400 rounded-full text-[10px] font-bold uppercase tracking-wider">Resolved</span>' : '<span class="px-2 py-0.5 bg-amber-500/15 text-amber-400 rounded-full text-[10px] font-bold uppercase tracking-wider">Request</span>') : ''}
                     </div>
                     <div class="flex items-center gap-2 mt-0.5">
                         <span class="text-[12px] text-zinc-500 font-medium">${timeAgo}</span>

@@ -31,11 +31,11 @@ const ProfileView = (() => {
                             ${email ? `<p class="text-xs text-zinc-500 flex items-center gap-1.5 mt-1 truncate"><svg class="w-3.5 h-3.5 flex-shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg><span class="truncate">${escapeHtml(email)}</span></p>` : ''}
                             ${profile.phone ? `<p class="text-xs text-zinc-400 flex items-center gap-1.5 mt-1 truncate"><svg class="w-3.5 h-3.5 flex-shrink-0 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg><a href="tel:${escapeHtml(profile.phone)}" class="hover:underline text-zinc-300">${escapeHtml(profile.phone)}</a></p>` : ''}
                             <div class="flex flex-wrap items-center gap-2 mt-1">
-                                ${profile.year ? `<span class="px-2 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded text-[10px] font-semibold">${escapeHtml(profile.year)}</span>` : ''}
-                                ${profile.branch ? `<span class="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded text-[10px] font-semibold">${escapeHtml(profile.branch)}</span>` : ''}
+                                ${profile.year ? `<span class="px-2 py-0.5 bg-rose-500/15 text-rose-400 rounded text-[10px] font-semibold">${escapeHtml(profile.year)}</span>` : ''}
+                                ${profile.branch ? `<span class="px-2 py-0.5 bg-blue-500/15 text-blue-400 rounded text-[10px] font-semibold">${escapeHtml(profile.branch)}</span>` : ''}
                                 ${(profile.memberships || []).map(tid => {
                                     const lead = getLeadByTeamId(tid);
-                                    return lead ? `<span class="px-2 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-[10px] text-zinc-300">${lead.team}</span>` : '';
+                                    return lead ? `<span class="px-2 py-0.5 bg-zinc-800/80 rounded text-[10px] text-zinc-300 font-medium">${lead.team}</span>` : '';
                                 }).join('')}
                                 ${profile.role === 'lead' ? `<span class="px-2 py-0.5 bg-red-600/15 text-red-400 rounded text-[10px] font-bold uppercase">${profile.role}</span>` : ''}
                             </div>
@@ -48,18 +48,18 @@ const ProfileView = (() => {
                     ${(profile.linkedin || profile.github) ? `
                     <div class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-zinc-800/80">
                         ${profile.linkedin ? `
-                        <a href="${profile.linkedin.startsWith('http') ? profile.linkedin : 'https://' + profile.linkedin}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-950/40 border border-blue-800/40 text-blue-400 rounded-lg text-xs font-medium hover:bg-blue-900/40 transition-colors">
+                        <a href="${profile.linkedin.startsWith('http') ? profile.linkedin : 'https://' + profile.linkedin}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-950/40 text-blue-400 rounded-lg text-xs font-medium hover:bg-blue-900/40 transition-colors">
                             <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/></svg>
                             LinkedIn
                         </a>` : ''}
                         ${profile.github ? `
-                        <a href="${profile.github.startsWith('http') ? profile.github : 'https://' + profile.github}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1 bg-zinc-800/80 border border-zinc-700 text-zinc-200 rounded-lg text-xs font-medium hover:bg-zinc-700 transition-colors">
+                        <a href="${profile.github.startsWith('http') ? profile.github : 'https://' + profile.github}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1 bg-zinc-800/80 text-zinc-200 rounded-lg text-xs font-medium hover:bg-zinc-700 transition-colors">
                             <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg>
                             GitHub
                         </a>` : ''}
                     </div>` : ''}
                     ${profile.bio ? `<p class="text-sm text-zinc-400 mt-3 leading-relaxed">${escapeHtml(profile.bio)}</p>` : ''}
-                    ${profile.skills?.length ? `<div class="flex flex-wrap gap-1.5 mt-3">${profile.skills.map(s => `<span class="px-2 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-[10px] text-zinc-400">${escapeHtml(s)}</span>`).join('')}</div>` : ''}
+                    ${profile.skills?.length ? `<div class="flex flex-wrap gap-1.5 mt-3">${profile.skills.map(s => `<span class="px-2 py-0.5 bg-zinc-800/80 rounded text-[10px] text-zinc-400 font-medium">${escapeHtml(s)}</span>`).join('')}</div>` : ''}
                 </div>
 
                 ${editing ? renderEditForm(profile) : ''}
@@ -144,7 +144,7 @@ const ProfileView = (() => {
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <label class="block text-[11px] font-medium text-zinc-500">Email Address</label>
-                        <span class="text-[9px] text-zinc-500 font-mono bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-800">Read-Only</span>
+                        <span class="text-[9px] text-zinc-500 font-mono bg-zinc-900 px-1.5 py-0.5 rounded">Read-Only</span>
                     </div>
                     <input type="email" value="${escapeHtml(email)}" disabled class="form-input w-full px-3 py-2 bg-zinc-900/60 border border-zinc-800/80 rounded-lg text-sm text-zinc-400 cursor-not-allowed opacity-75">
                 </div>
