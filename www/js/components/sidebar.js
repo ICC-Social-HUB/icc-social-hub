@@ -8,7 +8,7 @@ const Sidebar = (() => {
     function render() {
         return `
         <!-- Sidebar Toggle Button (Inside Sticky Header) -->
-        <button id="sidebar-toggle-btn" class="w-10 h-10 flex items-center justify-center bg-[#242f3d] hover:bg-[#2b394a] rounded-xl transition-all text-[#708499] hover:text-white group active:scale-95 border border-[#2b394a]">
+        <button id="sidebar-toggle-btn" class="w-10 h-10 flex items-center justify-center bg-[#242f3d] hover:bg-[#2b394a] rounded-xl transition-all text-[#708499] hover:text-white group active:scale-95 border border-[#2b394a] lg:hidden">
             <div class="flex flex-col gap-1.5 items-center justify-center">
                 <span class="w-5 h-0.5 bg-current rounded-full transition-all"></span>
                 <span class="w-5 h-0.5 bg-current rounded-full transition-all"></span>
@@ -21,18 +21,19 @@ const Sidebar = (() => {
     function renderDrawer() {
         const profile = ICCSupabase.getProfile();
         const isAdmin = ICCSupabase.isAdmin();
+        const currentHash = window.location.hash || '#dashboard';
 
         const menuItems = [
-            { id: 'notifications', label: 'Notifications', hash: '#notifications', icon: notifIcon(window.location.hash.startsWith('#notifications')) },
-            { id: 'home', label: 'Home', hash: '#dashboard', icon: homeIcon(window.location.hash.startsWith('#dashboard')) },
-            { id: 'feed', label: 'Innovation Feed', hash: '#feed', icon: feedIcon(window.location.hash.startsWith('#feed')) },
-            { id: 'students', label: 'Students', hash: '#students', icon: studentsIcon(window.location.hash.startsWith('#students')) },
-            { id: 'events', label: 'Events & Workshops', hash: '#events', icon: eventsIcon(window.location.hash.startsWith('#events')) },
-            { id: 'teams', label: 'Projects', hash: '#teams', icon: teamsIcon(window.location.hash.startsWith('#teams')) },
-            { id: 'chat', label: 'Messages', hash: '#chat', icon: chatIcon(window.location.hash.startsWith('#chat')), badge: unreadMessages },
+            { id: 'notifications', label: 'Notifications', hash: '#notifications', icon: notifIcon(currentHash.startsWith('#notifications')) },
+            { id: 'home', label: 'Home', hash: '#dashboard', icon: homeIcon(currentHash.startsWith('#dashboard')) },
+            { id: 'feed', label: 'Innovation Feed', hash: '#feed', icon: feedIcon(currentHash.startsWith('#feed')) },
+            { id: 'students', label: 'Students', hash: '#students', icon: studentsIcon(currentHash.startsWith('#students')) },
+            { id: 'events', label: 'Events & Workshops', hash: '#events', icon: eventsIcon(currentHash.startsWith('#events')) },
+            { id: 'teams', label: 'Projects', hash: '#teams', icon: teamsIcon(currentHash.startsWith('#teams')) },
+            { id: 'chat', label: 'Messages', hash: '#chat', icon: chatIcon(currentHash.startsWith('#chat')), badge: unreadMessages },
             { id: 'attendance', label: 'Attendance', hash: '#attendance', icon: attendanceIcon() },
             { id: 'inventory', label: 'Inventory', hash: '#inventory', icon: inventoryIcon() },
-            { id: 'download', label: 'Download App', hash: '#download', icon: downloadIcon(window.location.hash.startsWith('#download')) },
+            { id: 'download', label: 'Download App', hash: '#download', icon: downloadIcon(currentHash.startsWith('#download')) },
         ];
 
         if (isAdmin || ICCSupabase.isMentor()) {
@@ -40,38 +41,38 @@ const Sidebar = (() => {
                 id: 'core-space', 
                 label: 'Core Space', 
                 hash: '#core-space', 
-                icon: coreSpaceIcon(window.location.hash.startsWith('#core-space')) 
+                icon: coreSpaceIcon(currentHash.startsWith('#core-space')) 
             });
         }
 
         if (isAdmin) {
-            menuItems.push({ id: 'admin', label: 'Admin Dashboard', hash: '#admin', icon: adminIcon(false) });
+            menuItems.push({ id: 'admin', label: 'Admin Dashboard', hash: '#admin', icon: adminIcon(currentHash.startsWith('#admin')) });
         }
 
         if (ICCSupabase.isMentor()) {
-            menuItems.push({ id: 'mentor', label: 'Mentor Dashboard', hash: '#mentor-dashboard', icon: mentorIcon(window.location.hash.startsWith('#mentor-dashboard')) });
+            menuItems.push({ id: 'mentor', label: 'Mentor Dashboard', hash: '#mentor-dashboard', icon: mentorIcon(currentHash.startsWith('#mentor-dashboard')) });
         }
 
         return `
         <!-- Sidebar Backdrop -->
-        <div id="sidebar-backdrop" class="fixed inset-0 bg-[#0e1621]/80 backdrop-blur-md z-[2000] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}" onclick="Sidebar.close()"></div>
+        <div id="sidebar-backdrop" class="fixed inset-0 bg-[#0e1621]/80 backdrop-blur-md z-[2000] transition-opacity duration-300 lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}" onclick="Sidebar.close()"></div>
 
         <!-- Sidebar Drawer -->
-        <aside id="sidebar-drawer" class="fixed top-0 left-0 bottom-0 w-[280px] bg-[#17212b] border-r border-[#101921] z-[2100] transition-transform duration-300 ease-out shadow-2xl ${isOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col">
+        <aside id="sidebar-drawer" class="fixed top-0 left-0 bottom-0 w-[280px] bg-[#17212b] border-r border-[#101921] z-[2100] lg:z-[600] transition-transform duration-300 ease-out shadow-2xl lg:shadow-none lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col">
             <!-- Header -->
-            <div class="p-5 border-b border-[#101921] flex items-center justify-between bg-[#17212b]">
-                <div class="flex items-center gap-3">
+            <div class="h-16 px-5 border-b border-[#101921] flex items-center justify-between bg-[#17212b]">
+                <a href="#dashboard" class="flex items-center gap-3 hover:opacity-90 transition-opacity">
                     <div class="w-10 h-10 bg-[#3390ec] text-white rounded-xl flex items-center justify-center font-heading font-bold text-sm shadow-sm">ICC</div>
                     <span class="font-heading font-semibold text-lg tracking-tight text-white">Social Hub</span>
-                </div>
-                <button onclick="Sidebar.close()" class="p-2 hover:bg-[#242f3d] rounded-lg transition-colors text-[#708499]">
+                </a>
+                <button onclick="Sidebar.close()" class="p-2 hover:bg-[#242f3d] rounded-lg transition-colors text-[#708499] lg:hidden" aria-label="Close Sidebar">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
             <!-- Profile Section (Telegram Drawer Header Style) -->
             <div class="px-4 py-4 bg-[#17212b]">
-                <a href="#profile" onclick="Sidebar.close()" class="p-3 bg-[#242f3d] rounded-xl border border-[#2b394a] hover:bg-[#2b394a] transition-all cursor-pointer block group">
+                <a href="#profile" onclick="Sidebar.handleNavClick()" class="p-3 bg-[#242f3d] rounded-xl border border-[#2b394a] hover:bg-[#2b394a] transition-all cursor-pointer block group">
                     <div class="flex items-center gap-3">
                         <div class="w-11 h-11 rounded-full bg-[#3390ec] overflow-hidden border border-white/10 flex items-center justify-center font-bold text-white text-base shadow-sm">
                             ${profile?.avatar_url ? `<img src="${profile.avatar_url}" class="w-full h-full object-cover">` : `${profile?.full_name?.charAt(0) || 'I'}`}
@@ -98,7 +99,7 @@ const Sidebar = (() => {
                 </button>
 
                 ${menuItems.map(item => `
-                    <a href="${item.hash}" onclick="Sidebar.close()" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl transition-all group ${window.location.hash.startsWith(item.hash) ? 'bg-[#2b5278] text-white font-semibold' : 'text-[#708499] hover:text-white hover:bg-[#242f3d]'}" style="margin-bottom: 2px;">
+                    <a href="${item.hash}" onclick="Sidebar.handleNavClick()" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl transition-all group ${currentHash.startsWith(item.hash) ? 'bg-[#2b5278] text-white font-semibold' : 'text-[#708499] hover:text-white hover:bg-[#242f3d]'}" style="margin-bottom: 2px;">
                         <div class="w-6 h-6 transition-transform group-active:scale-90 relative flex items-center justify-center">
                             ${item.icon}
                             ${item.badge > 0 ? `<span class="absolute -top-1 -right-1 min-w-[16px] h-4 bg-[#3390ec] text-white text-[9px] flex items-center justify-center rounded-full border-2 border-[#17212b] font-bold px-1">${item.badge > 9 ? '9+' : item.badge}</span>` : ''}
@@ -172,7 +173,7 @@ const Sidebar = (() => {
     function bindEvents() {
         document.getElementById('sidebar-toggle-btn')?.addEventListener('click', open);
         document.getElementById('sidebar-create-post')?.addEventListener('click', () => {
-            close();
+            if (window.innerWidth < 1024) close();
             if (!ICCSupabase.getUser()) { AuthModal.open(); return; }
             CreatePostModal.open();
         });
@@ -180,20 +181,37 @@ const Sidebar = (() => {
 
     async function updateUnreadCount() {
         unreadMessages = await ICCSupabase.getUnreadCount();
-        if (isOpen) mount();
+        if (isOpen || window.innerWidth >= 1024) mount();
     }
 
     function open() {
+        if (window.innerWidth >= 1024) return;
         isOpen = true;
         mount();
         document.body.style.overflow = 'hidden';
     }
 
     function close() {
+        if (window.innerWidth >= 1024) {
+            document.body.style.overflow = '';
+            return;
+        }
         isOpen = false;
         mount();
         document.body.style.overflow = '';
     }
 
-    return { mount, open, close, updateUnreadCount };
+    function handleNavClick() {
+        if (window.innerWidth < 1024) {
+            close();
+        }
+    }
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth >= 1024) {
+            document.body.style.overflow = '';
+        }
+    });
+
+    return { mount, open, close, handleNavClick, updateUnreadCount };
 })();

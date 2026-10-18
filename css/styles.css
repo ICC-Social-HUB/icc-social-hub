@@ -1579,3 +1579,32 @@ input, select, textarea { font-size: 16px !important; }
 }
 
 
+
+/* ============================================
+   Pinned Desktop Sidebar (1024px and up)
+   ============================================ */
+@media (min-width: 1024px) {
+    #sidebar-drawer {
+        transform: translateX(0) !important;
+        box-shadow: none !important;
+        z-index: 600 !important;
+    }
+    #sidebar-backdrop {
+        display: none !important;
+        pointer-events: none !important;
+    }
+    #sidebar-toggle-btn {
+        display: none !important;
+    }
+    header.sticky {
+        margin-left: 280px !important;
+        width: calc(100% - 280px) !important;
+    }
+    main#app {
+        margin-left: 280px !important;
+        width: calc(100% - 280px) !important;
+    }
+    #toast-root {
+        padding-left: 280px !important;
+    }
+}

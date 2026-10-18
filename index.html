@@ -112,9 +112,13 @@
     <div id="route-progress"></div>
 
     <!-- Global Sticky Top Bar -->
-    <header class="sticky top-0 z-[500] w-full bg-[#17212b]/95 backdrop-blur-xl border-b border-[#101921] h-16 flex items-center justify-between px-4">
+    <header class="sticky top-0 z-[500] w-full bg-[#17212b]/95 backdrop-blur-xl border-b border-[#101921] h-16 flex items-center justify-between px-4 lg:ml-[280px] lg:w-[calc(100%-280px)]">
         <div id="sidebar-toggle-root"></div>
-        <a href="#dashboard" class="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+        <div class="hidden lg:flex items-center gap-2.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="text-xs font-semibold text-zinc-300 tracking-wide uppercase">Innovators Creators Club</span>
+        </div>
+        <a href="#dashboard" class="flex lg:hidden items-center gap-2.5 hover:opacity-80 transition-opacity">
             <div class="w-8 h-8 bg-[#3390ec] text-white rounded-xl flex items-center justify-center font-heading font-bold text-[11px] shadow-sm">ICC</div>
             <span class="font-heading font-semibold text-base tracking-tight text-white">Social Hub</span>
         </a>
@@ -125,13 +129,13 @@
     <div id="modal-root"></div>
 
     <!-- Main App View Container -->
-    <main id="app" class="relative pb-6"></main>
+    <main id="app" class="relative pb-6 lg:ml-[280px] lg:w-[calc(100%-280px)]"></main>
 
     <!-- Bottom Navigation Mount -->
     <div id="bottom-nav-root"></div>
 
     <!-- Toast Notifications -->
-    <div id="toast-root" class="fixed bottom-8 inset-x-0 mx-auto z-[10000] flex flex-col-reverse items-center justify-center pointer-events-none w-full px-4"></div>
+    <div id="toast-root" class="fixed bottom-8 inset-x-0 mx-auto z-[10000] flex flex-col-reverse items-center justify-center pointer-events-none w-full px-4 lg:pl-[280px]"></div>
 
     <!-- Floating Particles Background -->
     <div id="particles-bg" class="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true"></div>
