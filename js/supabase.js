@@ -1194,17 +1194,53 @@ const ICCSupabase = (() => {
     }
 
     async function deleteLead(id) {
-        if (!client || !isAdmin()) return { error: { message: 'Unauthorized' } };
+        if (!client || (!isAdmin() && !isMentor())) return { error: { message: 'Unauthorized: Only Mentors and Admins can delete projects.' } };
         
-        // 1. Revert any leads assigned to this team
-        await client.from('profiles').update({ role: 'student', team_id: null }).eq('team_id', id).eq('role', 'lead');
-        
-        // 2. Remove memberships
-        await client.from('team_memberships').delete().eq('team_id', id);
+        try {
+            // 1. Revert any leads assigned to this team in profiles
+            try {
+                await client.from('profiles').update({ role: 'student', team_id: null }).eq('team_id', id).eq('role', 'lead');
+            } catch(e) {
+                console.warn('Could not revert leads in profiles:', e);
+            }
+            try {
+                await client.from('profiles').update({ team_id: null }).eq('team_id', id);
+            } catch(e) {
+                console.warn('Could not clear team_id in profiles:', e);
+            }
+            
+            // 2. Remove memberships
+            try {
+                await client.from('team_memberships').delete().eq('team_id', id);
+            } catch(e) {
+                console.warn('Could not delete team memberships:', e);
+            }
 
-        // 3. Delete the lead record
-        const { error } = await client.from('core_leads').delete().eq('id', id);
-        return { error };
+            // 3. Remove mentor messages for this project
+            try {
+                await client.from('project_mentor_messages').delete().eq('project_id', id);
+            } catch(e) {
+                console.warn('Could not delete mentor messages:', e);
+            }
+
+            // 4. Update any applications referencing this approved project
+            try {
+                await client.from('project_applications').update({ approved_project_id: null }).eq('approved_project_id', id);
+            } catch(e) {
+                console.warn('Could not unlink project applications:', e);
+            }
+
+            // 5. Delete the lead record from core_leads
+            const { error } = await client.from('core_leads').delete().eq('id', id);
+            if (error) {
+                console.error('deleteLead error:', error);
+                return { error };
+            }
+            return { error: null, success: true };
+        } catch(err) {
+            console.error('Exception in deleteLead:', err);
+            return { error: err };
+        }
     }
 
     async function approveLead(userId, teamId) {

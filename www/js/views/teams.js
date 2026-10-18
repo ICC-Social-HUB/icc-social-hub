@@ -808,7 +808,7 @@ const TeamsView = (() => {
             if (!content) return;
 
             const res = await ICCSupabase.fetchMyProjectApplications();
-            const apps = Array.isArray(res) ? res : (res?.data || []);
+            const allApps = Array.isArray(res) ? res : (res?.data || []);
             const error = res?.error || null;
             if (error) {
                 content.innerHTML = `
@@ -825,19 +825,30 @@ const TeamsView = (() => {
                 return;
             }
 
+            // Exclude applications that are approved and now live in Projects
+            const apps = allApps.filter(app => String(app.status || '').trim().toLowerCase() !== 'approved');
+
             if (!apps || apps.length === 0) {
+                const hasApprovedProjects = allApps.some(app => String(app.status || '').trim().toLowerCase() === 'approved');
                 content.innerHTML = `
                     <div class="flex flex-col items-center justify-center h-full text-center px-4 space-y-4">
                         <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500">
                             <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                         </div>
                         <div class="space-y-1">
-                            <h4 class="font-bold text-white text-base">No Applications Yet</h4>
-                            <p class="text-xs text-zinc-400 max-w-sm">You have not submitted any project applications. Submit your innovation project proposal to get reviewed by mentors.</p>
+                            <h4 class="font-bold text-white text-base">${hasApprovedProjects ? 'All Proposals Approved & Live!' : 'No Applications Yet'}</h4>
+                            <p class="text-xs text-zinc-400 max-w-sm">${hasApprovedProjects ? 'Your project proposal has been approved and is now active and live in the Projects directory. You have no pending applications.' : 'You have not submitted any project applications. Submit your innovation project proposal to get reviewed by mentors.'}</p>
                         </div>
-                        <button onclick="document.getElementById('my-apps-new-btn')?.click()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer">
-                            + Create First Project Proposal
-                        </button>
+                        <div class="flex items-center gap-3 pt-2 flex-wrap justify-center">
+                            ${hasApprovedProjects ? `
+                                <button onclick="document.getElementById('back-my-apps-btn')?.click()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer">
+                                    Explore Projects
+                                </button>
+                            ` : ''}
+                            <button onclick="document.getElementById('my-apps-new-btn')?.click()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer">
+                                + Create New Proposal
+                            </button>
+                        </div>
                     </div>
                 `;
                 return;
@@ -1596,10 +1607,41 @@ const TeamsView = (() => {
         </div>`;
     }
 
+    
+    function isUserJoinedProject(lead, profile, user) {
+        if (!lead) return false;
+        const leadId = Number(lead.id);
+        const userId = user?.id || profile?.id;
+        
+        // 1. Direct creator / project lead match from core_leads
+        if (lead.lead_user_id && userId && String(lead.lead_user_id) === String(userId)) return true;
+
+        // 2. Direct role & team_id match
+        if (profile?.team_id && Number(profile.team_id) === leadId) return true;
+
+        // 3. User is in memberships
+        if (Array.isArray(profile?.memberships) && profile.memberships.map(Number).includes(leadId)) return true;
+
+        // 4. Name or email match
+        if (profile?.full_name && lead.name && profile.full_name.trim().toLowerCase() === lead.name.trim().toLowerCase()) return true;
+        if (profile?.email && lead.email && profile.email.trim().toLowerCase() === lead.email.trim().toLowerCase()) return true;
+
+        return false;
+    }
+
     function renderGrid() {
         const user = ICCSupabase.getUser();
         const profile = ICCSupabase.getProfile();
         const userTeamId = profile?.team_id;
+
+        // Projects which the user joined or leads are listed on the top of the list
+        const sortedLeads = [...CORE_LEADS].sort((a, b) => {
+            const aJoined = isUserJoinedProject(a, profile, user);
+            const bJoined = isUserJoinedProject(b, profile, user);
+            if (aJoined && !bJoined) return -1;
+            if (!aJoined && bJoined) return 1;
+            return 0;
+        });
         return `
         <section class="min-h-screen pt-2 pb-8 px-2.5 sm:px-4 md:px-6 lg:px-8 xl:px-10" id="teams-section">
             <div class="w-full max-w-[1760px] mx-auto">
@@ -1631,16 +1673,18 @@ const TeamsView = (() => {
                     <p class="text-zinc-500 text-sm max-w-md mx-auto">Discover student-led innovation projects and collaborate with creators.</p>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4" id="leads-grid">
-                    ${CORE_LEADS.map((lead, i) => {
-            const isMember = profile?.memberships?.includes(lead.id);
-            const isPending = profile?.pending_teams?.includes(lead.id);
+                    ${sortedLeads.map((lead, i) => {
+            const isJoined = isUserJoinedProject(lead, profile, user);
+            const isMember = isJoined || (profile?.memberships && profile.memberships.map(Number).includes(Number(lead.id)));
+            const isPending = profile?.pending_teams && profile.pending_teams.map(Number).includes(Number(lead.id));
+            const isLead = (lead.lead_user_id && user && String(lead.lead_user_id) === String(user.id)) || (profile?.role === 'lead' && Number(profile?.team_id) === Number(lead.id));
             
             const milestones = lead.milestones || {};
             const completedCount = MILESTONE_PHASES.filter(p => milestones[p.id]).length;
             const progress = Math.round((completedCount / MILESTONE_PHASES.length) * 100);
 
             return `
-                        <div class="lead-card bg-zinc-900/60 border border-zinc-800/50 rounded-xl overflow-hidden cursor-pointer group" data-lead-id="${lead.id}" style="animation:slideUp 0.4s ease-out ${i * 0.05}s both">
+                        <div class="lead-card bg-zinc-900/60 border ${isJoined ? 'border-emerald-500/60 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/30' : 'border-zinc-800/50'} rounded-xl overflow-hidden cursor-pointer group" data-lead-id="${lead.id}" style="animation:slideUp 0.4s ease-out ${i * 0.05}s both">
                             <div class="relative h-28 sm:h-36 overflow-hidden bg-gradient-to-br ${lead.gradient}">
                                 <div class="portrait absolute inset-0 flex items-center justify-center">
                                     <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-zinc-950/40 backdrop-blur-sm border-2 border-white/20 flex items-center justify-center overflow-hidden">
@@ -1648,8 +1692,8 @@ const TeamsView = (() => {
                                     </div>
                                 </div>
                                 <div class="absolute inset-0 bg-gradient-to-t from-zinc-900 via-transparent to-transparent opacity-60"></div>
-                                ${isMember ? `<div class="absolute top-2 right-2 px-2 py-0.5 bg-emerald-600 rounded-full text-[10px] font-bold flex items-center gap-1 z-10">✓ Member</div>` : ''}
-                                ${isPending ? `<div class="absolute top-2 right-2 px-2 py-0.5 bg-amber-600 rounded-full text-[10px] font-bold flex items-center gap-1 z-10 animate-pulse">⏳ Pending</div>` : ''}
+                                ${isJoined ? `<div class="absolute top-2 right-2 px-2 py-0.5 bg-emerald-600 rounded-full text-[10px] font-bold flex items-center gap-1 z-10 text-white shadow-md">✓ ${isLead ? 'Lead' : 'Joined'}</div>` : ''}
+                                ${(!isJoined && isPending) ? `<div class="absolute top-2 right-2 px-2 py-0.5 bg-amber-600 rounded-full text-[10px] font-bold flex items-center gap-1 z-10 animate-pulse text-white">⏳ Pending</div>` : ''}
                             </div>
                             <div class="p-3">
                                 <h3 class="font-heading font-bold text-sm sm:text-base text-white truncate" title="${lead.project_name || lead.team}">${lead.project_name || lead.team}</h3>
@@ -2324,12 +2368,18 @@ const TeamsView = (() => {
 
             <!-- Top Section: Full screen container on laptop & mobile -->
             <div class="w-full max-w-[1760px] mx-auto px-2.5 sm:px-4 md:px-6 lg:px-8 xl:px-10 pt-3 sm:pt-5 pb-12">
-                <!-- Top Navigation Bar with Back Button -->
-                <div class="flex items-center justify-between mb-3 sm:mb-4">
+                <!-- Top Navigation Bar with Back Button & Mentor/Admin Actions -->
+                <div class="flex items-center justify-between mb-3 sm:mb-4 gap-2 flex-wrap">
                     <button id="team-back-btn" onclick="TeamsView.goBack(event)" class="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900/90 hover:bg-zinc-800 rounded-xl text-xs font-semibold text-white border border-zinc-800 transition-all cursor-pointer shadow-md active:scale-95">
                         <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                         <span>Back</span>
                     </button>
+                    ${(ICCSupabase.isMentor() || ICCSupabase.isAdmin()) ? `
+                        <button onclick="TeamsView.deleteCurrentProject(${lead.id}, '${escapeHtml(lead.project_name || lead.team).replace(/'/g, "\\'")}')" class="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-md active:scale-95" title="Permanently delete this project">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            <span>Delete Project</span>
+                        </button>
+                    ` : ''}
                 </div>
 
                 <!-- Constant Project Header: Project Avatar, Name, Team Name, Code, and Tab Switcher (Constant at the top) -->
@@ -3362,6 +3412,28 @@ const TeamsView = (() => {
         });
     }
 
+    
+    async function deleteCurrentProject(leadId, leadTitle) {
+        if (!ICCSupabase.isMentor() && !ICCSupabase.isAdmin()) {
+            Toast.error('Unauthorized: Only Mentors and Admins can delete projects.');
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to permanently delete project "${leadTitle || 'Project'}"? All team memberships and project data will be removed.`)) {
+            return;
+        }
+
+        const { error } = await ICCSupabase.deleteLead(leadId);
+        if (error) {
+            Toast.error('Failed to delete project: ' + (error.message || 'Unknown error'));
+            return;
+        }
+
+        Toast.success('Project deleted successfully');
+        await loadLeads();
+        window.location.hash = '#teams';
+    }
+
     function unmount() {
         if (currentTeamId) ICCSupabase?.unsubscribeChannel?.(`team-${currentTeamId}`);
         currentTeamId = null; teamMembers = [];
@@ -3380,6 +3452,7 @@ const TeamsView = (() => {
         openCreateProjectModal,
         openMyApplicationsModal,
         getMemberTags,
-        isLeadForTeam
+        isLeadForTeam,
+        deleteCurrentProject
     };
 })();

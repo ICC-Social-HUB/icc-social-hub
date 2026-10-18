@@ -323,6 +323,18 @@ CREATE POLICY "Leads and admins can remove members"
         )
     );
 
+-- Allow Mentors, Super Admins, and Admins to update profiles (team assignment and cleanup)
+DROP POLICY IF EXISTS "Mentors and admins can update profile team assignments" ON public.profiles;
+CREATE POLICY "Mentors and admins can update profile team assignments"
+    ON public.profiles FOR UPDATE
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid() AND p.role IN ('mentor', 'admin', 'super_admin', 'superadmin')
+        )
+    );
+
 -- =========================================================================
 -- 16. Database RPC Function: approve_project_application (SECURITY DEFINER)
 -- =========================================================================
