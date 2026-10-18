@@ -57,6 +57,19 @@ const UserProfileModal = (() => {
         const isMe = ICCSupabase.getUser()?.id === profile.id;
         const email = profile.email || '';
 
+        let customTag = '';
+        if (profile.team_id && typeof TeamsView !== 'undefined' && typeof TeamsView.getMemberTags === 'function') {
+            const teamTags = TeamsView.getMemberTags(profile.team_id);
+            customTag = teamTags[profile.id] || '';
+        } else if (profile.team_id) {
+            try {
+                const local = JSON.parse(localStorage.getItem(`team_tags_${profile.team_id}`) || '{}');
+                customTag = local[profile.id] || '';
+            } catch(e) {}
+        }
+        const isLeadOfTeam = profile.role === 'lead' || Boolean(teamLead?.name && profile.full_name && profile.full_name.trim().toLowerCase() === teamLead.name.trim().toLowerCase());
+        const displayTag = customTag || (isLeadOfTeam ? 'Team Leader' : '');
+
         return `
         <div class="fixed inset-0 z-[2000] bg-zinc-950 flex flex-col overflow-y-auto w-full h-full animate-fade-in" id="user-profile-overlay">
             <!-- Full Modal Top Sticky Header Bar -->
@@ -65,8 +78,8 @@ const UserProfileModal = (() => {
                     <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
                     <span class="text-xs font-bold uppercase tracking-wider">Back</span>
                 </button>
-                <div class="text-center">
-                    <h2 class="font-heading font-bold text-sm text-white truncate max-w-[200px]">${escapeHtml(profile.full_name || 'User Profile')}</h2>
+                <div class="text-center px-2 min-w-0">
+                    <h2 class="font-heading font-bold text-sm text-white break-words max-w-[240px] sm:max-w-md line-clamp-1">${escapeHtml(profile.full_name || 'User Profile')}</h2>
                     <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">User Profile</p>
                 </div>
                 <div>
@@ -91,9 +104,23 @@ const UserProfileModal = (() => {
                         </div>
 
                         <div class="text-center space-y-2">
-                            <h1 class="font-heading font-bold text-xl sm:text-2xl text-white flex items-center justify-center gap-1.5">${escapeHtml(profile.full_name || 'User')}${profile.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</h1>
+                            <h1 class="font-heading font-bold text-xl sm:text-2xl text-white flex items-center justify-center gap-1.5 break-words px-2 leading-tight">${escapeHtml(profile.full_name || 'User')}${isLeadOfTeam ? ICC_CONFIG.VERIFIED_TICK : ''}</h1>
                             ${profile.username ? `<p class="text-sm text-zinc-400 font-medium">@${escapeHtml(profile.username)}</p>` : ''}
                             
+                            <!-- Prominent / Unique Leader Tag OR Member Tag below name -->
+                            ${isLeadOfTeam ? `
+                                <div class="inline-flex items-center justify-center gap-1.5 px-3 py-1 mt-1 text-xs font-extrabold text-amber-300 bg-gradient-to-r from-amber-500/25 via-yellow-500/20 to-amber-500/25 border border-amber-400/60 rounded-full shadow-[0_0_15px_rgba(251,191,36,0.3)] tracking-wide uppercase select-none">
+                                    <svg class="w-3.5 h-3.5 text-amber-400 fill-current flex-shrink-0" viewBox="0 0 20 20">
+                                        <path d="M2.5 14.5l1.5-7.5 4 4.5 4-6 4 6 4-4.5 1.5 7.5h-19z"/>
+                                    </svg>
+                                    <span>${escapeHtml(displayTag)}</span>
+                                </div>
+                            ` : (displayTag ? `
+                                <div class="inline-flex items-center justify-center px-3 py-1 mt-1 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                                    ${escapeHtml(displayTag)}
+                                </div>
+                            ` : '')}
+
                             <div class="flex flex-wrap items-center justify-center gap-2 pt-2">
                                 ${profile.year ? `<span class="px-3 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full text-xs font-semibold">${escapeHtml(profile.year)}</span>` : ''}
                                 ${profile.branch ? `<span class="px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full text-xs font-semibold">${escapeHtml(profile.branch)}</span>` : ''}

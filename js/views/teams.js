@@ -28,9 +28,54 @@ const TeamsView = (() => {
         return tags || {};
     }
 
+    function isLeadForTeam(leadId, customLead = null, members = teamMembers) {
+        const profile = ICCSupabase.getProfile();
+        if (!profile) return false;
+        if (typeof ICCSupabase.isAdmin === 'function' && ICCSupabase.isAdmin()) return true;
+
+        const leadNum = Number(leadId);
+        if (!leadNum) return false;
+        const lead = customLead || CORE_LEADS.find(l => Number(l.id) === leadNum);
+
+        // 1. Direct role & team_id match
+        if (profile.role === 'lead' && Number(profile.team_id) === leadNum) return true;
+
+        // 2. Lead role with team in memberships
+        if (profile.role === 'lead' && Array.isArray(profile.memberships) && profile.memberships.map(Number).includes(leadNum)) return true;
+
+        // 3. User is in this team's members with role 'lead' or is_lead
+        if (Array.isArray(members) && members.some(m => m.id === profile.id && (m.role === 'lead' || m.is_lead))) return true;
+
+        // 4. User's full name matches team leader's name
+        if (profile.full_name && lead?.name && profile.full_name.trim().toLowerCase() === lead.name.trim().toLowerCase()) return true;
+
+        // 5. User's email matches team lead email
+        if (profile.email && lead?.email && profile.email.trim().toLowerCase() === lead.email.trim().toLowerCase()) return true;
+
+        return false;
+    }
+
+    function sortTeamMembers(members, lead) {
+        if (!Array.isArray(members)) return [];
+        return [...members].sort((a, b) => {
+            const aIsLead = a.role === 'lead' || Boolean(a.is_lead) || Boolean(lead?.name && a.full_name && a.full_name.trim().toLowerCase() === lead.name.trim().toLowerCase());
+            const bIsLead = b.role === 'lead' || Boolean(b.is_lead) || Boolean(lead?.name && b.full_name && b.full_name.trim().toLowerCase() === lead.name.trim().toLowerCase());
+            if (aIsLead && !bIsLead) return -1;
+            if (!aIsLead && bIsLead) return 1;
+            return (a.full_name || a.username || '').localeCompare(b.full_name || b.username || '');
+        });
+    }
+
     async function saveMemberTag(teamId, memberId, newTag) {
-        let currentLead = CORE_LEADS.find(l => l.id === Number(teamId));
+        const leadNum = Number(teamId);
+        let currentLead = CORE_LEADS.find(l => l.id === leadNum);
         if (!currentLead) return;
+
+        if (!isLeadForTeam(leadNum, currentLead, teamMembers)) {
+            Toast.error('You do not have permission to edit tags for this team.');
+            return;
+        }
+
         if (!currentLead.milestones || typeof currentLead.milestones !== 'object') {
             try {
                 currentLead.milestones = typeof currentLead.milestones === 'string' ? JSON.parse(currentLead.milestones) : {};
@@ -49,31 +94,52 @@ const TeamsView = (() => {
         }
 
         try {
-            localStorage.setItem(`team_tags_${teamId}`, JSON.stringify(currentLead.milestones.member_tags));
+            localStorage.setItem(`team_tags_${leadNum}`, JSON.stringify(currentLead.milestones.member_tags));
         } catch(e) {}
 
-        const { error } = await ICCSupabase.updateLead(teamId, { milestones: currentLead.milestones });
+        const { error } = await ICCSupabase.updateLead(leadNum, { milestones: currentLead.milestones });
         if (error) {
             console.warn('Could not persist tag to Supabase:', error);
         }
     }
 
-    function openMemberActionModal(memberId, memberName, currentTag, leadId) {
+    function openMemberActionModal(memberId, memberName, currentTag, leadId, isThisMemberLead = false) {
         const existing = document.getElementById('workforce-action-modal');
         if (existing) existing.remove();
 
+        const leadNum = Number(leadId || currentTeamId);
+        const lead = CORE_LEADS.find(l => Number(l.id) === leadNum);
+
+        // Security check: Must be lead of this team or admin
+        if (!isLeadForTeam(leadNum, lead, teamMembers)) {
+            Toast.error('You do not have permission to manage members of this team.');
+            return;
+        }
+
         const profile = ICCSupabase.getProfile();
-        const canRemove = memberId !== profile?.id;
+        const isSelf = memberId === profile?.id || (profile?.full_name && memberName && profile.full_name.trim().toLowerCase() === memberName.trim().toLowerCase());
+        const canRemove = !isSelf && !isThisMemberLead;
+
+        const defaultTagVal = currentTag || (isThisMemberLead ? 'Team Leader' : '');
 
         const modalHtml = `
-        <div id="workforce-action-modal" class="fixed inset-0 z-[2500] bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+        <div id="workforce-action-modal" class="fixed inset-0 z-[2500] bg-zinc-950/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
             <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-4" onclick="event.stopPropagation()">
                 <div class="flex items-center justify-between pb-3 border-b border-zinc-800">
                     <div class="min-w-0 pr-2">
-                        <h3 class="font-heading font-bold text-base text-white truncate">${escapeHtml(memberName)}</h3>
-                        <p class="text-xs text-zinc-400">Manage Team Member</p>
+                        <h3 class="font-heading font-bold text-base text-white break-words">${escapeHtml(memberName)}</h3>
+                        ${isThisMemberLead ? `
+                            <div class="flex items-center gap-1 mt-0.5">
+                                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400">
+                                    <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M2.5 14.5l1.5-7.5 4 4.5 4-6 4 6 4-4.5 1.5 7.5h-19z"/></svg>
+                                    Team Leader
+                                </span>
+                            </div>
+                        ` : `
+                            <p class="text-xs text-zinc-400 mt-0.5">Manage Team Member</p>
+                        `}
                     </div>
-                    <div class="flex items-center gap-1.5">
+                    <div class="flex items-center gap-1.5 flex-shrink-0">
                         <button type="button" id="back-workforce-modal-btn" class="flex items-center gap-1 px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer" title="Go Back">
                             <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                             <span>Back</span>
@@ -87,23 +153,25 @@ const TeamsView = (() => {
                 <!-- Update Tag Form -->
                 <form id="workforce-tag-form" class="space-y-3">
                     <div>
-                        <label class="block text-xs font-semibold text-zinc-300 mb-1.5">Member Tag / Role Title</label>
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1.5">
+                            ${isThisMemberLead ? "Leader's Role Title / Tag" : "Member Tag / Role Title"}
+                        </label>
                         <input type="text" id="workforce-tag-input" 
-                               value="${escapeHtml(currentTag || '')}" 
-                               placeholder="e.g. Frontend Dev, Robotics Specialist" 
+                               value="${escapeHtml(defaultTagVal)}" 
+                               placeholder="${isThisMemberLead ? 'e.g. Team Leader, Founder' : 'e.g. Frontend Dev, Robotics Specialist'}" 
                                maxlength="40"
                                class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-colors">
-                        <p class="text-[10px] text-zinc-500 mt-1">Displayed directly under their name on the workforce page.</p>
+                        <p class="text-[10px] text-zinc-500 mt-1">Displayed directly below the name in the workforce roster.</p>
                     </div>
-                    <button type="submit" class="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-colors">
+                    <button type="submit" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20 active:scale-98">
                         Save Tag Name
                     </button>
                 </form>
 
                 ${canRemove ? `
                 <div class="pt-3 border-t border-zinc-800/80">
-                    <button id="workforce-remove-action-btn" class="w-full py-2 px-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2">
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    <button id="workforce-remove-action-btn" class="w-full py-2.5 px-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-98">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         Remove Member from Team
                     </button>
                 </div>
@@ -139,33 +207,39 @@ const TeamsView = (() => {
             submitBtn.disabled = true;
             submitBtn.textContent = 'Saving...';
 
-            await saveMemberTag(leadId, memberId, inputVal);
+            await saveMemberTag(leadNum, memberId, inputVal);
             modalEl.remove();
             Toast.success(inputVal ? 'Tag updated!' : 'Tag cleared!');
             
             // Re-render workforce roster
             const roster = document.getElementById('team-roster');
             if (roster) {
-                const tags = getMemberTags(leadId);
-                const profile = ICCSupabase.getProfile();
-                const isLeadMember = teamMembers.some(m => m.id === profile?.id && m.role === 'lead');
-                const isLeadUser = (profile?.role === 'lead' && Number(profile.team_id) === Number(leadId)) || isLeadMember;
-                const isLeadOrAdmin = isLeadUser || ICCSupabase.isAdmin();
+                const tags = getMemberTags(leadNum);
+                const isLeadOrAdmin = isLeadForTeam(leadNum, lead, teamMembers);
                 roster.innerHTML = teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No workforce members yet — be first to join!</div>'
-                    : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, tags, leadId)).join('');
+                    : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, tags, leadNum, lead)).join('');
             }
         });
 
         document.getElementById('workforce-remove-action-btn')?.addEventListener('click', async () => {
             if (!confirm(`Are you sure you want to remove ${memberName} from this team?`)) return;
+            const rmBtn = document.getElementById('workforce-remove-action-btn');
+            if (rmBtn) {
+                rmBtn.disabled = true;
+                rmBtn.textContent = 'Removing...';
+            }
             modalEl.remove();
-            const { error } = await ICCSupabase.denyMember(memberId, leadId);
+
+            // Clear any tag for this member
+            await saveMemberTag(leadNum, memberId, null);
+
+            const { error } = await ICCSupabase.denyMember(memberId, leadNum);
             if (error) {
                 Toast.error('Could not remove member: ' + error.message);
             } else {
-                Toast.success('Member removed successfully');
+                Toast.success(`${memberName} was removed from the team.`);
                 const c = document.getElementById('app');
-                mount(c, leadId);
+                mount(c, leadNum);
             }
         });
     }
@@ -180,7 +254,14 @@ const TeamsView = (() => {
         const memberName = btn.dataset.name;
         const currentTag = btn.dataset.tag;
         const leadId = btn.dataset.leadId || currentTeamId;
-        openMemberActionModal(memberId, memberName, currentTag, leadId);
+        const isLead = btn.dataset.isLead === 'true';
+
+        if (!isLeadForTeam(leadId)) {
+            Toast.error('You do not have permission to manage members of this team.');
+            return;
+        }
+
+        openMemberActionModal(memberId, memberName, currentTag, leadId, isLead);
     }
 
     function getRoboticAvatar(seed = '') {
@@ -216,46 +297,67 @@ const TeamsView = (() => {
         return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
     }
 
-    function renderWorkforceCard(m, i, isLeadOrAdmin, currentProfileId, memberTags = {}, leadId = currentTeamId) {
+    function renderWorkforceCard(m, i, isLeadOrAdmin, currentProfileId, memberTags = {}, leadId = currentTeamId, lead = null) {
         const name = m.full_name || m.username || 'Anonymous';
         const fallbackAvatar = getRoboticAvatar(m.id || m.username || name);
         const avatarSrc = m.avatar_url ? m.avatar_url : fallbackAvatar;
-        const tag = memberTags[m.id] || (m.role === 'lead' ? 'Team Lead' : '');
+        
+        const currentLeadObj = lead || CORE_LEADS.find(l => Number(l.id) === Number(leadId));
+        const isThisMemberLead = m.role === 'lead' || Boolean(m.is_lead) || Boolean(currentLeadObj?.name && m.full_name && m.full_name.trim().toLowerCase() === currentLeadObj.name.trim().toLowerCase());
+        
+        const rawTag = memberTags[m.id];
+        const tag = rawTag || (isThisMemberLead ? 'Team Leader' : '');
 
         return `
-        <div class="workforce-member-item group flex flex-col items-center justify-start text-center relative select-none w-full max-w-[130px] sm:max-w-[150px]" 
+        <div class="workforce-member-item group flex flex-col items-center justify-start text-center relative select-none w-full max-w-[130px] sm:max-w-[155px]" 
              style="animation-delay:${i * 0.04}s">
-            <!-- Circular Avatar ONLY (No rectangular/square borders, blends with page) -->
+            
+            <!-- Circular Avatar with Leader prominence -->
             <div class="open-user-profile cursor-pointer relative" data-id="${m.id}" title="View ${escapeHtml(name)}'s Profile">
-                <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden shadow-xl ring-2 ring-zinc-800/90 group-hover:ring-emerald-500/80 group-hover:scale-105 transition-all duration-300 flex items-center justify-center bg-zinc-900">
+                <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden shadow-xl ${isThisMemberLead ? 'ring-2 ring-amber-400 shadow-[0_0_18px_rgba(251,191,36,0.35)] group-hover:ring-amber-300' : 'ring-2 ring-zinc-800/90 group-hover:ring-emerald-500/80'} group-hover:scale-105 transition-all duration-300 flex items-center justify-center bg-zinc-900 relative">
                     <img src="${avatarSrc}" 
                          alt="${escapeHtml(name)}" 
                          class="w-full h-full object-cover rounded-full" 
                          onerror="this.onerror=null;this.src='${fallbackAvatar}';">
                 </div>
+                ${isThisMemberLead ? `
+                <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-tr from-amber-600 to-yellow-400 rounded-full border-2 border-zinc-950 flex items-center justify-center shadow-lg" title="Team Leader">
+                    <svg class="w-3 h-3 text-zinc-950 fill-current" viewBox="0 0 20 20">
+                        <path d="M2.5 14.5l1.5-7.5 4 4.5 4-6 4 6 4-4.5 1.5 7.5h-19z"/>
+                    </svg>
+                </div>
+                ` : ''}
             </div>
 
-            <!-- Member Name -->
-            <h4 class="open-user-profile text-xs sm:text-sm font-bold text-zinc-100 group-hover:text-emerald-400 transition-colors text-center truncate max-w-full mt-2.5 cursor-pointer leading-tight" 
+            <!-- Member Full Name (Completely visible, no truncation) -->
+            <h4 class="open-user-profile text-xs sm:text-sm font-bold text-zinc-100 group-hover:text-emerald-400 transition-colors text-center break-words w-full px-1 mt-2.5 cursor-pointer leading-snug" 
                 data-id="${m.id}" 
                 title="View ${escapeHtml(name)}'s Profile">
-                ${escapeHtml(name)}${m.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}
+                ${escapeHtml(name)}${isThisMemberLead ? ICC_CONFIG.VERIFIED_TICK : ''}
             </h4>
 
-            <!-- Member Tag (if present) -->
-            ${tag ? `
-                <span class="text-[10px] sm:text-[11px] text-zinc-400 text-center font-medium mt-0.5 truncate max-w-full leading-tight block">
+            <!-- Member Tag below the name (Prominent and unique for Leader) -->
+            ${isThisMemberLead ? `
+                <div class="inline-flex items-center justify-center gap-1.5 px-2.5 py-0.5 mt-1.5 text-[10px] sm:text-[11px] font-extrabold text-amber-300 bg-gradient-to-r from-amber-500/20 via-yellow-500/25 to-amber-500/20 border border-amber-400/50 rounded-full shadow-[0_0_12px_rgba(251,191,36,0.3)] tracking-wide uppercase select-none">
+                    <svg class="w-3 h-3 text-amber-400 fill-current flex-shrink-0" viewBox="0 0 20 20">
+                        <path d="M2.5 14.5l1.5-7.5 4 4.5 4-6 4 6 4-4.5 1.5 7.5h-19z"/>
+                    </svg>
+                    <span class="break-words leading-tight text-center">${escapeHtml(tag)}</span>
+                </div>
+            ` : (tag ? `
+                <span class="inline-flex items-center justify-center px-2 py-0.5 mt-1 text-[10px] sm:text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full max-w-full break-words text-center leading-tight">
                     ${escapeHtml(tag)}
                 </span>
-            ` : ''}
+            ` : '')}
 
-            <!-- Subtle 3-dot Menu (Team Leader / Admin only) -->
+            <!-- 3-dot Menu (Only for Leader of this team or Admin) -->
             ${isLeadOrAdmin ? `
                 <button class="member-actions-btn mt-1.5 p-1 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-full transition-colors cursor-pointer z-10" 
                         data-id="${m.id}" 
                         data-name="${escapeHtml(name)}" 
-                        data-tag="${escapeHtml(tag || '')}" 
+                        data-tag="${escapeHtml(rawTag || '')}" 
                         data-lead-id="${leadId || ''}"
+                        data-is-lead="${isThisMemberLead ? 'true' : 'false'}"
                         title="Member options"
                         onclick="TeamsView.handleMemberActionClick(event, this)">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -438,9 +540,7 @@ const TeamsView = (() => {
         const profile = ICCSupabase.getProfile();
         const isMember = profile?.memberships?.includes(lead.id);
         const isPending = profile?.pending_teams?.includes(lead.id);
-        const isLeadMember = teamMembers.some(m => m.id === profile?.id && m.role === 'lead');
-        const isLeadUser = (profile?.role === 'lead' && Number(profile.team_id) === Number(lead.id)) || isLeadMember;
-        const isLeadOrAdmin = isLeadUser || ICCSupabase.isAdmin();
+        const isLeadOrAdmin = isLeadForTeam(lead.id, lead, teamMembers);
         const memberTags = getMemberTags(lead.id);
 
         return `
@@ -548,7 +648,7 @@ const TeamsView = (() => {
                                                 ${m.avatar_url ? `<img src="${m.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[10px] font-bold bg-zinc-700 text-zinc-400">${(m.full_name || '?').charAt(0).toUpperCase()}</div>`}
                                             </div>
                                             <div class="min-w-0">
-                                                <p class="text-[13px] font-bold truncate cursor-pointer hover:text-emerald-400 transition-colors open-user-profile leading-tight" data-id="${m.id}">${m.full_name || m.username || 'Anon'}</p>
+                                                <p class="text-[13px] font-bold break-words cursor-pointer hover:text-emerald-400 transition-colors open-user-profile leading-tight" data-id="${m.id}">${m.full_name || m.username || 'Anon'}</p>
                                                 <p class="text-[10px] text-zinc-500 truncate">@${m.username || ''}</p>
                                             </div>
                                         </div>
@@ -615,7 +715,7 @@ const TeamsView = (() => {
                             <!-- Seamless circle-only grid in workforce column -->
                             <div id="team-roster" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-y-8 gap-x-4 justify-items-center">
                                 ${teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No workforce members yet — be first to join!</div>'
-                        : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, memberTags, lead.id)).join('')}
+                        : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, memberTags, lead.id, lead)).join('')}
                             </div>
                         </div>
                     </div>
@@ -644,11 +744,43 @@ const TeamsView = (() => {
                 } catch (e) {}
             }
             if (!lead) { container.innerHTML = '<div class="empty-state"><p class="text-zinc-500">Team not found</p></div>'; return; }
+            
             teamMembers = await ICCSupabase.getTeamMembers(currentTeamId);
             const profile = ICCSupabase.getProfile();
-            const isLeadMember = teamMembers.some(m => m.id === profile?.id && m.role === 'lead');
-            const isLeadUser = (profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) || isLeadMember;
-            if (isLeadUser || ICCSupabase.isAdmin()) {
+            
+            // Ensure team leader is present in teamMembers and sorted at top
+            const hasLead = teamMembers.some(m => m.role === 'lead' || Boolean(m.is_lead) || (lead?.name && m.full_name && m.full_name.trim().toLowerCase() === lead.name.trim().toLowerCase()));
+            if (!hasLead) {
+                try {
+                    const client = ICCSupabase.getClient();
+                    if (client) {
+                        let leadProf = null;
+                        const { data: profByTeam } = await client.from('profiles').select('id, username, full_name, avatar_url, role, email, usn, section, updated_at').eq('team_id', currentTeamId).eq('role', 'lead').maybeSingle();
+                        if (profByTeam) leadProf = profByTeam;
+                        else if (lead?.name) {
+                            const { data: profByName } = await client.from('profiles').select('id, username, full_name, avatar_url, role, email, usn, section, updated_at').ilike('full_name', lead.name).maybeSingle();
+                            if (profByName) leadProf = profByName;
+                        }
+                        if (leadProf) {
+                            leadProf.role = 'lead';
+                            teamMembers.unshift(leadProf);
+                        } else if (lead) {
+                            teamMembers.unshift({
+                                id: `lead_${lead.id}`,
+                                full_name: lead.name,
+                                username: lead.name.toLowerCase().replace(/\s+/g, '_'),
+                                avatar_url: lead.avatar_url,
+                                role: 'lead',
+                                is_lead: true
+                            });
+                        }
+                    }
+                } catch (e) {}
+            }
+            teamMembers = sortTeamMembers(teamMembers, lead);
+
+            const isLeadOrAdmin = isLeadForTeam(currentTeamId, lead, teamMembers);
+            if (isLeadOrAdmin) {
                 pendingMembers = await ICCSupabase.getPendingMembers(currentTeamId);
             }
             container.innerHTML = renderDetail(lead);
@@ -669,19 +801,30 @@ const TeamsView = (() => {
                 }
 
                 teamMembers = await ICCSupabase.getTeamMembers(currentTeamId);
+                const hasLeadRealtime = teamMembers.some(m => m.role === 'lead' || Boolean(m.is_lead) || (lead?.name && m.full_name && m.full_name.trim().toLowerCase() === lead.name.trim().toLowerCase()));
+                if (!hasLeadRealtime && lead) {
+                    teamMembers.unshift({
+                        id: `lead_${lead.id}`,
+                        full_name: lead.name,
+                        username: lead.name.toLowerCase().replace(/\s+/g, '_'),
+                        avatar_url: lead.avatar_url,
+                        role: 'lead',
+                        is_lead: true
+                    });
+                }
+                teamMembers = sortTeamMembers(teamMembers, lead);
+
                 const roster = document.getElementById('team-roster');
                 const count = document.getElementById('team-member-count');
+                const isLeadOrAdminRealtime = isLeadForTeam(currentTeamId, lead, teamMembers);
                 if (roster) {
-                    const isLeadMem = teamMembers.some(m => m.id === profile?.id && m.role === 'lead');
-                    const isLeadUsr = (profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) || isLeadMem;
-                    const isLeadOrAdmin = isLeadUsr || ICCSupabase.isAdmin();
                     const memberTags = getMemberTags(currentTeamId);
                     roster.innerHTML = teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No workforce members yet — be first to join!</div>'
-                        : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdmin, profile?.id, memberTags, currentTeamId)).join('');
+                        : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLeadOrAdminRealtime, profile?.id, memberTags, currentTeamId, lead)).join('');
                 }
                 if (count) count.textContent = teamMembers.length;
 
-                if ((profile?.role === 'lead' && Number(profile.team_id) === Number(currentTeamId)) || ICCSupabase.isAdmin()) {
+                if (isLeadOrAdminRealtime) {
                     pendingMembers = await ICCSupabase.getPendingMembers(currentTeamId);
                     const pendingContainer = document.getElementById('pending-requests-container');
                     if (pendingContainer) {
@@ -697,7 +840,7 @@ const TeamsView = (() => {
                                                 ${m.avatar_url ? `<img src="${m.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[10px] font-bold bg-zinc-700 text-zinc-400">${(m.full_name || '?').charAt(0).toUpperCase()}</div>`}
                                             </div>
                                             <div class="min-w-0">
-                                                <p class="text-[13px] font-bold truncate cursor-pointer hover:text-emerald-400 transition-colors open-user-profile leading-tight" data-id="${m.id}">${m.full_name || m.username || 'Anon'}</p>
+                                                <p class="text-[13px] font-bold break-words cursor-pointer hover:text-emerald-400 transition-colors open-user-profile leading-tight" data-id="${m.id}">${m.full_name || m.username || 'Anon'}</p>
                                                 <p class="text-[10px] text-zinc-500 truncate">@${m.username || ''}</p>
                                             </div>
                                         </div>
@@ -959,5 +1102,5 @@ const TeamsView = (() => {
         if (workforceModal) workforceModal.remove();
     }
 
-    return { mount, unmount, goBack, handleMemberActionClick, openMemberActionModal };
+    return { mount, unmount, goBack, handleMemberActionClick, openMemberActionModal, getMemberTags, isLeadForTeam };
 })();
