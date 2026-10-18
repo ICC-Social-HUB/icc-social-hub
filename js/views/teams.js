@@ -346,12 +346,12 @@ const TeamsView = (() => {
         const tag = rawTag || (isThisMemberLead ? 'Leader' : '');
 
         return `
-        <div class="workforce-member-item group flex flex-col items-center justify-start text-center relative select-none w-full max-w-[85px] sm:max-w-[95px]" 
+        <div class="workforce-member-item group flex flex-col items-center justify-start text-center relative select-none w-full max-w-[100px] sm:max-w-[115px] lg:max-w-[125px]" 
              style="animation-delay:${i * 0.04}s">
             
             <!-- Circular Avatar: Clean, uniform circular style -->
             <div class="open-user-profile cursor-pointer relative" data-id="${m.id}" title="View ${escapeHtml(name)}'s Profile">
-                <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-full overflow-hidden shadow-md ring-2 ring-zinc-800/90 group-hover:ring-emerald-500/80 group-hover:scale-105 transition-all duration-300 flex items-center justify-center bg-zinc-900 relative">
+                <div class="w-13 h-13 sm:w-14 sm:h-14 lg:w-15 lg:h-15 rounded-full overflow-hidden shadow-md ring-2 ring-zinc-800/90 group-hover:ring-emerald-500/80 group-hover:scale-105 transition-all duration-300 flex items-center justify-center bg-zinc-900 relative">
                     <img src="${avatarSrc}" 
                          alt="${escapeHtml(name)}" 
                          class="w-full h-full object-cover rounded-full" 
@@ -360,7 +360,7 @@ const TeamsView = (() => {
             </div>
 
             <!-- Member Full Name (Completely visible, no truncation) -->
-            <h4 class="open-user-profile text-[11px] font-bold text-zinc-100 group-hover:text-emerald-400 transition-colors text-center break-words w-full px-0.5 mt-1 cursor-pointer leading-tight" 
+            <h4 class="open-user-profile text-[11px] sm:text-xs font-bold text-zinc-100 group-hover:text-emerald-400 transition-colors text-center break-words w-full px-0.5 mt-1 cursor-pointer leading-tight" 
                 data-id="${m.id}" 
                 title="View ${escapeHtml(name)}'s Profile">
                 ${escapeHtml(name)}${isThisMemberLead ? ICC_CONFIG.VERIFIED_TICK : ''}
@@ -413,7 +413,7 @@ const TeamsView = (() => {
         const firstUncompletedIndex = MILESTONE_PHASES.findIndex(p => !milestones[p.id]);
 
         return `
-        <div class="glass-card rounded-2xl p-5 sm:p-6 border border-zinc-800/80 bg-zinc-950/70 backdrop-blur-xl">
+        <div class="glass-card rounded-2xl p-4 sm:p-5 lg:p-6 border border-zinc-800/80 bg-zinc-950/70 backdrop-blur-xl">
             <!-- Header matching the picture -->
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2.5 sm:gap-3">
@@ -536,8 +536,8 @@ const TeamsView = (() => {
         const profile = ICCSupabase.getProfile();
         const userTeamId = profile?.team_id;
         return `
-        <section class="min-h-screen pt-2 pb-8 px-4" id="teams-section">
-            <div class="max-w-5xl mx-auto">
+        <section class="min-h-screen pt-2 pb-8 px-2.5 sm:px-4 md:px-6 lg:px-8 xl:px-10" id="teams-section">
+            <div class="w-full max-w-[1760px] mx-auto">
                 <!-- Top Navigation Bar with Back Button -->
                 <div class="mb-4 flex items-center justify-between">
                     <button id="teams-grid-back-btn" onclick="window.location.hash='#dashboard'" class="flex items-center gap-2 px-3.5 py-2 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer shadow-sm active:scale-95 group" title="Return to Dashboard">
@@ -552,7 +552,7 @@ const TeamsView = (() => {
                     <h1 class="font-heading font-bold text-2xl sm:text-3xl mb-2">Explore <span class="gradient-text-static">Projects</span></h1>
                     <p class="text-zinc-500 text-sm max-w-md mx-auto">Discover student-led innovation projects and collaborate with creators.</p>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" id="leads-grid">
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4" id="leads-grid">
                     ${CORE_LEADS.map((lead, i) => {
             const isMember = profile?.memberships?.includes(lead.id);
             const isPending = profile?.pending_teams?.includes(lead.id);
@@ -725,7 +725,7 @@ const TeamsView = (() => {
         }
 
         return `
-        <div class="glass-card rounded-2xl p-5 sm:p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl space-y-3.5" id="project-links-card">
+        <div class="glass-card rounded-2xl p-4 sm:p-5 lg:p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl space-y-3.5" id="project-links-card">
             <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-2">
                     <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -745,7 +745,7 @@ const TeamsView = (() => {
             </div>
 
             ${validLinks.length > 0 ? `
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pt-1">
                 ${validLinks.map(link => renderLinkCard(link)).join('')}
             </div>
             ` : isLead ? `
@@ -775,32 +775,32 @@ const TeamsView = (() => {
         const customLinks = validLinks.filter(l => l !== githubLink && l !== youtubeLink);
 
         return `
-        <section class="min-h-screen relative pb-16" id="team-detail-section">
+        <section class="min-h-screen relative pb-16 w-full overflow-x-hidden" id="team-detail-section">
             <!-- Floating Quick-Back Button: stays accessible even when scrolled down -->
             <button id="team-floating-back-btn" onclick="TeamsView.goBack(event)" class="fixed bottom-6 left-6 z-40 flex items-center gap-2 px-4 py-2.5 bg-[#17212b]/95 hover:bg-[#242f3d] text-white text-xs font-bold rounded-full border border-[#2b394a] shadow-2xl backdrop-blur-md transition-all active:scale-95 cursor-pointer group" title="Go Back">
                 <svg class="w-4 h-4 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                 <span>Back</span>
             </button>
 
-            <!-- Top Section: Left-aligned Project Header (reduced size) & Active Workforce at top -->
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-8">
+            <!-- Top Section: Full screen container on laptop & mobile -->
+            <div class="w-full max-w-[1760px] mx-auto px-2.5 sm:px-4 md:px-6 lg:px-8 xl:px-10 pt-3 sm:pt-5 pb-12">
                 <!-- Top Navigation Bar with Back Button -->
-                <div class="flex items-center justify-between mb-5">
+                <div class="flex items-center justify-between mb-4 sm:mb-5">
                     <button id="team-back-btn" onclick="TeamsView.goBack(event)" class="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900/90 hover:bg-zinc-800 rounded-xl text-xs font-semibold text-white border border-zinc-800 transition-all cursor-pointer shadow-md active:scale-95">
                         <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                         <span>Back</span>
                     </button>
                 </div>
 
-                <!-- 2-Column Main Workspace Grid -->
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <!-- 2-Column Main Workspace Grid: Full Screen Edge-to-Edge Utilization -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 xl:gap-7 items-start w-full">
                     
-                    <!-- Left Column (lg:col-span-7 xl:col-span-8): Project Name & Team Name -> About the Project -> Project Links -> Project Progress -->
-                    <div class="lg:col-span-7 xl:col-span-8 space-y-5">
+                    <!-- Left Column (lg:col-span-8 xl:col-span-8 2xl:col-span-9): Project Header -> About the Project -> Project Progress -> Project Links -->
+                    <div class="lg:col-span-8 xl:col-span-8 2xl:col-span-9 space-y-5 w-full min-w-0">
                         
                         <!-- 1. Project Name & Team Name Section (Shifted to left, compact) -->
-                        <div class="flex items-center gap-4 pb-1">
-                            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-zinc-900 ring-2 ring-zinc-800/80 shadow-xl flex items-center justify-center overflow-hidden flex-shrink-0 ${lead.avatar_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}" ${lead.avatar_url ? `data-full-image="${lead.avatar_url}"` : ''}>
+                        <div class="flex items-center gap-3.5 sm:gap-4 pb-1">
+                            <div class="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-2xl bg-zinc-900 ring-2 ring-zinc-800/80 shadow-xl flex items-center justify-center overflow-hidden flex-shrink-0 ${lead.avatar_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}" ${lead.avatar_url ? `data-full-image="${lead.avatar_url}"` : ''}>
                                 ${lead.avatar_url
                                     ? `<img src="${lead.avatar_url}" class="w-full h-full object-cover">`
                                     : `<span class="font-heading font-bold text-2xl sm:text-3xl" style="color:${lead.color || '#10b981'}">${lead.initials}</span>`}
@@ -845,7 +845,7 @@ const TeamsView = (() => {
                         </div>
 
                         <!-- 2. "About the Project" Section (Shifted to top, below project name and team name) -->
-                        <div class="glass-card rounded-2xl p-5 sm:p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl space-y-4" id="about-project-card">
+                        <div class="glass-card rounded-2xl p-4 sm:p-5 lg:p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl space-y-4" id="about-project-card">
                             
                             <!-- Clean Preview Container (Default view) -->
                             <div id="about-project-view-container" class="space-y-4">
@@ -965,12 +965,12 @@ const TeamsView = (() => {
 
                     </div>
 
-                    <!-- Right Column (lg:col-span-5 xl:col-span-4): Active Workforce at top, then Membership -->
-                    <div class="lg:col-span-5 xl:col-span-4 space-y-5 w-full max-w-[340px] mx-auto lg:mx-0">
+                    <!-- Right Column (lg:col-span-4 xl:col-span-4 2xl:col-span-3): Active Workforce, Pending & Lead Config -->
+                    <div class="lg:col-span-4 xl:col-span-4 2xl:col-span-3 space-y-5 w-full min-w-0">
                         
-                        <!-- Active Workforce Section (At top, 3 in a column, reduced horizontal space) -->
+                        <!-- Active Workforce Section (At top, 3 in a column, naturally filling right column) -->
                         <div class="w-full" id="workforce-section">
-                            <div class="glass-card rounded-2xl p-3.5 sm:p-4 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl">
+                            <div class="glass-card rounded-2xl p-4 sm:p-5 lg:p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl">
                                 <div class="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-zinc-800/60">
                                     <div class="flex items-center gap-2">
                                         <h3 class="font-heading font-bold text-sm text-white tracking-tight">Active Workforce</h3>
@@ -986,7 +986,7 @@ const TeamsView = (() => {
                                 </div>
 
                                 <!-- 3 profiles in a column (grid-cols-3) -->
-                                <div id="team-roster" class="grid grid-cols-3 gap-y-3.5 gap-x-2 justify-items-center">
+                                <div id="team-roster" class="grid grid-cols-3 gap-y-3.5 sm:gap-y-4 gap-x-2 sm:gap-x-3 justify-items-center">
                                     ${teamMembers.length === 0 ? '<div class="col-span-full text-xs text-zinc-500 text-center py-6">No project members yet — be first to join!</div>'
                             : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLead, profile?.id, memberTags, lead.id, lead)).join('')}
                                 </div>
