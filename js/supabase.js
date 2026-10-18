@@ -4173,7 +4173,9 @@ const ICCSupabase = (() => {
         subscribeToProjectApplications, subscribeToApplicationComments,
         // Project Mentor Chat API
         fetchProjectMentorMessages, fetchAllProjectMentorMessages, sendProjectMentorMessage, deleteProjectMentorMessage,
-        subscribeToProjectMentorChat, canAccessProjectMentorChat, canUserAccessProjectMentorChat
+        subscribeToProjectMentorChat, canAccessProjectMentorChat, canUserAccessProjectMentorChat,
+        // Core Space & Minutes of Meeting (MoM) API
+        fetchMinutesOfMeeting, createMinutesOfMeeting, updateMinutesOfMeeting, deleteMinutesOfMeeting, canManageMom
     };
 })();
 
