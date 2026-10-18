@@ -73,3 +73,17 @@ CREATE POLICY "Allow mentors and admins delete tasks"
             AND (role IN ('mentor', 'admin', 'super_admin', 'superadmin') OR email = 'iccsocialhub@gmail.com')
         )
     );
+
+-- 5. Enable Realtime updates for live task sync
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.project_tasks;
+    END IF;
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+    WHEN others THEN NULL;
+END $$;
+
