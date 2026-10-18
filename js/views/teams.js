@@ -2378,19 +2378,29 @@ const TeamsView = (() => {
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Tab Switcher: Overview vs Mentor Chat -->
-                        <div class="flex items-center gap-1.5 p-1 bg-zinc-900/90 border border-zinc-800 rounded-xl flex-shrink-0 self-start md:self-center">
-                            <button id="project-tab-overview-btn" type="button" class="project-tab-btn flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${currentProjectTab === 'overview' ? 'bg-emerald-600 text-white shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'}">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <!-- Page Selection Navigation (Directly below project name, styled like reference image) -->
+                    <div class="mt-4 pt-2 border-t border-zinc-800/80 -mb-1">
+                        <nav class="flex items-center gap-6 sm:gap-8 overflow-x-auto no-scrollbar">
+                            <button id="project-tab-overview-btn" type="button" class="project-tab-btn group relative inline-flex items-center gap-2 pb-2.5 pt-1 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${currentProjectTab === 'overview' ? 'text-emerald-400 font-bold' : 'text-zinc-400 hover:text-zinc-200'}">
+                                <svg class="w-4 h-4 transition-colors ${currentProjectTab === 'overview' ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-zinc-300'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 14l3-3"/>
+                                    <path d="M3.34 19a10 10 0 1 1 17.32 0"/>
+                                </svg>
                                 <span>Overview</span>
+                                <span class="tab-indicator absolute bottom-0 left-0 right-0 h-0.5 rounded-full transition-all ${currentProjectTab === 'overview' ? 'bg-emerald-500' : 'bg-transparent'}"></span>
                             </button>
-                            <button id="project-tab-mentor-btn" type="button" class="project-tab-btn flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${currentProjectTab === 'mentor_chat' ? 'bg-amber-500 text-zinc-950 shadow-md font-extrabold' : 'text-zinc-400 hover:text-amber-400 hover:bg-zinc-800/60'}">
-                                <svg class="w-4 h-4 ${currentProjectTab === 'mentor_chat' ? 'text-zinc-950' : 'text-amber-400'}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+
+                            <button id="project-tab-mentor-btn" type="button" class="project-tab-btn group relative inline-flex items-center gap-2 pb-2.5 pt-1 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${currentProjectTab === 'mentor_chat' ? 'text-amber-400 font-bold' : 'text-zinc-400 hover:text-amber-400'}">
+                                <svg class="w-4 h-4 transition-colors ${currentProjectTab === 'mentor_chat' ? 'text-amber-400' : 'text-zinc-500 group-hover:text-amber-400'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                                </svg>
                                 <span>Mentor Chat</span>
-                                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                                <span class="w-1.5 h-1.5 rounded-full ${currentProjectTab === 'mentor_chat' ? 'bg-amber-400' : 'bg-amber-500/70'}"></span>
+                                <span class="tab-indicator absolute bottom-0 left-0 right-0 h-0.5 rounded-full transition-all ${currentProjectTab === 'mentor_chat' ? 'bg-amber-400' : 'bg-transparent'}"></span>
                             </button>
-                        </div>
+                        </nav>
                     </div>
                 </div>
 
@@ -2937,18 +2947,43 @@ const TeamsView = (() => {
 
         const switchTab = (tab) => {
             currentProjectTab = tab;
+            const overviewIcon = overviewTabBtn?.querySelector('svg');
+            const overviewIndicator = overviewTabBtn?.querySelector('.tab-indicator');
+            const mentorIcon = mentorTabBtn?.querySelector('svg');
+            const mentorIndicator = mentorTabBtn?.querySelector('.tab-indicator');
+
             if (tab === 'overview') {
-                overviewTabBtn?.classList.remove('text-zinc-400', 'hover:text-white', 'hover:bg-zinc-800/60');
-                overviewTabBtn?.classList.add('bg-emerald-600', 'text-white', 'shadow-md');
-                mentorTabBtn?.classList.remove('bg-amber-500', 'text-zinc-950', 'shadow-md', 'font-extrabold');
-                mentorTabBtn?.classList.add('text-zinc-400', 'hover:text-amber-400', 'hover:bg-zinc-800/60');
+                overviewTabBtn?.classList.remove('text-zinc-400', 'hover:text-zinc-200');
+                overviewTabBtn?.classList.add('text-emerald-400', 'font-bold');
+                overviewIcon?.classList.remove('text-zinc-500', 'group-hover:text-zinc-300');
+                overviewIcon?.classList.add('text-emerald-400');
+                overviewIndicator?.classList.remove('bg-transparent');
+                overviewIndicator?.classList.add('bg-emerald-500');
+
+                mentorTabBtn?.classList.remove('text-amber-400', 'font-bold');
+                mentorTabBtn?.classList.add('text-zinc-400', 'hover:text-amber-400');
+                mentorIcon?.classList.remove('text-amber-400');
+                mentorIcon?.classList.add('text-zinc-500', 'group-hover:text-amber-400');
+                mentorIndicator?.classList.remove('bg-amber-400');
+                mentorIndicator?.classList.add('bg-transparent');
+
                 overviewContent?.classList.remove('hidden');
                 mentorContent?.classList.add('hidden');
             } else {
-                mentorTabBtn?.classList.remove('text-zinc-400', 'hover:text-amber-400', 'hover:bg-zinc-800/60');
-                mentorTabBtn?.classList.add('bg-amber-500', 'text-zinc-950', 'shadow-md', 'font-extrabold');
-                overviewTabBtn?.classList.remove('bg-emerald-600', 'text-white', 'shadow-md');
-                overviewTabBtn?.classList.add('text-zinc-400', 'hover:text-white', 'hover:bg-zinc-800/60');
+                mentorTabBtn?.classList.remove('text-zinc-400', 'hover:text-amber-400');
+                mentorTabBtn?.classList.add('text-amber-400', 'font-bold');
+                mentorIcon?.classList.remove('text-zinc-500', 'group-hover:text-amber-400');
+                mentorIcon?.classList.add('text-amber-400');
+                mentorIndicator?.classList.remove('bg-transparent');
+                mentorIndicator?.classList.add('bg-amber-400');
+
+                overviewTabBtn?.classList.remove('text-emerald-400', 'font-bold');
+                overviewTabBtn?.classList.add('text-zinc-400', 'hover:text-zinc-200');
+                overviewIcon?.classList.remove('text-emerald-400');
+                overviewIcon?.classList.add('text-zinc-500', 'group-hover:text-zinc-300');
+                overviewIndicator?.classList.remove('bg-emerald-500');
+                overviewIndicator?.classList.add('bg-transparent');
+
                 mentorContent?.classList.remove('hidden');
                 overviewContent?.classList.add('hidden');
                 initMentorChat(lead, isLead, isMember);
