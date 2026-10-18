@@ -714,8 +714,15 @@ const ICCSupabase = (() => {
     async function joinTeam(teamId, summary, discTag) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
         
-        // 1. Check if already in THIS specific team
         const targetTeamNum = parseInt(teamId);
+
+        // Check if user is the creator / Project Lead of this project
+        const { data: leadCheck } = await client.from('core_leads').select('lead_user_id').eq('id', targetTeamNum).maybeSingle();
+        if (leadCheck?.lead_user_id && String(leadCheck.lead_user_id) === String(currentUser.id)) {
+            return { error: { message: 'You are the Project Lead of this project.' } };
+        }
+        
+        // 1. Check if already in THIS specific team
         const memberships = Array.isArray(currentProfile?.memberships) ? currentProfile.memberships.map(Number) : [];
         if (memberships.includes(targetTeamNum) || Number(currentProfile?.team_id) === targetTeamNum) {
             return { error: { message: 'You are already a member or lead of this team.' } };
@@ -727,15 +734,13 @@ const ICCSupabase = (() => {
             return { error: { message: 'You already have a pending application for this team.' } };
         }
         
-        // 3. (Limit removed)
-        
         // 1. Insert join data
         const { error: dataError } = await client.from('team_join_data').upsert({
             user_id: currentUser.id,
-            team_id: parseInt(teamId),
+            team_id: targetTeamNum,
             summary,
             disc_tag: discTag
-        });
+        }, { onConflict: 'user_id,team_id' });
         
         if (dataError) return { error: dataError };
 
@@ -927,6 +932,7 @@ const ICCSupabase = (() => {
         const leads = (typeof CORE_LEADS !== 'undefined' && Array.isArray(CORE_LEADS)) ? CORE_LEADS : [];
         const lead = customLead || leads.find(l => Number(l.id) === teamNum);
         if (lead) {
+            if (lead.lead_user_id && currentUser?.id && String(lead.lead_user_id) === String(currentUser.id)) return true;
             if (profile?.full_name && lead.name && profile.full_name.trim().toLowerCase() === lead.name.trim().toLowerCase()) return true;
             if (profile?.email && lead.email && profile.email.trim().toLowerCase() === lead.email.trim().toLowerCase()) return true;
             if (currentUser?.email && lead.email && currentUser.email.trim().toLowerCase() === lead.email.trim().toLowerCase()) return true;
@@ -951,6 +957,7 @@ const ICCSupabase = (() => {
                 const leads = (typeof CORE_LEADS !== 'undefined' && Array.isArray(CORE_LEADS)) ? CORE_LEADS : [];
                 const lead = leads.find(l => Number(l.id) === teamNum);
                 if (lead) {
+                    if (lead.lead_user_id && String(lead.lead_user_id) === String(currentUser.id)) return true;
                     if (prof.full_name && lead.name && prof.full_name.trim().toLowerCase() === lead.name.trim().toLowerCase()) return true;
                     if (prof.email && lead.email && prof.email.trim().toLowerCase() === lead.email.trim().toLowerCase()) return true;
                 }

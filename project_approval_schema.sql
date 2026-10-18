@@ -461,3 +461,68 @@ BEGIN
 END;
 $$;
 
+-- =========================================================================
+-- 17. Fix team_join_data RLS policies (Allow users to apply, leads to review)
+-- =========================================================================
+ALTER TABLE public.team_join_data ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own join data" ON public.team_join_data;
+DROP POLICY IF EXISTS "Users can insert their own join data" ON public.team_join_data;
+DROP POLICY IF EXISTS "Users, leads, and admins can view join data" ON public.team_join_data;
+DROP POLICY IF EXISTS "Users can update their own join data" ON public.team_join_data;
+DROP POLICY IF EXISTS "Users, leads, and admins can delete join data" ON public.team_join_data;
+DROP POLICY IF EXISTS "Leads and admins can view join data" ON public.team_join_data;
+DROP POLICY IF EXISTS "Leads and admins can delete join data" ON public.team_join_data;
+
+-- 1. Users can insert their own application/join request
+CREATE POLICY "Users can insert their own join data"
+    ON public.team_join_data FOR INSERT
+    TO authenticated
+    WITH CHECK (auth.uid() = user_id);
+
+-- 2. Users can view their own, leads can view applicants to their project, mentors/admins can view all
+CREATE POLICY "Users, leads, and admins can view join data"
+    ON public.team_join_data FOR SELECT
+    TO authenticated
+    USING (
+        auth.uid() = user_id
+        OR EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid() AND (
+                p.role IN ('admin', 'super_admin', 'superadmin', 'mentor')
+                OR (p.role = 'lead' AND p.team_id = team_join_data.team_id)
+            )
+        )
+        OR EXISTS (
+            SELECT 1 FROM public.core_leads l
+            WHERE l.id = team_join_data.team_id AND l.lead_user_id = auth.uid()
+        )
+    );
+
+-- 3. Users can update their own join data
+CREATE POLICY "Users can update their own join data"
+    ON public.team_join_data FOR UPDATE
+    TO authenticated
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+-- 4. Users can cancel their request, leads/admins/mentors can approve/deny (delete from queue)
+CREATE POLICY "Users, leads, and admins can delete join data"
+    ON public.team_join_data FOR DELETE
+    TO authenticated
+    USING (
+        auth.uid() = user_id
+        OR EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid() AND (
+                p.role IN ('admin', 'super_admin', 'superadmin', 'mentor')
+                OR (p.role = 'lead' AND p.team_id = team_join_data.team_id)
+            )
+        )
+        OR EXISTS (
+            SELECT 1 FROM public.core_leads l
+            WHERE l.id = team_join_data.team_id AND l.lead_user_id = auth.uid()
+        )
+    );
+
+

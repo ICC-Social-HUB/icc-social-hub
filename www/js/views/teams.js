@@ -74,6 +74,9 @@ const TeamsView = (() => {
         if (!leadNum) return false;
         const lead = customLead || CORE_LEADS.find(l => Number(l.id) === leadNum);
 
+        // 0. Direct creator / project lead match from core_leads (for approved projects)
+        if (lead?.lead_user_id && profile?.id && String(lead.lead_user_id) === String(profile.id)) return true;
+
         // 1. Direct role & team_id match
         if (profile.role === 'lead' && Number(profile.team_id) === leadNum) return true;
 
