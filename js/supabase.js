@@ -1075,8 +1075,17 @@ const ICCSupabase = (() => {
             if (!msg) return { error: { message: 'Message not found' } };
             const isMe = msg.sender_id === currentUser.id;
             const isLead = isTeamLead(msg.team_id) || (await verifyTeamLead(msg.team_id));
-            if (!isMe && !isLead) {
+            if (!isMe && !isLead && !isMentor() && !isAdmin() && !isSuperAdmin()) {
                 return { error: { message: 'Permission denied: Only the sender or team leader can delete this message.' } };
+            }
+            if (isLead && !isMe && !isMentor() && !isAdmin() && !isSuperAdmin()) {
+                const { data: senderProf } = await client.from('profiles').select('role, is_mentor').eq('id', msg.sender_id).maybeSingle();
+                if (senderProf) {
+                    const r = (senderProf.role || '').toLowerCase();
+                    if (r === 'mentor' || r === 'super_admin' || r === 'superadmin' || Boolean(senderProf.is_mentor)) {
+                        return { error: { message: 'Team leads cannot delete messages sent by mentors.' } };
+                    }
+                }
             }
             const { error } = await client.from('team_messages').delete().eq('id', messageId);
             return { error };
@@ -3473,6 +3482,41 @@ const ICCSupabase = (() => {
     async function deleteProjectMentorMessage(messageId, projectId = null) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
         try {
+            // Permission check: Team leads and members cannot delete messages sent by mentors.
+            if (!isMentor() && !isAdmin() && !isSuperAdmin()) {
+                let senderId = null;
+                try {
+                    const cache = JSON.parse(localStorage.getItem('icc_mentor_messages_cache') || '[]');
+                    const cachedMsg = cache.find(m => m.id === messageId);
+                    if (cachedMsg) senderId = cachedMsg.sender_id;
+                } catch (e) {}
+
+                if (!senderId) {
+                    const { data: msg } = await client
+                        .from('project_mentor_messages')
+                        .select('sender_id')
+                        .eq('id', messageId)
+                        .maybeSingle();
+                    if (msg) senderId = msg.sender_id;
+                }
+
+                if (senderId && senderId !== currentUser.id) {
+                    const { data: prof } = await client
+                        .from('profiles')
+                        .select('role, is_mentor')
+                        .eq('id', senderId)
+                        .maybeSingle();
+
+                    if (prof) {
+                        const role = (prof.role || '').toLowerCase();
+                        const isSenderMentor = role === 'mentor' || role === 'super_admin' || role === 'superadmin' || Boolean(prof.is_mentor);
+                        if (isSenderMentor) {
+                            return { error: { message: 'Team leads and members cannot delete messages sent by mentors.' } };
+                        }
+                    }
+                }
+            }
+
             const { error } = await client
                 .from('project_mentor_messages')
                 .delete()

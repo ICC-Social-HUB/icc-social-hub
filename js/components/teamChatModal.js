@@ -172,8 +172,9 @@ const TeamChatModal = (() => {
             const userRole = p.role || 'user';
             const isMentor = userRole === 'mentor';
             const isVerified = userRole === 'lead';
-            const isLead = typeof ICCSupabase.isTeamLead === 'function' && ICCSupabase.isTeamLead(currentTeamId);
-            const canDelete = isMe || isLead || (typeof ICCSupabase.isMentor === 'function' && ICCSupabase.isMentor()) || (typeof ICCSupabase.isAdmin === 'function' && ICCSupabase.isAdmin());
+            const isMentorUser = typeof ICCSupabase.isMentor === 'function' && ICCSupabase.isMentor();
+            const isAdminUser = typeof ICCSupabase.isAdmin === 'function' && ICCSupabase.isAdmin();
+            const canDelete = isMe || isMentorUser || isAdminUser || (isLead && !isMentor);
             
             let timeStr = '';
             try { 

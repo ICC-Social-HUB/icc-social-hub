@@ -2066,7 +2066,7 @@ const TeamsView = (() => {
             const senderRole = (prof.role || (isMe ? ICCSupabase.getProfile()?.role : '') || '').toLowerCase();
             const isSenderMentor = senderRole === 'mentor' || Boolean(prof.is_mentor) || senderRole === 'super_admin' || senderRole === 'superadmin' || (isMe && isMentorUser);
             const isSenderLead = prof.id === lead.lead_user_id || senderRole === 'lead';
-            const canDelete = isMe || isLead || isMentorUser || isAdminUser;
+            const canDelete = isMe || isMentorUser || isAdminUser || (isLead && !isSenderMentor);
 
             let timeStr = '';
             try {
