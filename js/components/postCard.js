@@ -26,13 +26,13 @@ const PostCard = (() => {
                     <button class="user-link w-11 h-11 rounded-2xl bg-gradient-to-br from-crimson to-crimson-dark flex items-center justify-center text-sm font-bold flex-shrink-0 overflow-hidden shadow-lg shadow-crimson/20 ${p.avatar_url ? 'cursor-pointer' : ''}" data-user-id="${p.id || post.user_id}">
                         ${p.avatar_url ? `<img src="${p.avatar_url}" class="w-full h-full object-cover" alt="">` : (p.full_name || 'U').charAt(0).toUpperCase()}
                     </button>
-                    ${p.role === 'lead' ? `<div class="absolute -bottom-1 -right-1 w-5 h-5 bg-crimson rounded-full border-2 border-[#121214] flex items-center justify-center text-[10px] text-white">${ICC_CONFIG.VERIFIED_TICK}</div>` : ''}
+                    ${p.role === 'mentor' ? `<div class="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-500/20 rounded-full border-2 border-[#121214] flex items-center justify-center text-[10px] text-amber-400">${ICC_CONFIG.MENTOR_TICK}</div>` : (p.role === 'lead' ? `<div class="absolute -bottom-1 -right-1 w-5 h-5 bg-crimson rounded-full border-2 border-[#121214] flex items-center justify-center text-[10px] text-white">${ICC_CONFIG.VERIFIED_TICK}</div>` : '')}
                 </div>
                 
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <button class="user-link font-bold text-[15px] hover:text-crimson transition-colors truncate tracking-tight" data-user-id="${p.id || post.user_id}">
-                            ${p.username || p.full_name || 'Anonymous'}
+                        <button class="user-link font-bold text-[15px] hover:text-crimson transition-colors truncate tracking-tight inline-flex items-center gap-0.5" data-user-id="${p.id || post.user_id}">
+                            <span>${p.username || p.full_name || 'Anonymous'}</span>${ICC_CONFIG.getRoleTick(p)}
                         </button>
                         ${isAnnounce ? '<span class="px-2 py-0.5 bg-crimson/15 text-crimson rounded-full text-[10px] font-bold uppercase tracking-wider">Official</span>' : ''}
                         ${isRequest ? (isResolved ? '<span class="px-2 py-0.5 bg-emerald-500/15 text-emerald-400 rounded-full text-[10px] font-bold uppercase tracking-wider">Resolved</span>' : '<span class="px-2 py-0.5 bg-amber-500/15 text-amber-400 rounded-full text-[10px] font-bold uppercase tracking-wider">Request</span>') : ''}
@@ -242,7 +242,7 @@ const PostCard = (() => {
                 return `<div class="flex gap-2 group relative">
                     <div class="w-6 h-6 rounded-full bg-zinc-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">${(cp.full_name||'?').charAt(0).toUpperCase()}</div>
                     <div class="flex-1 min-w-0 pr-6">
-                        <span class="text-xs font-semibold text-zinc-300">${cp.username||cp.full_name||'Anon'}${cp.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</span>
+                        <span class="text-xs font-semibold text-zinc-300 inline-flex items-center gap-0.5">${cp.username||cp.full_name||'Anon'}${ICC_CONFIG.getRoleTick(cp)}</span>
                         <p class="text-xs text-zinc-400 mt-0.5">${escapeHtml(c.content)}</p>
                     </div>
                     ${canDelete ? `<button class="delete-comment-btn absolute right-0 top-0 p-1.5 text-zinc-600 hover:text-red-500 transition-all rounded-lg hover:bg-zinc-800/50" data-comment-id="${c.id}" title="Delete comment">

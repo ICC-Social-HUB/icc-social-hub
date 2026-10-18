@@ -168,11 +168,12 @@ const TeamChatModal = (() => {
         container.innerHTML = messages.map(m => {
             const isMe = m.sender_id === myId;
             const p = m.profiles || {};
-            // Better role detection: check if they are an admin or lead
+            // Better role detection: check if they are an admin, lead, or mentor
             const userRole = p.role || 'user';
+            const isMentor = userRole === 'mentor';
             const isVerified = userRole === 'lead';
             const isLead = typeof ICCSupabase.isTeamLead === 'function' && ICCSupabase.isTeamLead(currentTeamId);
-            const canDelete = isMe || isLead;
+            const canDelete = isMe || isLead || (typeof ICCSupabase.isMentor === 'function' && ICCSupabase.isMentor()) || (typeof ICCSupabase.isAdmin === 'function' && ICCSupabase.isAdmin());
             
             let timeStr = '';
             try { 
@@ -188,7 +189,7 @@ const TeamChatModal = (() => {
                     <div class="min-w-0 flex flex-col ${isMe ? 'items-end' : 'items-start'}">
                         <p class="text-[10px] text-zinc-500 mb-1 flex items-center gap-1 font-semibold">
                             ${p.full_name || p.username || 'Anonymous User'}
-                            ${isVerified ? `<span class="text-emerald-400" title="Verified Member">${ICC_CONFIG.VERIFIED_TICK}</span>` : ''}
+                            ${isMentor ? ICC_CONFIG.MENTOR_TICK : (isVerified ? ICC_CONFIG.VERIFIED_TICK : '')}
                         </p>
                         <div class="relative flex items-center gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}">
                             <div class="px-3 py-2 rounded-2xl text-sm ${isMe ? 'bg-emerald-600 text-white rounded-tr-none shadow-lg shadow-emerald-600/10' : 'bg-zinc-800 text-zinc-200 rounded-tl-none'} break-words">

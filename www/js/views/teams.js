@@ -5,6 +5,10 @@ const TeamsView = (() => {
     let currentTeamId = null;
     let teamMembers = [];
     let pendingMembers = [];
+    let currentProjectTab = 'overview';
+    let currentMentorMessages = [];
+    let mentorReplyTarget = null;
+    let mentorChatUnsubscribe = null;
 
     function escapeHtml(str) {
         if (!str) return '';
@@ -1423,7 +1427,7 @@ const TeamsView = (() => {
             <h4 class="open-user-profile text-[11px] sm:text-xs font-bold text-zinc-100 group-hover:text-emerald-400 transition-colors text-center break-words w-full px-0.5 mt-1 cursor-pointer leading-tight" 
                 data-id="${m.id}" 
                 title="View ${escapeHtml(name)}'s Profile">
-                ${escapeHtml(name)}${isThisMemberLead ? ICC_CONFIG.VERIFIED_TICK : ''}
+                ${escapeHtml(name)}${m.role === 'mentor' || m.is_mentor ? ICC_CONFIG.MENTOR_TICK : (isThisMemberLead ? ICC_CONFIG.VERIFIED_TICK : '')}
             </h4>
 
             <!-- Member Tag below the name: Simple text for all members including leader -->
@@ -1650,7 +1654,7 @@ const TeamsView = (() => {
                             <div class="p-3">
                                 <h3 class="font-heading font-bold text-sm sm:text-base text-white truncate" title="${lead.project_name || lead.team}">${lead.project_name || lead.team}</h3>
                                 <p class="text-zinc-400 text-[11px] mt-0.5 truncate font-medium">Team: <span class="text-zinc-300 font-semibold">${lead.team}</span></p>
-                                <p class="text-zinc-500 text-[10px] mt-0.5 truncate">Lead: <span class="text-zinc-400">${lead.name}${ICC_CONFIG.VERIFIED_TICK}</span></p>
+                                <p class="text-zinc-500 text-[10px] mt-0.5 truncate">Lead: <span class="text-zinc-400">${lead.name}${lead.role === 'mentor' ? ICC_CONFIG.MENTOR_TICK : ICC_CONFIG.VERIFIED_TICK}</span></p>
                                 
                                 <!-- Progress Mini Indicator -->
                                 <div class="mt-3 pt-3 border-t border-zinc-800/30 space-y-1.5">
@@ -1835,6 +1839,461 @@ const TeamsView = (() => {
         `;
     }
 
+    
+    /* =========================================================================
+       IN-APP CONFIRMATION POPUP CARD (No native confirm dialogs)
+       ========================================================================= */
+    function showConfirmationPopup({ title, message, confirmText = 'Confirm', cancelText = 'Cancel', isDanger = false, onConfirm }) {
+        let root = document.getElementById('icc-confirm-popup-root');
+        if (!root) {
+            root = document.createElement('div');
+            root.id = 'icc-confirm-popup-root';
+            document.body.appendChild(root);
+        }
+        root.innerHTML = `
+        <div class="fixed inset-0 z-[2600] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in" id="confirm-popup-backdrop">
+            <div class="glass-card rounded-2xl border border-zinc-800 bg-zinc-950 p-6 max-w-sm w-full space-y-4 shadow-2xl animate-zoom-in text-center">
+                <div class="w-12 h-12 rounded-2xl ${isDanger ? 'bg-red-500/15 border border-red-500/30 text-red-400' : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'} flex items-center justify-center mx-auto shadow-md">
+                    ${isDanger ? `
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    ` : `
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    `}
+                </div>
+                <div>
+                    <h3 class="font-heading font-bold text-base text-white">${escapeHtml(title)}</h3>
+                    <p class="text-xs text-zinc-400 mt-1 leading-relaxed">${escapeHtml(message)}</p>
+                </div>
+                <div class="flex items-center gap-2 pt-2">
+                    <button type="button" id="confirm-popup-cancel-btn" class="flex-1 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer border border-zinc-800">
+                        ${escapeHtml(cancelText)}
+                    </button>
+                    <button type="button" id="confirm-popup-action-btn" class="flex-1 py-2.5 ${isDanger ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/20' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20'} rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer">
+                        ${escapeHtml(confirmText)}
+                    </button>
+                </div>
+            </div>
+        </div>`;
+
+        const close = () => { if (root) root.innerHTML = ''; };
+        const cancelBtn = document.getElementById('confirm-popup-cancel-btn');
+        const backdrop = document.getElementById('confirm-popup-backdrop');
+        const actionBtn = document.getElementById('confirm-popup-action-btn');
+
+        if (cancelBtn) cancelBtn.onclick = close;
+        if (backdrop) backdrop.onclick = (e) => { if (e.target === backdrop) close(); };
+        if (actionBtn) {
+            actionBtn.onclick = async () => {
+                close();
+                if (typeof onConfirm === 'function') await onConfirm();
+            };
+        }
+    }
+
+    /* =========================================================================
+       PAGE 2: MENTOR CHAT PAGE VIEW & REALTIME CONTROLLER
+       ========================================================================= */
+    function renderMentorChatPage(lead, isLead, isMember) {
+        const isMentorUser = typeof ICCSupabase.isMentor === 'function' && ICCSupabase.isMentor();
+        const isAdminUser = typeof ICCSupabase.isAdmin === 'function' && ICCSupabase.isAdmin();
+        const canAccess = isMember || isLead || isMentorUser || isAdminUser;
+
+        if (!canAccess) {
+            return `
+            <div class="glass-card rounded-2xl p-8 sm:p-12 border border-zinc-800/80 bg-zinc-950/70 text-center max-w-2xl mx-auto space-y-4 my-8">
+                <div class="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/10">
+                    <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
+                <h3 class="font-heading font-bold text-lg sm:text-xl text-white">Mentor Chat is Restricted</h3>
+                <p class="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto leading-relaxed">
+                    This dedicated discussion channel is reserved exclusively for approved team members of <span class="text-white font-semibold">${escapeHtml(lead.project_name || lead.team)}</span> and verified ICC Mentors.
+                </p>
+                ${!ICCSupabase.getUser() ? `
+                    <div class="pt-2">
+                        <a href="#login" class="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-600/20">
+                            Sign in to Access
+                        </a>
+                    </div>
+                ` : (!isMember && !isLead ? `
+                    <div class="pt-2">
+                        <button type="button" onclick="document.getElementById('team-join-btn')?.click()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-red-600/20 cursor-pointer">
+                            Apply to Join Team
+                        </button>
+                    </div>
+                ` : '')}
+            </div>`;
+        }
+
+        return `
+        <div class="glass-card rounded-2xl border border-zinc-800/80 bg-zinc-950/70 overflow-hidden shadow-2xl flex flex-col h-[75vh] min-h-[550px] max-h-[850px]" id="project-mentor-chat-wrapper">
+            <!-- Chat Header -->
+            <div class="p-4 sm:p-5 border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-md flex items-center justify-between gap-3 flex-shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 flex-shrink-0 shadow-sm">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <h2 class="font-heading font-bold text-sm sm:text-base text-white truncate">Mentor & Team Discussion</h2>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 flex-shrink-0">
+                                ${ICC_CONFIG.MENTOR_TICK}
+                                <span>Mentor Channel</span>
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-zinc-400 truncate">Direct collaboration between ${escapeHtml(lead.team)} members and ICC Mentors</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <button type="button" id="refresh-mentor-chat-btn" class="p-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-xl border border-zinc-800 transition-colors cursor-pointer" title="Refresh messages">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages Stream Container -->
+            <div id="project-mentor-messages-container" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5 custom-scrollbar bg-zinc-950/40">
+                <div class="flex items-center justify-center py-16" id="mentor-chat-spinner">
+                    <div class="spinner w-7 h-7"></div>
+                </div>
+            </div>
+
+            <!-- Reply Target Bar (Hidden by default, revealed when user clicks Reply) -->
+            <div id="mentor-chat-reply-bar" class="hidden px-4 py-2 bg-zinc-900/90 border-t border-zinc-800 flex items-center justify-between text-xs animate-slide-up">
+                <div class="flex items-center gap-2 min-w-0 pr-2">
+                    <svg class="w-3.5 h-3.5 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                    <span class="text-zinc-400 flex-shrink-0">Replying to <span id="mentor-reply-target-author" class="text-white font-semibold"></span>:</span>
+                    <span id="mentor-reply-target-text" class="text-zinc-400 truncate italic"></span>
+                </div>
+                <button type="button" id="cancel-mentor-reply-btn" class="p-1 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer" title="Cancel Reply">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- Chat Input Form -->
+            <form id="project-mentor-chat-form" class="p-3 sm:p-4 bg-zinc-900/80 border-t border-zinc-800 flex items-end gap-2.5 flex-shrink-0">
+                <div class="flex-1 min-w-0 relative">
+                    <textarea id="project-mentor-chat-input" rows="1" placeholder="Share project update or ask mentors for guidance... (Press Enter to send)" class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 focus:border-amber-500/60 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 outline-none resize-none max-h-32 leading-relaxed transition-all"></textarea>
+                </div>
+                <button type="submit" id="project-mentor-send-btn" class="px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-amber-500/20 active:scale-95 cursor-pointer flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50">
+                    <span>Send</span>
+                    <svg class="w-4 h-4 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </button>
+            </form>
+        </div>
+        `;
+    }
+
+    async function initMentorChat(lead, isLead, isMember) {
+        const container = document.getElementById('project-mentor-messages-container');
+        if (!container) return;
+
+        const isMentorUser = typeof ICCSupabase.isMentor === 'function' && ICCSupabase.isMentor();
+        const isAdminUser = typeof ICCSupabase.isAdmin === 'function' && ICCSupabase.isAdmin();
+        const canAccess = isMember || isLead || isMentorUser || isAdminUser;
+        if (!canAccess) return;
+
+        // Cleanup any existing subscription
+        if (typeof mentorChatUnsubscribe === 'function') {
+            mentorChatUnsubscribe();
+            mentorChatUnsubscribe = null;
+        }
+
+        container.innerHTML = `
+            <div class="flex items-center justify-center py-16" id="mentor-chat-spinner">
+                <div class="spinner w-7 h-7"></div>
+            </div>`;
+
+        // Fetch messages
+        const res = await ICCSupabase.fetchProjectMentorMessages(lead.id);
+        currentMentorMessages = res?.data || [];
+        renderMentorMessagesList(lead, isLead, true);
+
+        // Bind form and action events
+        bindMentorChatEvents(lead, isLead);
+
+        // Realtime subscription
+        try {
+            mentorChatUnsubscribe = ICCSupabase.subscribeToProjectMentorChat(lead.id, (event) => {
+                if (event.type === 'INSERT' && event.message) {
+                    if (!currentMentorMessages.some(m => m.id === event.message.id)) {
+                        currentMentorMessages.push(event.message);
+                        renderMentorMessagesList(lead, isLead, true);
+                    }
+                } else if (event.type === 'DELETE' && event.messageId) {
+                    currentMentorMessages = currentMentorMessages.filter(m => m.id !== event.messageId);
+                    renderMentorMessagesList(lead, isLead, false);
+                }
+            });
+        } catch (err) {
+            console.warn('Realtime mentor chat subscription warning:', err);
+        }
+    }
+
+    function renderMentorMessagesList(lead, isLead, shouldScrollBottom = true) {
+        const container = document.getElementById('project-mentor-messages-container');
+        if (!container) return;
+
+        const myUser = ICCSupabase.getUser();
+        const myId = myUser?.id;
+        const isMentorUser = typeof ICCSupabase.isMentor === 'function' && ICCSupabase.isMentor();
+        const isAdminUser = typeof ICCSupabase.isAdmin === 'function' && ICCSupabase.isAdmin();
+
+        if (!currentMentorMessages || currentMentorMessages.length === 0) {
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-20 text-center max-w-md mx-auto space-y-3">
+                    <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mb-1 shadow-sm">
+                        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+                        </svg>
+                    </div>
+                    <h3 class="font-heading font-bold text-base text-white">Welcome to Mentor Chat!</h3>
+                    <p class="text-xs text-zinc-400 leading-relaxed">
+                        No messages in this project channel yet. Team members of <span class="text-zinc-200 font-semibold">${escapeHtml(lead.team)}</span> and verified ICC Mentors can exchange updates, milestone guidance, and feedback here.
+                    </p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = currentMentorMessages.map(m => {
+            const isMe = m.sender_id === myId;
+            const prof = m.profiles || {};
+            const senderRole = (prof.role || '').toLowerCase();
+            const isSenderMentor = senderRole === 'mentor' || Boolean(prof.is_mentor) || senderRole === 'super_admin' || senderRole === 'superadmin';
+            const isSenderLead = prof.id === lead.lead_user_id || senderRole === 'lead';
+            const canDelete = isMe || isLead || isMentorUser || isAdminUser;
+
+            let timeStr = '';
+            try {
+                timeStr = typeof formatTimeAgo === 'function' ? formatTimeAgo(m.created_at) : new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                timeStr = '';
+            }
+
+            // Find reply target if present
+            let replyHtml = '';
+            if (m.reply_to_id) {
+                const targetMsg = currentMentorMessages.find(x => x.id === m.reply_to_id);
+                if (targetMsg) {
+                    const targetAuthor = targetMsg.profiles?.full_name || targetMsg.profiles?.username || 'User';
+                    const targetIsMentor = targetMsg.profiles?.role === 'mentor';
+                    replyHtml = `
+                    <div class="mb-2 px-3 py-1.5 rounded-lg bg-zinc-950/60 border-l-2 ${targetIsMentor ? 'border-amber-400' : 'border-emerald-400'} text-[11px] text-zinc-400 flex items-center gap-1.5 truncate">
+                        <svg class="w-3 h-3 flex-shrink-0 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                        <span class="font-bold text-zinc-300">@${escapeHtml(targetAuthor)}:</span>
+                        <span class="truncate italic text-zinc-400">${escapeHtml(targetMsg.message)}</span>
+                    </div>`;
+                }
+            }
+
+            return `
+            <div class="flex ${isMe ? 'justify-end' : 'justify-start'} group/msg animate-slide-up" data-msg-id="${m.id}">
+                <div class="flex max-w-[90%] sm:max-w-[80%] ${isMe ? 'flex-row-reverse' : 'flex-row'} items-start gap-2.5">
+                    <!-- Avatar -->
+                    <div class="w-8 h-8 rounded-full bg-zinc-800 flex-shrink-0 overflow-hidden mt-0.5 border ${isSenderMentor ? 'border-amber-500/50 ring-1 ring-amber-500/30' : 'border-zinc-700'} shadow-sm cursor-pointer open-user-profile" data-id="${prof.id || m.sender_id}">
+                        ${prof.avatar_url
+                            ? `<img src="${prof.avatar_url}" class="w-full h-full object-cover">`
+                            : `<div class="w-full h-full flex items-center justify-center text-[10px] font-bold ${isSenderMentor ? 'bg-amber-500/20 text-amber-400' : 'bg-zinc-800 text-zinc-300'}">${(prof.full_name || prof.username || '?').charAt(0).toUpperCase()}</div>`}
+                    </div>
+
+                    <!-- Bubble Container -->
+                    <div class="min-w-0 flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+                        <!-- Author & Badges Header -->
+                        <div class="flex items-center gap-1.5 mb-1 text-[11px] flex-wrap">
+                            <span class="font-bold text-zinc-300 hover:text-white cursor-pointer open-user-profile inline-flex items-center" data-id="${prof.id || m.sender_id}">
+                                ${escapeHtml(prof.full_name || prof.username || 'Anonymous User')}
+                            </span>
+                            ${isSenderMentor
+                                ? `${ICC_CONFIG.MENTOR_TICK}<span class="text-[9px] font-bold text-amber-400 uppercase tracking-wider bg-amber-500/10 px-1.5 py-0.2 rounded-full border border-amber-500/20">Mentor</span>`
+                                : (isSenderLead
+                                    ? `${ICC_CONFIG.VERIFIED_TICK}<span class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider bg-emerald-500/10 px-1.5 py-0.2 rounded-full border border-emerald-500/20">Lead</span>`
+                                    : `<span class="text-[9px] text-zinc-500">Member</span>`)}
+                            <span class="text-[10px] text-zinc-500 ml-1">${timeStr}</span>
+                        </div>
+
+                        <!-- Message Box -->
+                        <div class="relative flex items-center gap-1.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}">
+                            <div class="p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed break-words shadow-md transition-all ${
+                                isMe
+                                    ? 'bg-emerald-600 text-white rounded-tr-none shadow-emerald-600/15'
+                                    : (isSenderMentor
+                                        ? 'bg-amber-500/10 border border-amber-500/30 text-amber-100 rounded-tl-none shadow-amber-500/5'
+                                        : 'bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-tl-none')
+                            }">
+                                ${replyHtml}
+                                <div class="whitespace-pre-wrap">${escapeHtml(m.message)}</div>
+                            </div>
+
+                            <!-- Actions (Reply & Delete) -->
+                            <div class="flex items-center gap-0.5 opacity-0 group-hover/msg:opacity-100 transition-opacity flex-shrink-0">
+                                <button type="button" class="mentor-reply-msg-btn p-1.5 text-zinc-500 hover:text-amber-400 hover:bg-zinc-800/80 rounded-lg transition-colors cursor-pointer" data-msg-id="${m.id}" title="Reply to this message">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                </button>
+                                ${canDelete ? `
+                                <button type="button" class="mentor-delete-msg-btn p-1.5 text-zinc-500 hover:text-red-400 hover:bg-zinc-800/80 rounded-lg transition-colors cursor-pointer" data-msg-id="${m.id}" title="Delete message">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        // Delegate profile opening
+        container.querySelectorAll('.open-user-profile').forEach(el => {
+            el.onclick = (e) => {
+                e.stopPropagation();
+                const uid = el.dataset.id;
+                if (uid && typeof UserProfileModal !== 'undefined') {
+                    UserProfileModal.open(uid);
+                }
+            };
+        });
+
+        // Bind delete buttons
+        container.querySelectorAll('.mentor-delete-msg-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const msgId = btn.dataset.msgId;
+                if (!msgId) return;
+
+                showConfirmationPopup({
+                    title: 'Delete Message?',
+                    message: 'Are you sure you want to delete this message from Mentor Chat?',
+                    confirmText: 'Delete Message',
+                    cancelText: 'Cancel',
+                    isDanger: true,
+                    onConfirm: async () => {
+                        btn.disabled = true;
+                        const { error } = await ICCSupabase.deleteProjectMentorMessage(msgId);
+                        if (error) {
+                            Toast.error('Failed to delete message: ' + (error.message || 'Unknown error'));
+                            btn.disabled = false;
+                        } else {
+                            currentMentorMessages = currentMentorMessages.filter(x => x.id !== msgId);
+                            renderMentorMessagesList(lead, isLead, false);
+                            Toast.success('Message deleted');
+                        }
+                    }
+                });
+            };
+        });
+
+        // Bind reply buttons
+        container.querySelectorAll('.mentor-reply-msg-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const msgId = btn.dataset.msgId;
+                const targetMsg = currentMentorMessages.find(x => x.id === msgId);
+                if (!targetMsg) return;
+
+                mentorReplyTarget = targetMsg;
+                const replyBar = document.getElementById('mentor-chat-reply-bar');
+                const replyAuthor = document.getElementById('mentor-reply-target-author');
+                const replyText = document.getElementById('mentor-reply-target-text');
+                const input = document.getElementById('project-mentor-chat-input');
+
+                if (replyBar && replyAuthor && replyText) {
+                    replyAuthor.textContent = targetMsg.profiles?.full_name || targetMsg.profiles?.username || 'User';
+                    replyText.textContent = targetMsg.message;
+                    replyBar.classList.remove('hidden');
+                }
+                if (input) {
+                    input.focus();
+                }
+            };
+        });
+
+        if (shouldScrollBottom) {
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+
+    function bindMentorChatEvents(lead, isLead) {
+        const form = document.getElementById('project-mentor-chat-form');
+        const input = document.getElementById('project-mentor-chat-input');
+        const sendBtn = document.getElementById('project-mentor-send-btn');
+        const cancelReplyBtn = document.getElementById('cancel-mentor-reply-btn');
+        const refreshBtn = document.getElementById('refresh-mentor-chat-btn');
+
+        if (cancelReplyBtn) {
+            cancelReplyBtn.onclick = () => {
+                mentorReplyTarget = null;
+                const replyBar = document.getElementById('mentor-chat-reply-bar');
+                if (replyBar) replyBar.classList.add('hidden');
+            };
+        }
+
+        if (refreshBtn) {
+            refreshBtn.onclick = async () => {
+                refreshBtn.classList.add('animate-spin');
+                const res = await ICCSupabase.fetchProjectMentorMessages(lead.id);
+                refreshBtn.classList.remove('animate-spin');
+                if (res?.data) {
+                    currentMentorMessages = res.data;
+                    renderMentorMessagesList(lead, isLead, false);
+                }
+            };
+        }
+
+        if (input) {
+            input.oninput = () => {
+                input.style.height = 'auto';
+                input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+            };
+
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (form) form.requestSubmit();
+                }
+            };
+        }
+
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                if (!input) return;
+                const text = input.value.trim();
+                if (!text || form.dataset.sending === 'true') return;
+
+                form.dataset.sending = 'true';
+                if (sendBtn) sendBtn.disabled = true;
+
+                const replyToId = mentorReplyTarget ? mentorReplyTarget.id : null;
+                const { data, error } = await ICCSupabase.sendProjectMentorMessage(lead.id, text, replyToId);
+
+                form.dataset.sending = 'false';
+                if (sendBtn) sendBtn.disabled = false;
+
+                if (error) {
+                    Toast.error('Failed to send message: ' + (error.message || 'Unknown error'));
+                    return;
+                }
+
+                input.value = '';
+                input.style.height = 'auto';
+
+                mentorReplyTarget = null;
+                const replyBar = document.getElementById('mentor-chat-reply-bar');
+                if (replyBar) replyBar.classList.add('hidden');
+
+                if (data && !currentMentorMessages.some(x => x.id === data.id)) {
+                    currentMentorMessages.push(data);
+                    renderMentorMessagesList(lead, isLead, true);
+                }
+            };
+        }
+    }
+
     function renderDetail(lead) {
         const user = ICCSupabase.getUser();
         const profile = ICCSupabase.getProfile();
@@ -1860,21 +2319,18 @@ const TeamsView = (() => {
             <!-- Top Section: Full screen container on laptop & mobile -->
             <div class="w-full max-w-[1760px] mx-auto px-2.5 sm:px-4 md:px-6 lg:px-8 xl:px-10 pt-3 sm:pt-5 pb-12">
                 <!-- Top Navigation Bar with Back Button -->
-                <div class="flex items-center justify-between mb-4 sm:mb-5">
+                <div class="flex items-center justify-between mb-3 sm:mb-4">
                     <button id="team-back-btn" onclick="TeamsView.goBack(event)" class="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900/90 hover:bg-zinc-800 rounded-xl text-xs font-semibold text-white border border-zinc-800 transition-all cursor-pointer shadow-md active:scale-95">
                         <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                         <span>Back</span>
                     </button>
                 </div>
 
-                <!-- 2-Column Main Workspace Grid: Full Screen Edge-to-Edge Utilization -->
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 xl:gap-7 items-start w-full">
-                    
-                    <!-- Left Column (lg:col-span-8 xl:col-span-8 2xl:col-span-9): Project Header -> About the Project -> Project Progress -> Project Links -->
-                    <div class="lg:col-span-8 xl:col-span-8 2xl:col-span-9 space-y-5 w-full min-w-0">
-                        
-                        <!-- 1. Project Name & Team Name Section (Shifted to left, compact) -->
-                        <div class="flex items-center gap-3.5 sm:gap-4 pb-1">
+                <!-- Constant Project Header: Project Avatar, Name, Team Name, Code, and Tab Switcher (Constant at the top) -->
+                <div class="glass-card rounded-2xl p-4 sm:p-5 lg:p-6 border border-zinc-800/80 bg-zinc-950/70 backdrop-blur-xl shadow-xl mb-5">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <!-- Project Identity & Team Name (Constant at the top) -->
+                        <div class="flex items-center gap-3.5 sm:gap-4 min-w-0">
                             <div class="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-2xl bg-zinc-900 ring-2 ring-zinc-800/80 shadow-xl flex items-center justify-center overflow-hidden flex-shrink-0 ${lead.avatar_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}" ${lead.avatar_url ? `data-full-image="${lead.avatar_url}"` : ''}>
                                 ${lead.avatar_url
                                     ? `<img src="${lead.avatar_url}" class="w-full h-full object-cover">`
@@ -1911,7 +2367,7 @@ const TeamsView = (() => {
                                         </button>`;
                                     })()}
                                 </div>
-                                <div class="flex items-center flex-wrap gap-2 mt-1.5 text-xs">
+                                <div class="flex items-center flex-wrap gap-3 mt-1.5 text-xs">
                                     <span class="text-xs font-medium text-zinc-400">Team: <span class="text-zinc-200 font-bold">${lead.team}</span></span>
                                     ${canSeeCode ? `
                                         <span class="text-xs font-mono font-bold text-emerald-400 flex items-center gap-1.5" title="Unique Project Code (Visible to Project Lead, Members, Mentors, and Admins)">
@@ -1923,6 +2379,29 @@ const TeamsView = (() => {
                             </div>
                         </div>
 
+                        <!-- Tab Switcher: Overview vs Mentor Chat -->
+                        <div class="flex items-center gap-1.5 p-1 bg-zinc-900/90 border border-zinc-800 rounded-xl flex-shrink-0 self-start md:self-center">
+                            <button id="project-tab-overview-btn" type="button" class="project-tab-btn flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${currentProjectTab === 'overview' ? 'bg-emerald-600 text-white shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'}">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                <span>Overview</span>
+                            </button>
+                            <button id="project-tab-mentor-btn" type="button" class="project-tab-btn flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${currentProjectTab === 'mentor_chat' ? 'bg-amber-500 text-zinc-950 shadow-md font-extrabold' : 'text-zinc-400 hover:text-amber-400 hover:bg-zinc-800/60'}">
+                                <svg class="w-4 h-4 ${currentProjectTab === 'mentor_chat' ? 'text-zinc-950' : 'text-amber-400'}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                                <span>Mentor Chat</span>
+                                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Page 1: Overview Tab Container -->
+                <div id="project-tab-overview-content" class="${currentProjectTab === 'overview' ? '' : 'hidden'}">
+                    <!-- 2-Column Main Workspace Grid: Full Screen Edge-to-Edge Utilization -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 xl:gap-7 items-start w-full">
+                    
+                    <!-- Left Column (lg:col-span-8 xl:col-span-8 2xl:col-span-9): Project Header -> About the Project -> Project Progress -> Project Links -->
+                    <div class="lg:col-span-8 xl:col-span-8 2xl:col-span-9 space-y-5 w-full min-w-0">
+                        
                         <!-- 2. "About the Project" Section (Shifted to top, below project name and team name) -->
                         <div class="glass-card rounded-2xl p-4 sm:p-5 lg:p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl space-y-4" id="about-project-card">
                             
@@ -2132,6 +2611,12 @@ const TeamsView = (() => {
 
                     </div>
 
+                </div>
+                </div>
+
+                <!-- Page 2: Mentor Chat Tab Container -->
+                <div id="project-tab-mentor-content" class="${currentProjectTab === 'mentor_chat' ? '' : 'hidden'}">
+                    ${renderMentorChatPage(lead, isLead, isMember)}
                 </div>
             </div>
 
@@ -2439,6 +2924,43 @@ const TeamsView = (() => {
     function bindDetailEvents(lead) {
         const backBtn = document.getElementById('team-back-btn');
         if (backBtn) backBtn.onclick = goBack;
+
+        const isLead = isLeadForTeam(lead.id, lead, teamMembers);
+        const profile = ICCSupabase.getProfile();
+        const isMember = profile?.memberships?.map(Number).includes(Number(lead.id));
+
+        // Tab Switchers (Overview vs Mentor Chat)
+        const overviewTabBtn = document.getElementById('project-tab-overview-btn');
+        const mentorTabBtn = document.getElementById('project-tab-mentor-btn');
+        const overviewContent = document.getElementById('project-tab-overview-content');
+        const mentorContent = document.getElementById('project-tab-mentor-content');
+
+        const switchTab = (tab) => {
+            currentProjectTab = tab;
+            if (tab === 'overview') {
+                overviewTabBtn?.classList.remove('text-zinc-400', 'hover:text-white', 'hover:bg-zinc-800/60');
+                overviewTabBtn?.classList.add('bg-emerald-600', 'text-white', 'shadow-md');
+                mentorTabBtn?.classList.remove('bg-amber-500', 'text-zinc-950', 'shadow-md', 'font-extrabold');
+                mentorTabBtn?.classList.add('text-zinc-400', 'hover:text-amber-400', 'hover:bg-zinc-800/60');
+                overviewContent?.classList.remove('hidden');
+                mentorContent?.classList.add('hidden');
+            } else {
+                mentorTabBtn?.classList.remove('text-zinc-400', 'hover:text-amber-400', 'hover:bg-zinc-800/60');
+                mentorTabBtn?.classList.add('bg-amber-500', 'text-zinc-950', 'shadow-md', 'font-extrabold');
+                overviewTabBtn?.classList.remove('bg-emerald-600', 'text-white', 'shadow-md');
+                overviewTabBtn?.classList.add('text-zinc-400', 'hover:text-white', 'hover:bg-zinc-800/60');
+                mentorContent?.classList.remove('hidden');
+                overviewContent?.classList.add('hidden');
+                initMentorChat(lead, isLead, isMember);
+            }
+        };
+
+        if (overviewTabBtn) overviewTabBtn.onclick = () => switchTab('overview');
+        if (mentorTabBtn) mentorTabBtn.onclick = () => switchTab('mentor_chat');
+
+        if (currentProjectTab === 'mentor_chat') {
+            initMentorChat(lead, isLead, isMember);
+        }
         const floatingBackBtn = document.getElementById('team-floating-back-btn');
         if (floatingBackBtn) floatingBackBtn.onclick = goBack;
         document.getElementById('lead-profile-link')?.addEventListener('click', () => {

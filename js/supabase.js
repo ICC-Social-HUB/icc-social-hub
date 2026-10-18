@@ -3301,7 +3301,128 @@ const ICCSupabase = (() => {
         };
     }
 
+    // ==================== PROJECT MENTOR CHAT API ====================
+
+    async function canUserAccessProjectMentorChat(projectId) {
+        if (!currentUser) return false;
+        if (isMentor() || isAdmin() || isSuperAdmin()) return true;
+        return await canUserAccessTeamChat(projectId);
+    }
+
+    function canAccessProjectMentorChat(projectId) {
+        if (!currentUser) return false;
+        if (isMentor() || isAdmin() || isSuperAdmin()) return true;
+        return canAccessTeamChat(projectId);
+    }
+
+    async function fetchProjectMentorMessages(projectId) {
+        if (!client) return { data: [], error: null };
+        try {
+            const { data, error } = await client
+                .from('project_mentor_messages')
+                .select(`
+                    id,
+                    project_id,
+                    sender_id,
+                    message,
+                    reply_to_id,
+                    created_at,
+                    profiles:sender_id (id, username, full_name, avatar_url, role)
+                `)
+                .eq('project_id', projectId)
+                .order('created_at', { ascending: true });
+
+            if (error) {
+                console.error('fetchProjectMentorMessages error:', error);
+                return { data: [], error };
+            }
+            return { data: data || [], error: null };
+        } catch (err) {
+            console.error('fetchProjectMentorMessages exception:', err);
+            return { data: [], error: err };
+        }
+    }
+
+    async function sendProjectMentorMessage(projectId, message, replyToId = null) {
+        if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        try {
+            const payload = {
+                project_id: projectId,
+                sender_id: currentUser.id,
+                message: message.trim()
+            };
+            if (replyToId) payload.reply_to_id = replyToId;
+
+            const { data, error } = await client
+                .from('project_mentor_messages')
+                .insert(payload)
+                .select(`
+                    id,
+                    project_id,
+                    sender_id,
+                    message,
+                    reply_to_id,
+                    created_at,
+                    profiles:sender_id (id, username, full_name, avatar_url, role)
+                `)
+                .single();
+
+            return { data, error };
+        } catch (err) {
+            return { data: null, error: err };
+        }
+    }
+
+    async function deleteProjectMentorMessage(messageId) {
+        if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        try {
+            const { error } = await client
+                .from('project_mentor_messages')
+                .delete()
+                .eq('id', messageId);
+            return { error };
+        } catch (err) {
+            return { error: err };
+        }
+    }
+
+    function subscribeToProjectMentorChat(projectId, onEvent) {
+        if (!client) return null;
+        const channelName = `project-mentor-chat-${projectId}`;
+        const channel = client.channel(channelName)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'project_mentor_messages',
+                filter: `project_id=eq.${projectId}`
+            }, async (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    let senderProfile = null;
+                    try {
+                        const { data } = await client.from('profiles')
+                            .select('id, username, full_name, avatar_url, role')
+                            .eq('id', payload.new.sender_id)
+                            .maybeSingle();
+                        senderProfile = data;
+                    } catch (e) {}
+                    if (onEvent) onEvent({ type: 'INSERT', message: { ...payload.new, profiles: senderProfile } });
+                } else if (payload.eventType === 'DELETE') {
+                    if (onEvent) onEvent({ type: 'DELETE', messageId: payload.old.id });
+                }
+            })
+            .subscribe();
+
+        activeChannels.push({ name: channelName, channel });
+        return () => {
+            try {
+                client.removeChannel(channel);
+                activeChannels = activeChannels.filter(c => c.name !== channelName);
+            } catch (e) {}
+        };
+    }
+
     // ==================== HELPERS ====================
+
 
     function getUser() { return currentUser; }
     function getProfile() { return currentProfile; }
@@ -3364,7 +3485,10 @@ const ICCSupabase = (() => {
         createProjectApplication, fetchMyProjectApplications, fetchAllProjectApplications, fetchApplicationDetails,
         addApplicationComment, requestApplicationChanges, resubmitProjectApplication, approveProjectApplication,
         fetchMentorDashboardSummary, fetchProjectForMentor, filterProjectFieldsForUser,
-        subscribeToProjectApplications, subscribeToApplicationComments
+        subscribeToProjectApplications, subscribeToApplicationComments,
+        // Project Mentor Chat API
+        fetchProjectMentorMessages, sendProjectMentorMessage, deleteProjectMentorMessage,
+        subscribeToProjectMentorChat, canAccessProjectMentorChat, canUserAccessProjectMentorChat
     };
 })();
 

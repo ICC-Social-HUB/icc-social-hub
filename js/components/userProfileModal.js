@@ -104,11 +104,16 @@ const UserProfileModal = (() => {
                         </div>
 
                         <div class="text-center space-y-2">
-                            <h1 class="font-heading font-bold text-xl sm:text-2xl text-white flex items-center justify-center gap-1.5 break-words px-2 leading-tight">${escapeHtml(profile.full_name || 'User')}${isLeadOfTeam ? ICC_CONFIG.VERIFIED_TICK : ''}</h1>
+                            <h1 class="font-heading font-bold text-xl sm:text-2xl text-white flex items-center justify-center gap-1.5 break-words px-2 leading-tight">${escapeHtml(profile.full_name || 'User')}${ICC_CONFIG.getRoleTick(profile) || (isLeadOfTeam ? ICC_CONFIG.VERIFIED_TICK : '')}</h1>
                             ${profile.username ? `<p class="text-sm text-zinc-400 font-medium">@${escapeHtml(profile.username)}</p>` : ''}
                             
                             <!-- Prominent / Unique Leader Tag OR Member Tag below name -->
-                            ${isLeadOfTeam ? `
+                            ${profile.role === 'mentor' ? `
+                                <div class="inline-flex items-center justify-center gap-1.5 mt-1 text-xs font-extrabold text-amber-400 tracking-wide uppercase select-none">
+                                    ${ICC_CONFIG.MENTOR_TICK}
+                                    <span>Verified ICC Mentor</span>
+                                </div>
+                            ` : (isLeadOfTeam ? `
                                 <div class="inline-flex items-center justify-center gap-1.5 mt-1 text-xs font-extrabold text-amber-400 tracking-wide uppercase select-none">
                                     <svg class="w-3.5 h-3.5 text-amber-400 fill-current flex-shrink-0" viewBox="0 0 20 20">
                                         <path d="M2.5 14.5l1.5-7.5 4 4.5 4-6 4 6 4-4.5 1.5 7.5h-19z"/>
@@ -119,12 +124,13 @@ const UserProfileModal = (() => {
                                 <div class="inline-flex items-center justify-center mt-1 text-xs font-semibold text-emerald-400">
                                     ${escapeHtml(displayTag)}
                                 </div>
-                            ` : '')}
+                            ` : ''))}
 
                             <div class="flex flex-wrap items-center justify-center gap-2.5 pt-2">
                                 ${profile.year ? `<span class="text-xs font-semibold text-rose-400">${escapeHtml(profile.year)}</span>` : ''}
                                 ${profile.branch ? `<span class="text-xs font-semibold text-blue-400">${escapeHtml(profile.branch)}</span>` : ''}
                                 ${teamLead ? `<span class="text-xs text-zinc-300 font-medium">${teamLead.team}</span>` : ''}
+                                ${profile.role === 'mentor' ? `<span class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1">Mentor ${ICC_CONFIG.MENTOR_TICK}</span>` : ''}
                                 ${profile.role === 'lead' ? `<span class="text-xs font-bold uppercase tracking-wider text-red-400">${profile.role}</span>` : ''}
                                 ${profile.role === 'admin' ? `<span class="text-xs font-bold uppercase tracking-wider text-amber-400">Admin</span>` : ''}
                             </div>

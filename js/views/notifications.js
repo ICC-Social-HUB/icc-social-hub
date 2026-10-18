@@ -112,8 +112,8 @@ const NotificationsView = (() => {
     }
 
     function formatBody(n) {
-        const isVerified = n.actor?.role === 'lead';
-        const actor = `<span class="text-white font-semibold">${escapeHtml(n.actor_name || 'Someone')}${isVerified ? ICC_CONFIG.VERIFIED_TICK : ''}</span>`;
+        const tick = ICC_CONFIG.getRoleTick(n.actor) || (n.actor?.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : '');
+        const actor = `<span class="text-white font-semibold">${escapeHtml(n.actor_name || 'Someone')}${tick}</span>`;
         switch (n.type) {
             case 'like': return `${actor} liked your post`;
             case 'comment': return `${actor} commented on your post: <span class="text-zinc-500 italic">"${escapeHtml(n.body?.slice(0, 50))}${n.body?.length > 50 ? '...' : ''}"</span>`;

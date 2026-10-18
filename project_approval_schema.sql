@@ -525,4 +525,104 @@ CREATE POLICY "Users, leads, and admins can delete join data"
         )
     );
 
+-- =========================================================================
+-- 18. Project Mentor Messages (Dedicated Mentor & Team Chat per Project)
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS public.project_mentor_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id BIGINT NOT NULL REFERENCES public.core_leads(id) ON DELETE CASCADE,
+    sender_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    reply_to_id UUID REFERENCES public.project_mentor_messages(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE public.project_mentor_messages ENABLE ROW LEVEL SECURITY;
+
+-- Indexes for lightning fast lookups
+CREATE INDEX IF NOT EXISTS idx_pmm_project_id ON public.project_mentor_messages(project_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_pmm_sender_id ON public.project_mentor_messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_pmm_reply_to ON public.project_mentor_messages(reply_to_id);
+
+-- Enable Realtime
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+          AND schemaname = 'public' 
+          AND tablename = 'project_mentor_messages'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.project_mentor_messages;
+    END IF;
+END $$;
+
+-- 1. SELECT: Team members, Project Leader, Mentors, and Admins can view messages
+DROP POLICY IF EXISTS "Team members and mentors can view project mentor messages" ON public.project_mentor_messages;
+CREATE POLICY "Team members and mentors can view project mentor messages"
+    ON public.project_mentor_messages FOR SELECT
+    TO authenticated
+    USING (
+        public.is_mentor_or_admin(auth.uid())
+        OR EXISTS (
+            SELECT 1 FROM public.core_leads l
+            WHERE l.id = project_mentor_messages.project_id
+              AND (
+                  l.lead_user_id = auth.uid()
+                  OR EXISTS (
+                      SELECT 1 FROM public.profiles p
+                      WHERE p.id = auth.uid()
+                        AND (
+                            p.team_id = l.id
+                            OR l.id = ANY(p.memberships)
+                        )
+                  )
+              )
+        )
+    );
+
+-- 2. INSERT: Team members, Project Leader, Mentors, and Admins can send messages and replies
+DROP POLICY IF EXISTS "Team members and mentors can insert project mentor messages" ON public.project_mentor_messages;
+CREATE POLICY "Team members and mentors can insert project mentor messages"
+    ON public.project_mentor_messages FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        auth.uid() = sender_id
+        AND (
+            public.is_mentor_or_admin(auth.uid())
+            OR EXISTS (
+                SELECT 1 FROM public.core_leads l
+                WHERE l.id = project_mentor_messages.project_id
+                  AND (
+                      l.lead_user_id = auth.uid()
+                      OR EXISTS (
+                          SELECT 1 FROM public.profiles p
+                          WHERE p.id = auth.uid()
+                            AND (
+                                p.team_id = l.id
+                                OR l.id = ANY(p.memberships)
+                            )
+                      )
+                  )
+            )
+        )
+    );
+
+-- 3. DELETE: Author of message, Mentors/Admins, or Project Leader can delete messages
+DROP POLICY IF EXISTS "Author, mentors, or lead can delete project mentor messages" ON public.project_mentor_messages;
+CREATE POLICY "Author, mentors, or lead can delete project mentor messages"
+    ON public.project_mentor_messages FOR DELETE
+    TO authenticated
+    USING (
+        auth.uid() = sender_id
+        OR public.is_mentor_or_admin(auth.uid())
+        OR EXISTS (
+            SELECT 1 FROM public.core_leads l
+            WHERE l.id = project_mentor_messages.project_id
+              AND l.lead_user_id = auth.uid()
+        )
+    );
+
+
 

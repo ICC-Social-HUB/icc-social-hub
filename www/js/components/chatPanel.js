@@ -50,7 +50,7 @@ const ChatPanel = (() => {
                     ${partnerProfile.avatar_url ? `<img src="${partnerProfile.avatar_url}" class="w-full h-full object-cover" data-full-image="${partnerProfile.avatar_url}">` : (partnerProfile.full_name || '?').charAt(0).toUpperCase()}
                 </button>
                 <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-sm text-white truncate">${partnerProfile.username || partnerProfile.full_name || 'User'}${partnerProfile.role === 'lead' ? ICC_CONFIG.VERIFIED_TICK : ''}</p>
+                    <p class="font-semibold text-sm text-white truncate flex items-center">${partnerProfile.username || partnerProfile.full_name || 'User'}${ICC_CONFIG.getRoleTick(partnerProfile)}</p>
                     <p class="text-[11px] text-[#708499] truncate">${partnerProfile.team_id ? getTeamName(partnerProfile.team_id) : 'ICC Member'}</p>
                 </div>
             </div>
