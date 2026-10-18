@@ -1358,10 +1358,11 @@ const ICCSupabase = (() => {
         }
         const role = (target?.role || '').toLowerCase().trim();
         const isSuper = role === 'super_admin' || role === 'superadmin' || target?.email === 'iccsocialhub@gmail.com';
-        const isAdmin = role === 'admin';
+        const isAdminRole = role === 'admin';
+        const isMentorRole = role === 'mentor';
 
-        // Non-admins have no admin permissions
-        if (!isSuper && !isAdmin) {
+        // Non-admins and non-mentors have no admin permissions
+        if (!isSuper && !isAdminRole && !isMentorRole) {
             return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, all: false };
         }
 
@@ -1370,9 +1371,14 @@ const ICCSupabase = (() => {
             return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, all: true };
         }
 
-        // Backward compatibility: If admin_permissions is undefined/null, grant all by default
-        if (target.admin_permissions === undefined || target.admin_permissions === null) {
+        // Standard Admins: Backward compatibility: If admin_permissions is undefined/null, grant all by default
+        if (isAdminRole && (target.admin_permissions === undefined || target.admin_permissions === null)) {
             return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, all: true };
+        }
+
+        // Mentors: if admin_permissions is undefined/null, grant none by default
+        if (isMentorRole && (target.admin_permissions === undefined || target.admin_permissions === null)) {
+            return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, all: false };
         }
 
         // If stored as JSON object
@@ -1380,7 +1386,10 @@ const ICCSupabase = (() => {
             const p = target.admin_permissions;
             const keys = Object.keys(p);
             if (keys.length === 0) {
-                return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, all: true };
+                if (isAdminRole) {
+                    return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, all: true };
+                }
+                return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, all: false };
             }
 
             // Backward compatibility for legacy 'users' key (before users_edit/users_export split)
@@ -1591,11 +1600,11 @@ const ICCSupabase = (() => {
         }
     }
 
-    async function setMentorRole(userId, isMentor) {
+    async function setMentorRole(userId, isMentor, permissions = null) {
         if (!client || !isSuperAdmin()) {
             return { error: { message: 'Unauthorized: Only Super Admins can alter Mentor roles.' } };
         }
-        return setAdminRole(userId, isMentor ? 'mentor' : 'member');
+        return setAdminRole(userId, isMentor ? 'mentor' : 'member', permissions);
     }
 
 
@@ -3598,9 +3607,16 @@ const ICCSupabase = (() => {
     function isConfigured() { return client !== null; }
     function getClient() { return client; }
 
-    function isAdmin() {
-        const role = (currentProfile?.role || '').toLowerCase().trim();
-        return role === 'admin' || role === 'super_admin' || role === 'superadmin';
+    function isAdmin(prof = currentProfile) {
+        const target = prof || currentProfile;
+        if (!target && !currentUser) return false;
+        const role = (target?.role || '').toLowerCase().trim();
+        if (role === 'admin' || role === 'super_admin' || role === 'superadmin') return true;
+        if (role === 'mentor') {
+            const perms = getAdminPermissions(target);
+            return !!(perms.broadcast || perms.moderate || perms.events || perms.leads || perms.users_edit || perms.users_export || perms.all);
+        }
+        return false;
     }
 
     function isMentor(prof = currentProfile) {

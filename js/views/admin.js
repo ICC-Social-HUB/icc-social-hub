@@ -868,10 +868,12 @@ const AdminView = (() => {
                             </div>
                         </div>
 
-                        <!-- Granular Permissions (Only for Standard Admin) -->
-                        <div id="appoint-perms-section" class="${appointingUserDraft?.targetRole !== 'admin' ? 'opacity-40 pointer-events-none' : ''} space-y-2.5">
+                        <!-- Granular Permissions (For Standard Admin & Mentors) -->
+                        <div id="appoint-perms-section" class="${(appointingUserDraft?.targetRole !== 'admin' && appointingUserDraft?.targetRole !== 'mentor') ? 'opacity-40 pointer-events-none' : ''} space-y-2.5">
                             <div class="flex items-center justify-between">
-                                <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-wider">Granular Feature Permissions</label>
+                                <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-wider">
+                                    Granular Admin Feature Permissions ${appointingUserDraft?.targetRole === 'mentor' ? '<span class="text-emerald-400 font-normal lowercase">(optional for mentors)</span>' : ''}
+                                </label>
                                 <label class="inline-flex items-center gap-2 cursor-pointer">
                                     <input type="checkbox" id="appoint-all-toggle" class="accent-blue-500" ${appointingUserDraft?.all ? 'checked' : ''}>
                                     <span class="text-[11px] text-zinc-300 font-medium">All Features (Full Access)</span>
@@ -1055,6 +1057,9 @@ const AdminView = (() => {
                                                 <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-300">🛡️ Super Admin</span>
                                             ` : (isMentorRole ? `
                                                 <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-300">🎓 Mentor</span>
+                                                ${(perms.all || perms.broadcast || perms.moderate || perms.events || perms.leads || perms.users_edit || perms.users_export) ? `
+                                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">👑 Admin Features Enabled</span>
+                                                ` : ''}
                                             ` : `
                                                 <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/15 text-blue-300">👑 Admin</span>
                                             `)}
@@ -1098,15 +1103,15 @@ const AdminView = (() => {
                                 </div>
                             ` : ''}
 
-                            <!-- Granular Feature Access Toggles (Standard Admins Only) -->
+                            <!-- Granular Feature Access Toggles (Standard Admins & Mentors) -->
                             ${isSuper ? '' : `
                             <div class="mt-4 pt-4 border-t border-zinc-800/80">
                                 <div class="space-y-3">
                                     <!-- Master Toggle -->
                                     <div class="flex items-center justify-between p-3 bg-zinc-950/70 rounded-xl border border-zinc-800">
                                         <div>
-                                            <span class="text-xs font-semibold text-white block">⚡ Master Toggle: Full Access (All Features)</span>
-                                            <span class="text-[10px] text-zinc-400">Grant or remove all 6 administrator permissions simultaneously</span>
+                                            <span class="text-xs font-semibold text-white block">⚡ Master Toggle: Full Access (All Admin Features)</span>
+                                            <span class="text-[10px] text-zinc-400">${isMentorRole ? 'Grant or remove administrator feature permissions for this mentor' : 'Grant or remove all 6 administrator permissions simultaneously'}</span>
                                         </div>
                                         <label class="switch-container">
                                             <input type="checkbox" class="switch-input admin-all-perm-toggle" data-user-id="${u.id}" data-name="${escapeHtml(fullName)}" ${perms.all ? 'checked' : ''}>
@@ -2531,20 +2536,21 @@ const AdminView = (() => {
 
             const roleToSet = appointingUserDraft.targetRole || (appointingUserDraft.isSuperAdmin ? 'super_admin' : 'admin');
             
+            const permsToSet = (roleToSet === 'super_admin') ? null : {
+                broadcast: !!appointingUserDraft.broadcast,
+                moderate: !!appointingUserDraft.moderate,
+                events: !!appointingUserDraft.events,
+                leads: !!appointingUserDraft.leads,
+                users_edit: !!appointingUserDraft.users_edit,
+                users_export: !!appointingUserDraft.users_export,
+                users: !!(appointingUserDraft.users_edit || appointingUserDraft.users_export),
+                all: !!appointingUserDraft.all
+            };
+
             let res;
             if (roleToSet === 'mentor') {
-                res = await ICCSupabase.setMentorRole(targetId, true);
+                res = await ICCSupabase.setMentorRole(targetId, true, permsToSet);
             } else {
-                const permsToSet = (roleToSet === 'super_admin') ? null : {
-                    broadcast: !!appointingUserDraft.broadcast,
-                    moderate: !!appointingUserDraft.moderate,
-                    events: !!appointingUserDraft.events,
-                    leads: !!appointingUserDraft.leads,
-                    users_edit: !!appointingUserDraft.users_edit,
-                    users_export: !!appointingUserDraft.users_export,
-                    users: !!(appointingUserDraft.users_edit || appointingUserDraft.users_export),
-                    all: !!appointingUserDraft.all
-                };
                 res = await ICCSupabase.setAdminRole(targetId, roleToSet, permsToSet);
             }
 
