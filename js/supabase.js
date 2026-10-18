@@ -1447,6 +1447,41 @@ const ICCSupabase = (() => {
     }
 
 
+    
+    async function fetchCoreProfiles() {
+        if (!client) {
+            try {
+                const cached = localStorage.getItem('icc_core_profiles_cache');
+                return cached ? JSON.parse(cached) : [];
+            } catch(e) { return []; }
+        }
+        try {
+            const { data, error } = await client
+                .from('profiles')
+                .select('id, full_name, username, avatar_url, role, email')
+                .in('role', ['admin', 'super_admin', 'superadmin', 'mentor'])
+                .order('full_name', { ascending: true });
+
+            if (error) {
+                console.warn('fetchCoreProfiles error:', error.message);
+                try {
+                    const cached = localStorage.getItem('icc_core_profiles_cache');
+                    return cached ? JSON.parse(cached) : [];
+                } catch(e) { return []; }
+            }
+            if (data && data.length > 0) {
+                try { localStorage.setItem('icc_core_profiles_cache', JSON.stringify(data)); } catch(e) {}
+            }
+            return data || [];
+        } catch(e) {
+            console.error('fetchCoreProfiles exception:', e);
+            try {
+                const cached = localStorage.getItem('icc_core_profiles_cache');
+                return cached ? JSON.parse(cached) : [];
+            } catch(err) { return []; }
+        }
+    }
+
     function canManageMom(prof = currentProfile) {
         const target = prof || currentProfile;
         if (!target && !currentUser) return false;
@@ -4175,7 +4210,7 @@ const ICCSupabase = (() => {
         fetchProjectMentorMessages, fetchAllProjectMentorMessages, sendProjectMentorMessage, deleteProjectMentorMessage,
         subscribeToProjectMentorChat, canAccessProjectMentorChat, canUserAccessProjectMentorChat,
         // Core Space & Minutes of Meeting (MoM) API
-        fetchMinutesOfMeeting, createMinutesOfMeeting, updateMinutesOfMeeting, deleteMinutesOfMeeting, canManageMom
+        fetchCoreProfiles, fetchMinutesOfMeeting, createMinutesOfMeeting, updateMinutesOfMeeting, deleteMinutesOfMeeting, canManageMom
     };
 })();
 
