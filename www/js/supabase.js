@@ -1145,7 +1145,27 @@ const ICCSupabase = (() => {
             }
         }
 
-        const { data, error } = await client.from('core_leads').update(fields).eq('id', id).select();
+        let { data, error } = await client.from('core_leads').update(fields).eq('id', id).select();
+        
+        // Graceful fallback if links column has not been added to core_leads yet
+        if (error && error.message && error.message.includes('links') && 'links' in fields) {
+            console.warn('links column missing in core_leads, falling back to storing in milestones.project_links');
+            const fallbackFields = { ...fields };
+            const linksData = fallbackFields.links;
+            delete fallbackFields.links;
+            
+            const leadItem = (typeof CORE_LEADS !== 'undefined' && Array.isArray(CORE_LEADS)) ? CORE_LEADS.find(l => Number(l.id) === Number(id)) : null;
+            let currentMilestones = fallbackFields.milestones || leadItem?.milestones || {};
+            if (typeof currentMilestones === 'string') {
+                try { currentMilestones = JSON.parse(currentMilestones); } catch(e) { currentMilestones = {}; }
+            }
+            fallbackFields.milestones = { ...currentMilestones, project_links: linksData };
+            
+            const fallbackRes = await client.from('core_leads').update(fallbackFields).eq('id', id).select();
+            data = fallbackRes.data;
+            error = fallbackRes.error;
+        }
+
         return { data: data && data.length > 0 ? data[0] : null, error };
     }
 

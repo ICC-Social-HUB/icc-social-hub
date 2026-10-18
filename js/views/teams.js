@@ -598,6 +598,169 @@ const TeamsView = (() => {
         </section>`;
     }
 
+    function getProjectLinks(lead) {
+        if (!lead) return [];
+        let links = lead.links;
+        if (typeof links === 'string') {
+            try { links = JSON.parse(links); } catch (e) { links = null; }
+        }
+        if (Array.isArray(links) && links.length > 0) {
+            return links.filter(l => l && l.url && String(l.url).trim().length > 0);
+        }
+
+        let milestones = lead.milestones || {};
+        if (typeof milestones === 'string') {
+            try { milestones = JSON.parse(milestones); } catch (e) { milestones = {}; }
+        }
+        let projectLinks = milestones.project_links;
+        if (typeof projectLinks === 'string') {
+            try { projectLinks = JSON.parse(projectLinks); } catch (e) { projectLinks = null; }
+        }
+        if (Array.isArray(projectLinks) && projectLinks.length > 0) {
+            return projectLinks.filter(l => l && l.url && String(l.url).trim().length > 0);
+        }
+
+        return [];
+    }
+
+    function formatExternalUrl(url) {
+        if (!url) return '#';
+        const trimmed = String(url).trim();
+        if (!/^https?:\/\//i.test(trimmed)) {
+            return 'https://' + trimmed;
+        }
+        return trimmed;
+    }
+
+    function detectLinkType(url, fallbackType = 'custom') {
+        if (!url) return fallbackType;
+        const lower = String(url).toLowerCase();
+        if (lower.includes('github.com')) return 'github';
+        if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'youtube';
+        if (lower.includes('figma.com')) return 'figma';
+        if (lower.includes('docs.google.com') || lower.includes('drive.google.com')) return 'doc';
+        return fallbackType || 'link';
+    }
+
+    function getDisplayUrl(url) {
+        if (!url) return '';
+        try {
+            const formatted = formatExternalUrl(url);
+            const u = new URL(formatted);
+            const path = u.pathname.length > 1 ? (u.pathname.length > 25 ? u.pathname.substring(0, 25) + '…' : u.pathname) : '';
+            return u.hostname + path;
+        } catch (e) {
+            return String(url).replace(/^https?:\/\//i, '').split('/')[0];
+        }
+    }
+
+    function renderLinkCard(link) {
+        const type = detectLinkType(link.url, link.type);
+        const href = formatExternalUrl(link.url);
+        const displayUrl = getDisplayUrl(link.url);
+
+        let iconHtml = '';
+        let borderHover = 'hover:border-zinc-700/80 hover:shadow-zinc-900/50';
+        let badgeText = '';
+
+        if (type === 'github') {
+            iconHtml = `
+            <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>`;
+            borderHover = 'hover:border-zinc-500 hover:shadow-black/60';
+            badgeText = 'GitHub';
+        } else if (type === 'youtube') {
+            iconHtml = `
+            <svg class="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>`;
+            borderHover = 'hover:border-red-500/40 hover:shadow-red-950/30';
+            badgeText = 'YouTube';
+        } else if (type === 'figma') {
+            iconHtml = `
+            <svg class="w-5 h-5 text-purple-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 24c2.208 0 4-1.792 4-4v-4H8c-2.208 0-4 1.792-4 4s1.792 4 4 4zM4 12c0-2.208 1.792-4 4-4h4v8H8c-2.208 0-4-1.792-4-4zm0-8c0-2.208 1.792-4 4-4h4v8H8C5.792 8 4 6.208 4 4zm8-4h4c2.208 0 4 1.792 4 4s-1.792 4-4 4h-4V0zm0 8h4c2.208 0 4 1.792 4 4s-1.792 4-4 4h-4V8z"/>
+            </svg>`;
+            borderHover = 'hover:border-purple-500/40 hover:shadow-purple-950/30';
+            badgeText = 'Figma';
+        } else {
+            iconHtml = `
+            <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+            </svg>`;
+            borderHover = 'hover:border-emerald-500/40 hover:shadow-emerald-950/30';
+            badgeText = 'Link';
+        }
+
+        return `
+        <a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" 
+           class="flex items-center justify-between p-3.5 rounded-xl border border-zinc-800/80 bg-zinc-950/50 hover:bg-zinc-900/80 ${borderHover} transition-all duration-200 group cursor-pointer shadow-sm">
+            <div class="flex items-center gap-3 min-w-0 pr-2">
+                <div class="w-10 h-10 rounded-xl bg-zinc-900/90 border border-zinc-800 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform shadow-inner">
+                    ${iconHtml}
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <p class="text-xs sm:text-sm font-bold text-white group-hover:text-emerald-400 transition-colors truncate leading-tight">${escapeHtml(link.name || 'Project Resource')}</p>
+                        ${badgeText ? `<span class="px-1.5 py-0.2 text-[9px] font-semibold rounded bg-zinc-900 text-zinc-400 border border-zinc-800">${badgeText}</span>` : ''}
+                    </div>
+                    <p class="text-[11px] text-zinc-500 truncate mt-1 group-hover:text-zinc-400 transition-colors">${escapeHtml(displayUrl)}</p>
+                </div>
+            </div>
+            <div class="p-1.5 rounded-lg text-zinc-500 group-hover:text-emerald-400 group-hover:bg-emerald-500/10 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                </svg>
+            </div>
+        </a>`;
+    }
+
+    function renderProjectLinksSection(lead, isLead) {
+        const validLinks = getProjectLinks(lead);
+        
+        // If links are not pasted, it shouldn't show in the main modal
+        if (validLinks.length === 0 && !isLead) {
+            return '';
+        }
+
+        return `
+        <div class="glass-card rounded-2xl p-5 sm:p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl space-y-3.5" id="project-links-card">
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                    </svg>
+                    <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400">Project Links & Resources</h3>
+                    ${validLinks.length > 0 ? `<span class="px-2 py-0.5 bg-zinc-900 border border-zinc-800 rounded-full text-[10px] font-semibold text-zinc-400">${validLinks.length}</span>` : ''}
+                </div>
+                ${isLead ? `
+                <button id="manage-links-btn" type="button" class="flex items-center gap-1.5 px-3 py-1 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-emerald-400 border border-zinc-800 hover:border-emerald-500/40 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-sm active:scale-95" title="Manage Project Links">
+                    <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span>${validLinks.length > 0 ? 'Edit Links' : 'Add Links'}</span>
+                </button>
+                ` : ''}
+            </div>
+
+            ${validLinks.length > 0 ? `
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                ${validLinks.map(link => renderLinkCard(link)).join('')}
+            </div>
+            ` : isLead ? `
+            <div class="p-4 rounded-xl border border-dashed border-zinc-800/80 bg-zinc-950/40 text-center">
+                <p class="text-xs text-zinc-400 mb-2.5">No links added yet. Add your GitHub repository, YouTube video, or documentation.</p>
+                <button type="button" onclick="document.getElementById('manage-links-btn')?.click()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-emerald-400 border border-zinc-800 hover:border-emerald-500/40 rounded-xl text-xs font-semibold transition-all cursor-pointer">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    <span>Add GitHub, YouTube & Links</span>
+                </button>
+            </div>
+            ` : ''}
+        </div>
+        `;
+    }
+
     function renderDetail(lead) {
         const user = ICCSupabase.getUser();
         const profile = ICCSupabase.getProfile();
@@ -605,6 +768,11 @@ const TeamsView = (() => {
         const isPending = profile?.pending_teams?.map(Number).includes(Number(lead.id));
         const isLead = isLeadForTeam(lead.id, lead, teamMembers);
         const memberTags = getMemberTags(lead.id);
+
+        const validLinks = getProjectLinks(lead);
+        const githubLink = validLinks.find(l => detectLinkType(l.url, l.type) === 'github');
+        const youtubeLink = validLinks.find(l => detectLinkType(l.url, l.type) === 'youtube');
+        const customLinks = validLinks.filter(l => l !== githubLink && l !== youtubeLink);
 
         return `
         <section class="min-h-screen relative pb-16" id="team-detail-section">
@@ -627,7 +795,7 @@ const TeamsView = (() => {
                 <!-- 2-Column Main Workspace Grid -->
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                     
-                    <!-- Left Column (lg:col-span-7 xl:col-span-8): Project Name & Team Name -> About the Project -> Project Progress -->
+                    <!-- Left Column (lg:col-span-7 xl:col-span-8): Project Name & Team Name -> About the Project -> Project Links -> Project Progress -->
                     <div class="lg:col-span-7 xl:col-span-8 space-y-5">
                         
                         <!-- 1. Project Name & Team Name Section (Shifted to left, compact) -->
@@ -684,12 +852,20 @@ const TeamsView = (() => {
                                 <div class="flex items-center justify-between gap-3">
                                     <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400">About the Project</h3>
                                     ${isLead ? `
-                                    <button id="edit-about-btn" class="flex items-center gap-1.5 px-3 py-1 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-emerald-400 border border-zinc-800 hover:border-emerald-500/40 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-sm active:scale-95" title="Edit About the Project">
-                                        <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                        </svg>
-                                        <span>Edit</span>
-                                    </button>
+                                    <div class="flex items-center gap-2">
+                                        <button id="manage-links-header-btn" type="button" class="flex items-center gap-1.5 px-3 py-1 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-emerald-400 border border-zinc-800 hover:border-emerald-500/40 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-sm active:scale-95" title="Manage Project Links">
+                                            <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                                            </svg>
+                                            <span>${validLinks.length > 0 ? 'Links (' + validLinks.length + ')' : '+ Links'}</span>
+                                        </button>
+                                        <button id="edit-about-btn" class="flex items-center gap-1.5 px-3 py-1 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-emerald-400 border border-zinc-800 hover:border-emerald-500/40 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-sm active:scale-95" title="Edit About the Project">
+                                            <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                            </svg>
+                                            <span>Edit</span>
+                                        </button>
+                                    </div>
                                     ` : ''}
                                 </div>
 
@@ -779,7 +955,10 @@ const TeamsView = (() => {
                             ` : ''}
                         </div>
 
-                        <!-- 3. Project Progress Section (Below "About the Project") -->
+                        <!-- 3. Project Links & Resources Section (Only shown if links exist, or lead edit trigger) -->
+                        ${renderProjectLinksSection(lead, isLead)}
+
+                        <!-- 4. Project Progress Section (Below "About the Project" and Links) -->
                         <div id="project-progress-container">
                             ${renderMilestones(lead, isLead)}
                         </div>
@@ -860,6 +1039,12 @@ const TeamsView = (() => {
                                     <div><label class="block text-xs font-medium text-zinc-400 mb-1">Project Avatar / Icon (Optional)</label><input type="file" id="lead-avatar-input" accept="image/jpeg, image/png, image/webp" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
                                     <div><label class="block text-xs font-medium text-zinc-400 mb-1">Project Overview & Objectives</label><textarea id="lead-bio" rows="3" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${lead.bio}</textarea></div>
                                     <div><label class="block text-xs font-medium text-zinc-400 mb-1">Specialties & Tech Stack (comma-separated)</label><input type="text" id="lead-specialties" value="${lead.specialties.join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                                    <div class="pt-1">
+                                        <button type="button" id="manage-links-config-btn" class="w-full py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-xs font-semibold text-zinc-300 hover:text-emerald-400 transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
+                                            <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                                            <span>Manage GitHub, YouTube & Links</span>
+                                        </button>
+                                    </div>
                                     <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold mt-2 transition-all shadow-lg shadow-emerald-600/20">Save Project Configuration</button>
                                 </form>
                             </div>
@@ -870,6 +1055,87 @@ const TeamsView = (() => {
 
                 </div>
             </div>
+
+            ${isLead ? `
+            <!-- Manage Links Modal -->
+            <div id="links-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm hidden">
+                <div class="bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl animate-zoom-in">
+                    <div class="p-4 sm:p-5 border-b border-zinc-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-heading font-bold text-base text-white">Project Links & Resources</h3>
+                                <p class="text-[11px] text-zinc-400">Add or edit your GitHub repo, YouTube demos, and custom links</p>
+                            </div>
+                        </div>
+                        <button id="close-links-modal" type="button" class="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+
+                    <form id="manage-links-form" class="p-4 sm:p-5 max-h-[70vh] overflow-y-auto space-y-4">
+                        <!-- GitHub Field -->
+                        <div class="p-3 bg-zinc-950/60 border border-zinc-800 rounded-xl space-y-2">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                                <label class="text-xs font-bold text-zinc-200">GitHub Repository</label>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <input type="text" id="link-github-name" placeholder="Name (e.g. GitHub Repo)" class="form-input text-xs px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white" value="${escapeHtml(githubLink?.name || 'GitHub Repository')}">
+                                <input type="text" id="link-github-url" placeholder="https://github.com/..." class="form-input text-xs sm:col-span-2 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white" value="${escapeHtml(githubLink?.url || '')}">
+                            </div>
+                        </div>
+
+                        <!-- YouTube Field -->
+                        <div class="p-3 bg-zinc-950/60 border border-zinc-800 rounded-xl space-y-2">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                <label class="text-xs font-bold text-zinc-200">YouTube Video / Demo</label>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <input type="text" id="link-youtube-name" placeholder="Name (e.g. Project Demo)" class="form-input text-xs px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white" value="${escapeHtml(youtubeLink?.name || 'Demo Video')}">
+                                <input type="text" id="link-youtube-url" placeholder="https://youtube.com/watch?v=..." class="form-input text-xs sm:col-span-2 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white" value="${escapeHtml(youtubeLink?.url || '')}">
+                            </div>
+                        </div>
+
+                        <!-- Custom Links Section -->
+                        <div class="space-y-2.5 pt-1">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-zinc-300">Custom Links (Website, Docs, Figma)</span>
+                                <button type="button" id="add-custom-link-row-btn" class="flex items-center gap-1 px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-emerald-400 hover:text-emerald-300 rounded-lg text-xs font-semibold cursor-pointer transition-colors">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                    <span>Add Link</span>
+                                </button>
+                            </div>
+
+                            <div id="custom-links-container" class="space-y-2">
+                                ${customLinks.map(c => `
+                                <div class="custom-link-row flex items-center gap-2 p-2 bg-zinc-950/60 border border-zinc-800 rounded-xl">
+                                    <input type="text" class="custom-link-name form-input text-xs w-1/3 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white" placeholder="Link Name (e.g. Docs)" value="${escapeHtml(c.name || '')}">
+                                    <input type="text" class="custom-link-url form-input text-xs flex-1 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white" placeholder="https://..." value="${escapeHtml(c.url || '')}">
+                                    <button type="button" class="remove-link-row-btn p-2 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer" title="Remove Link">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex items-center justify-end gap-2 pt-3 border-t border-zinc-800">
+                            <button type="button" id="cancel-links-modal" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer">
+                                Cancel
+                            </button>
+                            <button type="submit" id="save-links-submit-btn" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-600/20 cursor-pointer">
+                                Save Links
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            ` : ''}
         </section>`;
     }
 
@@ -1068,6 +1334,16 @@ const TeamsView = (() => {
         if (e) {
             e.preventDefault();
             e.stopPropagation();
+        }
+        const linksModal = document.getElementById('links-modal');
+        if (linksModal && !linksModal.classList.contains('hidden')) {
+            linksModal.classList.add('hidden');
+            return;
+        }
+        const progressModal = document.getElementById('progress-modal');
+        if (progressModal && !progressModal.classList.contains('hidden')) {
+            progressModal.classList.add('hidden');
+            return;
         }
         if (typeof AndroidNavigation !== 'undefined' && AndroidNavigation.hasOpenModal && AndroidNavigation.hasOpenModal()) {
             AndroidNavigation.closeActiveModal();
@@ -1333,6 +1609,107 @@ const TeamsView = (() => {
                 // Realtime subscription should handle the UI update, but we can also force a reload
                 await loadLeads();
                 const c = document.getElementById('app'); mount(c, lead.id);
+            }
+        });
+
+        // Project Links Modal Events
+        const openLinksModal = () => {
+            const modal = document.getElementById('links-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                try {
+                    if (!window.history.state?.modalOpen) {
+                        window.history.pushState({ modalOpen: true, modal: 'links' }, '');
+                    }
+                } catch (e) {}
+            }
+        };
+
+        const closeLinksModal = () => {
+            document.getElementById('links-modal')?.classList.add('hidden');
+        };
+
+        document.getElementById('manage-links-btn')?.addEventListener('click', openLinksModal);
+        document.getElementById('manage-links-header-btn')?.addEventListener('click', openLinksModal);
+        document.getElementById('manage-links-config-btn')?.addEventListener('click', openLinksModal);
+        document.getElementById('close-links-modal')?.addEventListener('click', closeLinksModal);
+        document.getElementById('cancel-links-modal')?.addEventListener('click', closeLinksModal);
+
+        // Add custom link row
+        document.getElementById('add-custom-link-row-btn')?.addEventListener('click', () => {
+            const container = document.getElementById('custom-links-container');
+            if (container) {
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = `
+                <div class="custom-link-row flex items-center gap-2 p-2 bg-zinc-950/60 border border-zinc-800 rounded-xl">
+                    <input type="text" class="custom-link-name form-input text-xs w-1/3 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white" placeholder="Link Name (e.g. Docs)" value="">
+                    <input type="text" class="custom-link-url form-input text-xs flex-1 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white" placeholder="https://..." value="">
+                    <button type="button" class="remove-link-row-btn p-2 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer" title="Remove Link">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                </div>`;
+                const row = wrapper.firstElementChild;
+                container.appendChild(row);
+                row.querySelector('.custom-link-name')?.focus();
+            }
+        });
+
+        // Delegate remove custom link row
+        document.getElementById('custom-links-container')?.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('.remove-link-row-btn');
+            if (removeBtn) {
+                removeBtn.closest('.custom-link-row')?.remove();
+            }
+        });
+
+        // Submit Links Form
+        document.getElementById('manage-links-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('save-links-submit-btn');
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving...'; }
+
+            const allLinks = [];
+
+            // 1. GitHub
+            const ghUrl = document.getElementById('link-github-url')?.value.trim();
+            const ghName = document.getElementById('link-github-name')?.value.trim() || 'GitHub Repository';
+            if (ghUrl) {
+                allLinks.push({ type: 'github', name: ghName, url: ghUrl });
+            }
+
+            // 2. YouTube
+            const ytUrl = document.getElementById('link-youtube-url')?.value.trim();
+            const ytName = document.getElementById('link-youtube-name')?.value.trim() || 'Demo Video';
+            if (ytUrl) {
+                allLinks.push({ type: 'youtube', name: ytName, url: ytUrl });
+            }
+
+            // 3. Custom links
+            document.querySelectorAll('.custom-link-row').forEach(row => {
+                const nameInput = row.querySelector('.custom-link-name');
+                const urlInput = row.querySelector('.custom-link-url');
+                const url = urlInput ? urlInput.value.trim() : '';
+                const name = nameInput ? nameInput.value.trim() : '';
+                if (url) {
+                    allLinks.push({
+                        type: detectLinkType(url, 'custom'),
+                        name: name || 'Project Resource',
+                        url: url
+                    });
+                }
+            });
+
+            const { error } = await ICCSupabase.updateLead(lead.id, { links: allLinks });
+
+            if (error) {
+                Toast.error('Failed to save links: ' + error.message);
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save Links'; }
+            } else {
+                Toast.success('Project links updated!');
+                closeLinksModal();
+                await loadLeads();
+                const c = document.getElementById('app');
+                mount(c, lead.id);
             }
         });
     }
