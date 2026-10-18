@@ -1486,8 +1486,16 @@ const ICCSupabase = (() => {
         const target = prof || currentProfile;
         if (!target && !currentUser) return false;
         if (isSuperAdmin(target)) return true;
+        
+        // Authorized admins: Only admins explicitly authorized by super admin with 'mom' permission can edit/add/delete
+        if (target.admin_permissions && typeof target.admin_permissions === 'object') {
+            return target.admin_permissions.mom === true;
+        }
+        if (Array.isArray(target.admin_permissions)) {
+            return target.admin_permissions.includes('mom');
+        }
         const perms = getAdminPermissions(target);
-        return !!(perms.all || perms.mom);
+        return perms.mom === true;
     }
 
     function updateMomCache(item, action = 'add') {

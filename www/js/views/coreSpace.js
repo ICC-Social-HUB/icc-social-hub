@@ -212,7 +212,7 @@ const CoreSpaceView = (() => {
                 </div>
 
                 <!-- Stats summary strip without borders -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5">
+                <div class="grid grid-cols-2 gap-3 mt-6 pt-5">
                     <div class="bg-zinc-950/50 rounded-xl p-3">
                         <span class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Meeting Logs</span>
                         <div class="flex items-baseline gap-1 mt-0.5">
@@ -224,20 +224,6 @@ const CoreSpaceView = (() => {
                         <span class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Latest Session</span>
                         <div class="mt-0.5">
                             <span class="text-xs font-semibold text-zinc-200">${allMoms[0]?.meeting_date || 'No logs yet'}</span>
-                        </div>
-                    </div>
-                    <div class="bg-zinc-950/50 rounded-xl p-3">
-                        <span class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Core Team</span>
-                        <div class="mt-0.5">
-                            <span class="text-xs font-semibold text-emerald-400">${coreProfiles.length} Members</span>
-                        </div>
-                    </div>
-                    <div class="bg-zinc-950/50 rounded-xl p-3">
-                        <span class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Your Core Role</span>
-                        <div class="mt-0.5">
-                            <span class="text-xs font-bold ${canManage ? 'text-rose-400' : 'text-zinc-400'}">
-                                ${canManage ? 'Full Manage (Edit/Delete)' : 'Core Reader'}
-                            </span>
                         </div>
                     </div>
                 </div>
