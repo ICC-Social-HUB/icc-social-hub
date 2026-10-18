@@ -1060,20 +1060,27 @@ const TeamsView = (() => {
                         <div id="app-comments-list" class="space-y-3 max-h-60 overflow-y-auto pr-1">
                             ${comments.length === 0 ? `
                                 <p class="text-xs text-zinc-500 py-3 text-center italic">No comments yet. When mentors review your proposal, their notes will appear here.</p>
-                            ` : comments.map(c => `
-                                <div class="p-3 rounded-xl border ${c.user_role === 'mentor' || c.user_role === 'superadmin' ? 'bg-emerald-950/20 border-emerald-500/30' : 'bg-zinc-900 border-zinc-800'} space-y-1">
+                            ` : comments.map(c => {
+                                const isFeedback = c.is_mentor_feedback || c.author?.role === 'mentor' || c.user_role === 'mentor';
+                                const authorName = c.author?.full_name || c.profiles?.full_name || (c.author_id === ICCSupabase.getUser()?.id ? 'You' : 'User');
+                                const authorRole = (c.author?.role || c.user_role || '').toLowerCase();
+                                const roleBadge = isFeedback ? '🎓 Mentor' : (authorRole === 'superadmin' || authorRole === 'super_admin' ? '⚡ Super Admin' : 'Applicant');
+                                const messageText = c.content || c.comment || '';
+                                return `
+                                <div class="p-3 rounded-xl border ${isFeedback ? 'bg-emerald-950/20 border-emerald-500/30' : 'bg-zinc-900 border-zinc-800'} space-y-1">
                                     <div class="flex items-center justify-between text-xs">
                                         <div class="flex items-center gap-2">
-                                            <span class="font-bold text-white">${escapeHtml(c.profiles?.full_name || 'User')}</span>
-                                            <span class="px-2 py-0.2 rounded-full text-[10px] font-bold ${c.user_role === 'mentor' || c.user_role === 'superadmin' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">
-                                                ${c.user_role === 'mentor' ? '🎓 Mentor' : c.user_role === 'superadmin' ? '⚡ Super Admin' : 'Applicant'}
+                                            <span class="font-bold text-white">${escapeHtml(authorName)}</span>
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isFeedback ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">
+                                                ${roleBadge}
                                             </span>
                                         </div>
-                                        <span class="text-[10px] text-zinc-500">${new Date(c.created_at).toLocaleString()}</span>
+                                        <span class="text-[10px] text-zinc-500">${c.created_at ? new Date(c.created_at).toLocaleString() : ''}</span>
                                     </div>
-                                    <p class="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap">${escapeHtml(c.comment)}</p>
+                                    <p class="text-xs text-zinc-200 leading-relaxed whitespace-pre-wrap">${escapeHtml(messageText)}</p>
                                 </div>
-                            `).join('')}
+                                `;
+                            }).join('')}
                         </div>
 
                         <!-- Post Reply Box -->
@@ -1094,16 +1101,21 @@ const TeamsView = (() => {
                         <div class="bg-zinc-950/70 border border-zinc-800 rounded-2xl p-4 sm:p-5 space-y-3">
                             <h5 class="font-heading font-bold text-xs uppercase tracking-wider text-zinc-400">Status History & Audit Trail</h5>
                             <div class="space-y-2 text-xs">
-                                ${history.map(h => `
+                                ${history.map(h => {
+                                    const fromSt = h.previous_status || h.from_status || 'Submitted';
+                                    const toSt = h.new_status || h.to_status || 'Pending Review';
+                                    const noteText = h.comment || h.notes || '';
+                                    return `
                                     <div class="flex items-start gap-2.5 p-2 bg-zinc-900/40 rounded-xl border border-zinc-800/40">
                                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0"></span>
                                         <div class="flex-1 min-w-0">
-                                            <p class="text-white font-medium">Status changed: <span class="text-zinc-400">${h.from_status || 'initial'}</span> → <span class="font-bold text-emerald-400">${h.to_status}</span></p>
-                                            ${h.notes ? `<p class="text-zinc-400 text-[11px] mt-0.5">${escapeHtml(h.notes)}</p>` : ''}
-                                            <p class="text-[10px] text-zinc-500 mt-0.5">${new Date(h.created_at).toLocaleString()}</p>
+                                            <p class="text-white font-medium">Status: <span class="text-zinc-400">${escapeHtml(fromSt)}</span> → <span class="font-bold text-emerald-400">${escapeHtml(toSt)}</span></p>
+                                            ${noteText ? `<p class="text-zinc-400 text-[11px] mt-0.5">${escapeHtml(noteText)}</p>` : ''}
+                                            <p class="text-[10px] text-zinc-500 mt-0.5">${h.created_at ? new Date(h.created_at).toLocaleString() : ''}</p>
                                         </div>
                                     </div>
-                                `).join('')}
+                                    `;
+                                }).join('')}
                             </div>
                         </div>
                     ` : ''}
@@ -1246,20 +1258,27 @@ const TeamsView = (() => {
                 return;
             }
 
-            list.innerHTML = comments.map(c => `
-                <div class="p-3 rounded-xl border ${c.user_role === 'mentor' || c.user_role === 'superadmin' ? 'bg-emerald-950/20 border-emerald-500/30' : 'bg-zinc-900 border-zinc-800'} space-y-1">
+            list.innerHTML = comments.map(c => {
+                const isFeedback = c.is_mentor_feedback || c.author?.role === 'mentor' || c.user_role === 'mentor';
+                const authorName = c.author?.full_name || c.profiles?.full_name || (c.author_id === ICCSupabase.getUser()?.id ? 'You' : 'User');
+                const authorRole = (c.author?.role || c.user_role || '').toLowerCase();
+                const roleBadge = isFeedback ? '🎓 Mentor' : (authorRole === 'superadmin' || authorRole === 'super_admin' ? '⚡ Super Admin' : 'Applicant');
+                const messageText = c.content || c.comment || '';
+                return `
+                <div class="p-3 rounded-xl border ${isFeedback ? 'bg-emerald-950/20 border-emerald-500/30' : 'bg-zinc-900 border-zinc-800'} space-y-1">
                     <div class="flex items-center justify-between text-xs">
                         <div class="flex items-center gap-2">
-                            <span class="font-bold text-white">${escapeHtml(c.profiles?.full_name || 'User')}</span>
-                            <span class="px-2 py-0.2 rounded-full text-[10px] font-bold ${c.user_role === 'mentor' || c.user_role === 'superadmin' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">
-                                ${c.user_role === 'mentor' ? '🎓 Mentor' : c.user_role === 'superadmin' ? '⚡ Super Admin' : 'Applicant'}
+                            <span class="font-bold text-white">${escapeHtml(authorName)}</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isFeedback ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">
+                                ${roleBadge}
                             </span>
                         </div>
-                        <span class="text-[10px] text-zinc-500">${new Date(c.created_at).toLocaleString()}</span>
+                        <span class="text-[10px] text-zinc-500">${c.created_at ? new Date(c.created_at).toLocaleString() : ''}</span>
                     </div>
-                    <p class="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap">${escapeHtml(c.comment)}</p>
+                    <p class="text-xs text-zinc-200 leading-relaxed whitespace-pre-wrap">${escapeHtml(messageText)}</p>
                 </div>
-            `).join('');
+                `;
+            }).join('');
             list.scrollTop = list.scrollHeight;
         }
 

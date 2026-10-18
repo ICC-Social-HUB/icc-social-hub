@@ -2709,10 +2709,23 @@ const ICCSupabase = (() => {
                     is_mentor_feedback: isMentorFeedback || (!isApplicant && isMentor()),
                     created_at: new Date().toISOString()
                 }])
-                .select(`*, author:author_id(id, full_name, avatar_url, role)`)
+                .select('*')
                 .maybeSingle();
 
             if (error) throw error;
+
+            if (data) {
+                const { data: prof } = await client
+                    .from('profiles')
+                    .select('id, full_name, avatar_url, role')
+                    .eq('id', currentUser.id)
+                    .maybeSingle();
+                data.author = prof || {
+                    id: currentUser.id,
+                    full_name: currentUser.user_metadata?.full_name || currentUser.email || 'You',
+                    role: isMentor() ? 'mentor' : 'member'
+                };
+            }
 
             // Notify counterpart
             if (!isApplicant) {
