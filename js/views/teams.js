@@ -1944,23 +1944,49 @@ const TeamsView = (() => {
     // PROJECT TASKS SECTION (MENTOR ASSIGNMENT & COMPLETION)
     // ==========================================
 
+    function getTaskStatus(task) {
+        if (!task) return 'pending';
+        if (task.status === 'completed') return 'completed';
+        if (task.deadline) {
+            const today = new Date().toISOString().split('T')[0];
+            const taskDl = String(task.deadline).split('T')[0];
+            if (today > taskDl) return 'not_completed';
+        }
+        return 'pending';
+    }
+
+    function formatDeadlineDate(dateStr) {
+        if (!dateStr) return '';
+        try {
+            const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } catch (e) {
+            return dateStr;
+        }
+    }
+
     function renderTasksPage(lead, isLead, isMember, isMentorOrAdmin) {
         const user = ICCSupabase.getUser();
-        const pendingCount = projectTasks.filter(t => t.status !== 'completed').length;
-        const completedCount = projectTasks.filter(t => t.status === 'completed').length;
+        const isMentorUser = ICCSupabase.isMentor();
+
+        const pendingCount = projectTasks.filter(t => getTaskStatus(t) === 'pending').length;
+        const notCompletedCount = projectTasks.filter(t => getTaskStatus(t) === 'not_completed').length;
+        const completedCount = projectTasks.filter(t => getTaskStatus(t) === 'completed').length;
 
         const filteredTasks = projectTasks.filter(t => {
-            if (currentTaskFilter === 'pending') return t.status !== 'completed';
-            if (currentTaskFilter === 'completed') return t.status === 'completed';
+            const st = getTaskStatus(t);
+            if (currentTaskFilter === 'pending') return st === 'pending';
+            if (currentTaskFilter === 'not_completed') return st === 'not_completed';
+            if (currentTaskFilter === 'completed') return st === 'completed';
             return true;
         });
 
         return `
-        <div class="glass-card rounded-2xl p-4 sm:p-6 lg:p-7 border border-zinc-800/80 bg-zinc-950/70 backdrop-blur-xl shadow-xl space-y-6">
+        <div class="rounded-2xl p-4 sm:p-6 lg:p-7 bg-zinc-950/80 backdrop-blur-xl shadow-xl space-y-6">
             <!-- Header Bar -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-zinc-800/80">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5">
                 <div class="flex items-center gap-3.5">
-                    <div class="w-11 h-11 rounded-2xl bg-sky-500/15 border border-sky-500/30 text-sky-400 flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <div class="w-11 h-11 rounded-2xl bg-sky-500/15 text-sky-400 flex items-center justify-center flex-shrink-0 shadow-sm">
                         <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M9 11l3 3L22 4"/>
                             <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
@@ -1969,9 +1995,6 @@ const TeamsView = (() => {
                     <div>
                         <div class="flex items-center gap-2">
                             <h2 class="font-heading font-bold text-lg sm:text-xl text-white">Project Tasks & Deliverables</h2>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-sky-500/15 text-sky-400 border border-sky-500/20">
-                                Mentor Workflow
-                            </span>
                         </div>
                         <p class="text-xs text-zinc-400 mt-0.5">
                             Tasks assigned by project mentors to team members to drive execution and milestones.
@@ -1979,8 +2002,8 @@ const TeamsView = (() => {
                     </div>
                 </div>
 
-                <!-- Mentor/Admin Action -->
-                ${isMentorOrAdmin ? `
+                <!-- Only Mentors Can Assign New Task -->
+                ${isMentorUser ? `
                     <button id="open-add-task-modal-btn" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer flex-shrink-0">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                         <span>+ Assign New Task</span>
@@ -1988,15 +2011,18 @@ const TeamsView = (() => {
                 ` : ''}
             </div>
 
-            <!-- Filter Pills -->
+            <!-- Filter Pills (Strictly No Borders) -->
             <div class="flex items-center gap-2 flex-wrap">
-                <button type="button" class="task-filter-pill px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${currentTaskFilter === 'all' ? 'bg-sky-600 text-white shadow-sm' : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'}" data-filter="all">
+                <button type="button" class="task-filter-pill px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${currentTaskFilter === 'all' ? 'bg-sky-600 text-white shadow-sm' : 'bg-zinc-900 text-zinc-400 hover:text-white'}" data-filter="all">
                     All (${projectTasks.length})
                 </button>
-                <button type="button" class="task-filter-pill px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${currentTaskFilter === 'pending' ? 'bg-amber-600 text-white shadow-sm' : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'}" data-filter="pending">
+                <button type="button" class="task-filter-pill px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${currentTaskFilter === 'pending' ? 'bg-amber-600 text-white shadow-sm' : 'bg-zinc-900 text-zinc-400 hover:text-white'}" data-filter="pending">
                     Pending (${pendingCount})
                 </button>
-                <button type="button" class="task-filter-pill px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${currentTaskFilter === 'completed' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'}" data-filter="completed">
+                <button type="button" class="task-filter-pill px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${currentTaskFilter === 'not_completed' ? 'bg-rose-600 text-white shadow-sm' : 'bg-zinc-900 text-zinc-400 hover:text-white'}" data-filter="not_completed">
+                    Not Completed (${notCompletedCount})
+                </button>
+                <button type="button" class="task-filter-pill px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${currentTaskFilter === 'completed' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-zinc-900 text-zinc-400 hover:text-white'}" data-filter="completed">
                     Completed (${completedCount})
                 </button>
             </div>
@@ -2004,7 +2030,7 @@ const TeamsView = (() => {
             <!-- Task List Container -->
             <div id="project-tasks-list-container" class="space-y-4">
                 ${filteredTasks.length === 0 ? `
-                    <div class="text-center py-12 px-4 rounded-2xl bg-zinc-900/50 border border-zinc-800/60 space-y-3">
+                    <div class="text-center py-12 px-4 rounded-2xl bg-zinc-900/50 space-y-3">
                         <div class="w-12 h-12 rounded-2xl bg-zinc-800/80 text-zinc-500 flex items-center justify-center mx-auto">
                             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
@@ -2014,21 +2040,23 @@ const TeamsView = (() => {
                         <p class="text-xs text-zinc-500 max-w-sm mx-auto leading-relaxed">
                             ${currentTaskFilter === 'completed' 
                                 ? 'No completed tasks yet. Team members can complete assigned tasks to show progress.'
-                                : isMentorOrAdmin
-                                    ? 'No tasks assigned yet. Click "+ Assign New Task" to assign work to a team member.'
-                                    : 'No tasks currently assigned for this project. Mentors will assign action items here.'}
+                                : currentTaskFilter === 'not_completed'
+                                    ? 'No overdue or uncompleted tasks. All deadlines are currently on schedule!'
+                                    : isMentorUser
+                                        ? 'No tasks assigned yet. Click "+ Assign New Task" to assign work to a team member.'
+                                        : 'No tasks currently assigned for this project. Mentors will assign action items here.'}
                         </p>
                     </div>
-                ` : filteredTasks.map(t => renderTaskCard(t, user, isMentorOrAdmin)).join('')}
+                ` : filteredTasks.map(t => renderTaskCard(t, user, isMentorUser)).join('')}
             </div>
         </div>
 
-        <!-- Assign Task Modal -->
+        <!-- Assign Task Modal (Strictly No Borders) -->
         <div id="assign-task-modal" class="fixed inset-0 z-[2500] bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-4 animate-fade-in">
-            <div class="bg-[#17212b] border border-[#242f3d] w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl animate-zoom-in" onclick="event.stopPropagation()">
-                <div class="p-4 sm:p-5 border-b border-[#242f3d] flex items-center justify-between bg-[#121924]">
+            <div class="bg-[#17212b] w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl animate-zoom-in" onclick="event.stopPropagation()">
+                <div class="p-4 sm:p-5 flex items-center justify-between bg-[#121924]">
                     <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-400 flex items-center justify-center">
+                        <div class="w-8 h-8 rounded-xl bg-sky-500/15 text-sky-400 flex items-center justify-center">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                         </div>
                         <h3 class="font-heading font-bold text-sm text-white">Assign Task to Member</h3>
@@ -2044,7 +2072,7 @@ const TeamsView = (() => {
                             Task Name <span class="text-red-400">*</span>
                         </label>
                         <input type="text" id="task-name-input" required placeholder="e.g. Implement WebSocket real-time alerts" maxlength="120"
-                               class="w-full px-3.5 py-2.5 bg-[#0e1621] border border-[#242f3d] focus:border-sky-500 rounded-xl text-sm text-white placeholder-zinc-500 outline-none transition-colors">
+                               class="w-full px-3.5 py-2.5 bg-[#0e1621] rounded-xl text-sm text-white placeholder-zinc-500 outline-none focus:ring-1 focus:ring-sky-500 transition-colors">
                     </div>
 
                     <div>
@@ -2052,30 +2080,40 @@ const TeamsView = (() => {
                             Task Description <span class="text-red-400">*</span>
                         </label>
                         <textarea id="task-desc-input" rows="3" required placeholder="Outline the deliverable requirements, expected outcome, key test cases or milestone details..."
-                                  class="w-full px-3.5 py-2.5 bg-[#0e1621] border border-[#242f3d] focus:border-sky-500 rounded-xl text-sm text-white placeholder-zinc-500 outline-none transition-colors leading-relaxed"></textarea>
+                                  class="w-full px-3.5 py-2.5 bg-[#0e1621] rounded-xl text-sm text-white placeholder-zinc-500 outline-none focus:ring-1 focus:ring-sky-500 transition-colors leading-relaxed"></textarea>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-semibold text-zinc-300 mb-1.5">
-                            Assign To Team Member <span class="text-red-400">*</span>
-                        </label>
-                        <select id="task-assignee-select" required class="w-full px-3.5 py-2.5 bg-[#0e1621] border border-[#242f3d] focus:border-sky-500 rounded-xl text-sm text-white outline-none transition-colors cursor-pointer">
-                            <option value="" disabled selected>Select a team member...</option>
-                            ${(() => {
-                                const membersForAssign = [...teamMembers];
-                                if (lead && lead.name && !membersForAssign.some(m => m.full_name === lead.name)) {
-                                    membersForAssign.unshift({ id: lead.lead_id || lead.id, full_name: lead.name, role: 'lead' });
-                                }
-                                return membersForAssign.map(m => `
-                                    <option value="${m.id}" data-name="${escapeHtml(m.full_name || m.username || 'Member')}">
-                                        ${escapeHtml(m.full_name || m.username || 'Member')} (${m.role === 'lead' ? 'Team Lead' : 'Member'}${m.specialty ? ' - ' + m.specialty : ''})
-                                    </option>
-                                `).join('');
-                            })()}
-                        </select>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-300 mb-1.5">
+                                Assign To Member <span class="text-red-400">*</span>
+                            </label>
+                            <select id="task-assignee-select" required class="w-full px-3.5 py-2.5 bg-[#0e1621] rounded-xl text-sm text-white outline-none focus:ring-1 focus:ring-sky-500 transition-colors cursor-pointer">
+                                <option value="" disabled selected>Select a team member...</option>
+                                ${(() => {
+                                    const membersForAssign = [...teamMembers];
+                                    if (lead && lead.name && !membersForAssign.some(m => m.full_name === lead.name)) {
+                                        membersForAssign.unshift({ id: lead.lead_id || lead.id, full_name: lead.name, role: 'lead' });
+                                    }
+                                    return membersForAssign.map(m => `
+                                        <option value="${m.id}" data-name="${escapeHtml(m.full_name || m.username || 'Member')}">
+                                            ${escapeHtml(m.full_name || m.username || 'Member')} (${m.role === 'lead' ? 'Team Lead' : 'Member'}${m.specialty ? ' - ' + m.specialty : ''})
+                                        </option>
+                                    `).join('');
+                                })()}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-300 mb-1.5">
+                                Task Deadline <span class="text-red-400">*</span>
+                            </label>
+                            <input type="date" id="task-deadline-input" required
+                                   class="w-full px-3.5 py-2.5 bg-[#0e1621] rounded-xl text-sm text-white outline-none focus:ring-1 focus:ring-sky-500 transition-colors [color-scheme:dark] cursor-pointer">
+                        </div>
                     </div>
 
-                    <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#242f3d]">
+                    <div class="flex items-center justify-end gap-3 pt-3">
                         <button type="button" id="cancel-assign-task-btn" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer">
                             Cancel
                         </button>
@@ -2087,12 +2125,12 @@ const TeamsView = (() => {
             </div>
         </div>
 
-        <!-- Finish Task Modal (Formatted Text Input) -->
+        <!-- Finish Task Modal (Formatted Text Input - Strictly No Borders) -->
         <div id="finish-task-modal" class="fixed inset-0 z-[2500] bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-4 animate-fade-in">
-            <div class="bg-[#17212b] border border-[#242f3d] w-full max-w-xl rounded-2xl overflow-hidden shadow-2xl animate-zoom-in" onclick="event.stopPropagation()">
-                <div class="p-4 sm:p-5 border-b border-[#242f3d] flex items-center justify-between bg-[#121924]">
+            <div class="bg-[#17212b] w-full max-w-xl rounded-2xl overflow-hidden shadow-2xl animate-zoom-in" onclick="event.stopPropagation()">
+                <div class="p-4 sm:p-5 flex items-center justify-between bg-[#121924]">
                     <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center">
+                        <div class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                         </div>
                         <div>
@@ -2117,17 +2155,17 @@ const TeamsView = (() => {
                             Type or paste your work report. Use <b>Bold</b>, <u>Underline</u>, <i>Italics</i>, or bullet lists to organize your findings.
                         </p>
 
-                        <!-- Formatting Toolbar -->
+                        <!-- Formatting Toolbar (No borders) -->
                         ${renderRichEditorToolbar('finish-task-toolbar')}
 
-                        <!-- Contenteditable Rich Text Area -->
+                        <!-- Contenteditable Rich Text Area (No borders) -->
                         <div id="finish-task-editor" 
                              contenteditable="true" 
-                             class="prose-clean min-h-[180px] max-h-[320px] overflow-y-auto p-4 bg-[#0e1621] border border-[#242f3d] focus:border-emerald-500 rounded-xl text-sm text-zinc-100 outline-none focus:ring-1 focus:ring-emerald-500/40 transition-all leading-relaxed"
+                             class="prose-clean min-h-[180px] max-h-[320px] overflow-y-auto p-4 bg-[#0e1621] rounded-xl text-sm text-zinc-100 outline-none focus:ring-1 focus:ring-emerald-500 transition-all leading-relaxed"
                              placeholder="Detail what was done, key results, code changes, links or notes for mentor review..."></div>
                     </div>
 
-                    <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#242f3d]">
+                    <div class="flex items-center justify-end gap-3 pt-3">
                         <button type="button" id="cancel-finish-task-btn" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer">
                             Cancel
                         </button>
@@ -2142,32 +2180,48 @@ const TeamsView = (() => {
         `;
     }
 
-    function renderTaskCard(task, user, isMentorOrAdmin) {
-        const isCompleted = task.status === 'completed';
+    function renderTaskCard(task, user, isMentorUser) {
+        const taskStatus = getTaskStatus(task);
+        const isCompleted = taskStatus === 'completed';
+        const isNotCompleted = taskStatus === 'not_completed';
         const isAssignedToCurrentUser = user && String(user.id) === String(task.assigned_to);
 
+        let statusBadgeHtml = '';
+        if (isCompleted) {
+            statusBadgeHtml = `
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    <span>Completed</span>
+                </span>
+            `;
+        } else if (isNotCompleted) {
+            statusBadgeHtml = `
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-500/15 text-rose-400 flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    <span>Not Completed</span>
+                </span>
+            `;
+        } else {
+            statusBadgeHtml = `
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span>Pending</span>
+                </span>
+            `;
+        }
+
         return `
-        <div class="bg-[#17212b] border ${isCompleted ? 'border-emerald-500/30' : 'border-[#242f3d]'} rounded-2xl p-4 sm:p-5 transition-all shadow-sm space-y-3.5">
+        <div class="bg-[#17212b] rounded-2xl p-4 sm:p-5 transition-all shadow-sm space-y-3.5">
             <!-- Top Badges & Actions -->
             <div class="flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2">
-                    ${isCompleted ? `
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                            <span>Completed</span>
-                        </span>
-                    ` : `
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
-                            <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-                            <span>Pending</span>
-                        </span>
-                    `}
+                <div class="flex items-center gap-2 flex-wrap">
+                    ${statusBadgeHtml}
                     <span class="text-[11px] text-zinc-500">
                         Assigned ${formatTimeAgo(task.created_at)} by <strong class="text-zinc-400 font-semibold">${escapeHtml(task.created_by_name || 'Mentor')}</strong>
                     </span>
                 </div>
 
-                ${isMentorOrAdmin ? `
+                ${isMentorUser ? `
                     <button type="button" class="delete-task-btn p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer" data-task-id="${task.id}" title="Delete Task">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>
@@ -2180,20 +2234,32 @@ const TeamsView = (() => {
                 <p class="text-xs sm:text-sm text-zinc-300 mt-1 leading-relaxed whitespace-pre-line">${escapeHtml(task.description)}</p>
             </div>
 
-            <!-- Assignee Info -->
-            <div class="flex items-center gap-2 pt-1 text-xs">
+            <!-- Meta: Assignee Info & Deadline -->
+            <div class="flex items-center gap-2 flex-wrap pt-1 text-xs">
                 <span class="text-zinc-500">Assigned To:</span>
-                <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#121924] border border-[#242f3d]">
+                <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#121924]">
                     <div class="w-5 h-5 rounded-full bg-sky-600 text-white flex items-center justify-center font-bold text-[10px]">
                         ${task.assigned_to_name ? task.assigned_to_name.charAt(0).toUpperCase() : 'M'}
                     </div>
                     <span class="font-semibold text-zinc-200">${escapeHtml(task.assigned_to_name || 'Team Member')}</span>
                 </div>
+
+                ${task.deadline ? `
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#121924]">
+                        <svg class="w-3.5 h-3.5 ${isNotCompleted ? 'text-rose-400' : 'text-zinc-400'}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <span class="text-zinc-400">Deadline:</span>
+                        <span class="font-semibold ${isNotCompleted ? 'text-rose-400 font-bold' : 'text-zinc-200'}">
+                            ${formatDeadlineDate(task.deadline)} ${isNotCompleted ? '(Past Due)' : ''}
+                        </span>
+                    </div>
+                ` : ''}
             </div>
 
             <!-- Completed Details OR Action Button -->
             ${isCompleted ? `
-                <div class="mt-3 pt-3 border-t border-[#242f3d] space-y-2">
+                <div class="mt-3 pt-3 space-y-2">
                     <div class="flex items-center justify-between text-xs font-semibold text-emerald-400">
                         <div class="flex items-center gap-1.5">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -2201,16 +2267,16 @@ const TeamsView = (() => {
                         </div>
                         <span class="text-[11px] text-zinc-500 font-normal">Completed ${formatTimeAgo(task.completed_at)}</span>
                     </div>
-                    <div class="p-3.5 bg-[#121924] rounded-xl border border-emerald-500/20 text-xs sm:text-sm text-zinc-200 prose-clean leading-relaxed break-words">
+                    <div class="p-3.5 bg-[#121924] rounded-xl text-xs sm:text-sm text-zinc-200 prose-clean leading-relaxed break-words">
                         ${sanitizeRichText(task.submission_content) || '<span class="text-zinc-500 italic">Task marked completed without extra notes.</span>'}
                     </div>
                 </div>
             ` : `
-                <div class="mt-3 pt-3 border-t border-[#242f3d] flex items-center justify-between gap-3 flex-wrap">
+                <div class="mt-3 pt-3 flex items-center justify-between gap-3 flex-wrap">
                     ${isAssignedToCurrentUser ? `
-                        <div class="flex items-center gap-2 text-xs text-amber-300 font-medium">
-                            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                            <span>Assigned to you</span>
+                        <div class="flex items-center gap-2 text-xs ${isNotCompleted ? 'text-rose-400' : 'text-amber-300'} font-medium">
+                            <span class="w-2 h-2 rounded-full ${isNotCompleted ? 'bg-rose-500' : 'bg-amber-400'} animate-pulse"></span>
+                            <span>${isNotCompleted ? 'Assigned to you (Past Deadline)' : 'Assigned to you'}</span>
                         </div>
                         <button type="button" class="open-finish-task-modal-btn px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5" data-task-id="${task.id}" data-task-title="${escapeHtml(task.title)}">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
@@ -2243,6 +2309,7 @@ const TeamsView = (() => {
 
     function bindProjectTasksEvents(lead, isLead, isMember, isMentorOrAdmin) {
         const user = ICCSupabase.getUser();
+        const isMentorUser = ICCSupabase.isMentor();
 
         // 1. Filter Pills
         document.querySelectorAll('.task-filter-pill').forEach(btn => {
@@ -2256,7 +2323,7 @@ const TeamsView = (() => {
             };
         });
 
-        // 2. Open Add Task Modal
+        // 2. Open Add Task Modal (Strictly for Mentors)
         const assignModal = document.getElementById('assign-task-modal');
         const openAddBtn = document.getElementById('open-add-task-modal-btn');
         const closeAddBtn = document.getElementById('close-assign-task-modal');
@@ -2282,16 +2349,18 @@ const TeamsView = (() => {
                 const nameInput = document.getElementById('task-name-input');
                 const descInput = document.getElementById('task-desc-input');
                 const assigneeSelect = document.getElementById('task-assignee-select');
+                const deadlineInput = document.getElementById('task-deadline-input');
                 const submitBtn = document.getElementById('submit-assign-task-btn');
 
                 const title = nameInput?.value.trim();
                 const description = descInput?.value.trim();
                 const assigned_to = assigneeSelect?.value;
+                const deadline = deadlineInput?.value || null;
                 const selectedOption = assigneeSelect?.options[assigneeSelect.selectedIndex];
                 const assigned_to_name = selectedOption?.dataset.name || selectedOption?.text?.split('(')[0]?.trim() || 'Team Member';
 
-                if (!title || !description || !assigned_to) {
-                    Toast.error('Please fill in task name, description, and assign to a team member.');
+                if (!title || !description || !assigned_to || !deadline) {
+                    Toast.error('Please fill in task name, description, assigned member, and deadline date.');
                     return;
                 }
 
@@ -2301,7 +2370,8 @@ const TeamsView = (() => {
                     title,
                     description,
                     assigned_to,
-                    assigned_to_name
+                    assigned_to_name,
+                    deadline
                 });
 
                 if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Assign Task'; }
@@ -2379,7 +2449,7 @@ const TeamsView = (() => {
                 if (error) {
                     Toast.error('Failed to complete task: ' + (error.message || error));
                 } else {
-                    Toast.success('🎉 Task completed successfully!');
+                    Toast.success('Task marked as completed!');
                     closeFinishModal();
                     await initProjectTasks(lead, isLead, isMember, isMentorOrAdmin);
                     const container = document.getElementById('project-tab-tasks-content');
@@ -2391,17 +2461,18 @@ const TeamsView = (() => {
             };
         }
 
-        // 6. Delete Task (Mentor / Admin)
+        // 6. Delete Task (Mentor only)
         document.querySelectorAll('.delete-task-btn').forEach(btn => {
             btn.onclick = async () => {
                 const taskId = btn.dataset.taskId;
+                if (!taskId) return;
                 if (!confirm('Are you sure you want to delete this task?')) return;
 
                 const { error } = await ICCSupabase.deleteProjectTask(taskId, lead.id);
                 if (error) {
                     Toast.error('Failed to delete task: ' + (error.message || error));
                 } else {
-                    Toast.success('Task deleted.');
+                    Toast.success('Task deleted successfully');
                     await initProjectTasks(lead, isLead, isMember, isMentorOrAdmin);
                     const container = document.getElementById('project-tab-tasks-content');
                     if (container) {

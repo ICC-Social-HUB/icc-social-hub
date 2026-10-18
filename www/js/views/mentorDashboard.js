@@ -9,6 +9,9 @@ const MentorDashboardView = (() => {
     let summary = { pending: 0, changesRequested: 0, approved: 0, totalProjects: 0, totalApplications: 0 };
     let applications = [];
     let projects = [];
+    let allTasks = [];
+    let taskFilter = 'all'; // 'all' | 'pending' | 'not_completed' | 'completed'
+    let taskProjectFilter = 'all';
     let mentorMessages = [];
     let activeChatProjectId = null;
     let activeChatMessages = [];
@@ -66,20 +69,60 @@ const MentorDashboardView = (() => {
         return temp.innerHTML;
     }
 
+    function getTaskStatus(task) {
+        if (!task) return 'pending';
+        if (task.status === 'completed') return 'completed';
+        if (task.deadline) {
+            const today = new Date().toISOString().split('T')[0];
+            const taskDl = String(task.deadline).split('T')[0];
+            if (today > taskDl) return 'not_completed';
+        }
+        return 'pending';
+    }
+
+    function formatDeadlineDate(dateStr) {
+        if (!dateStr) return '';
+        try {
+            const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } catch (e) {
+            return dateStr;
+        }
+    }
+
+    function formatTimeAgo(dateStr) {
+        if (!dateStr) return 'recently';
+        try {
+            const diffMs = Date.now() - new Date(dateStr).getTime();
+            const diffSec = Math.floor(diffMs / 1000);
+            if (diffSec < 60) return 'just now';
+            const diffMin = Math.floor(diffSec / 60);
+            if (diffMin < 60) return diffMin + 'm ago';
+            const diffHr = Math.floor(diffMin / 60);
+            if (diffHr < 24) return diffHr + 'h ago';
+            const diffDay = Math.floor(diffHr / 24);
+            return diffDay + 'd ago';
+        } catch (e) {
+            return 'recently';
+        }
+    }
+
     async function loadData() {
         isLoading = true;
         try {
-            const [sumRes, appsRes, leadsRes, msgsRes] = await Promise.all([
+            const [sumRes, appsRes, leadsRes, msgsRes, tasksRes] = await Promise.all([
                 ICCSupabase.fetchMentorDashboardSummary(),
                 ICCSupabase.fetchAllProjectApplications(),
                 ICCSupabase.fetchLeads(),
-                typeof ICCSupabase.fetchAllProjectMentorMessages === 'function' ? ICCSupabase.fetchAllProjectMentorMessages() : { data: [] }
+                typeof ICCSupabase.fetchAllProjectMentorMessages === 'function' ? ICCSupabase.fetchAllProjectMentorMessages() : { data: [] },
+                typeof ICCSupabase.fetchAllProjectTasks === 'function' ? ICCSupabase.fetchAllProjectTasks() : []
             ]);
 
             if (sumRes.data) summary = sumRes.data;
             if (appsRes.data) applications = appsRes.data;
             if (leadsRes) projects = leadsRes;
             if (msgsRes?.data) mentorMessages = msgsRes.data;
+            if (Array.isArray(tasksRes)) allTasks = tasksRes;
 
             if (activeChatProjectId) {
                 const chatRes = await ICCSupabase.fetchProjectMentorMessages(activeChatProjectId);
@@ -307,6 +350,14 @@ const MentorDashboardView = (() => {
                                 <span>Mentor Chat</span>
                                 ${mentorMessages.length > 0 ? `<span class="px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'mentor_chat' ? 'bg-zinc-950 text-amber-400 font-extrabold' : 'bg-amber-500/20 text-amber-400 font-bold'}">${mentorMessages.length}</span>` : ''}
                             </button>
+                            <button onclick="MentorDashboardView.setActiveTab('tasks')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${activeTab === 'tasks' ? 'bg-sky-600 text-white shadow-md shadow-sky-600/25' : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'}">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M9 11l3 3L22 4"/>
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                                </svg>
+                                <span>Track Tasks</span>
+                                ${allTasks.length > 0 ? `<span class="px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'tasks' ? 'bg-white/20 text-white' : 'bg-sky-500/20 text-sky-400'} font-bold">${allTasks.length}</span>` : ''}
+                            </button>
                         </div>
 
                         <!-- Search Bar -->
@@ -355,8 +406,8 @@ const MentorDashboardView = (() => {
                         ` : filteredProjects.map(p => renderProjectRow(p)).join('')}
                     </div>
                     ` : `
-                    <!-- Mentor Chat Hub Content -->
-                    ${renderMentorChatHub()}
+                    <!-- Tab Content Switcher -->
+                    ${activeTab === 'mentor_chat' ? renderMentorChatHub() : renderTasksTrackerView()}
                     `)}
                 </div>
             </div>
@@ -1597,6 +1648,225 @@ const MentorDashboardView = (() => {
         await deleteProject(projectId, projectName);
     }
 
+
+    function renderTasksTrackerView() {
+        const totalCount = allTasks.length;
+        const pendingList = allTasks.filter(t => getTaskStatus(t) === 'pending');
+        const notCompletedList = allTasks.filter(t => getTaskStatus(t) === 'not_completed');
+        const completedList = allTasks.filter(t => getTaskStatus(t) === 'completed');
+
+        const query = searchQuery.trim().toLowerCase();
+        const filteredTasks = allTasks.filter(t => {
+            const st = getTaskStatus(t);
+            if (taskFilter === 'pending' && st !== 'pending') return false;
+            if (taskFilter === 'not_completed' && st !== 'not_completed') return false;
+            if (taskFilter === 'completed' && st !== 'completed') return false;
+
+            if (taskProjectFilter !== 'all' && String(t.project_id) !== String(taskProjectFilter)) return false;
+
+            if (query) {
+                const proj = projects.find(p => Number(p.id) === Number(t.project_id));
+                const projName = proj ? (proj.project_name || proj.team || '') : '';
+                const target = `${t.title || ''} ${t.description || ''} ${t.assigned_to_name || ''} ${t.created_by_name || ''} ${projName}`.toLowerCase();
+                if (!target.includes(query)) return false;
+            }
+
+            return true;
+        });
+
+        return `
+        <div class="space-y-4 pt-1">
+            <!-- Summary Metric Cards for Task Tracker -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div onclick="MentorDashboardView.setTaskFilter('all')" class="glass-card rounded-2xl p-3.5 border ${taskFilter === 'all' ? 'border-sky-500/60 bg-sky-500/10' : 'border-zinc-800/80 bg-zinc-900/40'} hover:border-sky-500/40 transition-all cursor-pointer">
+                    <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Total Tasks</span>
+                    <p class="font-heading font-extrabold text-xl text-white mt-1">${totalCount}</p>
+                </div>
+                <div onclick="MentorDashboardView.setTaskFilter('pending')" class="glass-card rounded-2xl p-3.5 border ${taskFilter === 'pending' ? 'border-amber-500/60 bg-amber-500/10' : 'border-zinc-800/80 bg-zinc-900/40'} hover:border-amber-500/40 transition-all cursor-pointer">
+                    <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Pending Tasks</span>
+                    <p class="font-heading font-extrabold text-xl text-amber-300 mt-1">${pendingList.length}</p>
+                </div>
+                <div onclick="MentorDashboardView.setTaskFilter('not_completed')" class="glass-card rounded-2xl p-3.5 border ${taskFilter === 'not_completed' ? 'border-rose-500/60 bg-rose-500/10' : 'border-zinc-800/80 bg-zinc-900/40'} hover:border-rose-500/40 transition-all cursor-pointer">
+                    <span class="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Not Completed / Overdue</span>
+                    <p class="font-heading font-extrabold text-xl text-rose-400 mt-1">${notCompletedList.length}</p>
+                </div>
+                <div onclick="MentorDashboardView.setTaskFilter('completed')" class="glass-card rounded-2xl p-3.5 border ${taskFilter === 'completed' ? 'border-emerald-500/60 bg-emerald-500/10' : 'border-zinc-800/80 bg-zinc-900/40'} hover:border-emerald-500/40 transition-all cursor-pointer">
+                    <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Completed</span>
+                    <p class="font-heading font-extrabold text-xl text-emerald-300 mt-1">${completedList.length}</p>
+                </div>
+            </div>
+
+            <!-- Filter Pills & Project Selector -->
+            <div class="flex items-center justify-between gap-3 flex-wrap pt-1">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    <button onclick="MentorDashboardView.setTaskFilter('all')" class="px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${taskFilter === 'all' ? 'bg-sky-600 text-white' : 'text-zinc-400 hover:text-white bg-zinc-950/60'}">All (${totalCount})</button>
+                    <button onclick="MentorDashboardView.setTaskFilter('pending')" class="px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${taskFilter === 'pending' ? 'bg-amber-500/20 text-amber-300' : 'text-zinc-400 hover:text-white bg-zinc-950/60'}">Pending (${pendingList.length})</button>
+                    <button onclick="MentorDashboardView.setTaskFilter('not_completed')" class="px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${taskFilter === 'not_completed' ? 'bg-rose-500/20 text-rose-300' : 'text-zinc-400 hover:text-white bg-zinc-950/60'}">Not Completed (${notCompletedList.length})</button>
+                    <button onclick="MentorDashboardView.setTaskFilter('completed')" class="px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${taskFilter === 'completed' ? 'bg-emerald-500/20 text-emerald-300' : 'text-zinc-400 hover:text-white bg-zinc-950/60'}">Completed (${completedList.length})</button>
+                </div>
+
+                <!-- Project Selector Dropdown -->
+                <div class="flex items-center gap-2">
+                    <label class="text-xs text-zinc-400 font-medium hidden sm:inline">Project:</label>
+                    <select id="mentor-task-project-select" onchange="MentorDashboardView.setTaskProjectFilter(this.value)" class="px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white outline-none focus:border-sky-500 cursor-pointer">
+                        <option value="all">All Projects (${projects.length})</option>
+                        ${projects.map(p => `
+                            <option value="${p.id}" ${String(taskProjectFilter) === String(p.id) ? 'selected' : ''}>
+                                ${escapeHtml(p.project_name || p.team)} (${escapeHtml(p.project_code || 'PRJ')})
+                            </option>
+                        `).join('')}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Task List Rows -->
+            <div class="space-y-3 pt-2">
+                ${isLoading ? `
+                    <div class="p-12 text-center text-zinc-500 text-sm flex items-center justify-center gap-2">
+                        <div class="w-4 h-4 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span>Loading tracked tasks...</span>
+                    </div>
+                ` : filteredTasks.length === 0 ? `
+                    <div class="p-12 text-center bg-zinc-950/40 rounded-2xl border border-dashed border-zinc-800 text-zinc-500 text-sm space-y-2">
+                        <p class="text-base font-semibold text-zinc-400">No tasks found</p>
+                        <p class="text-xs text-zinc-500">No tasks match the active status or project filter.</p>
+                    </div>
+                ` : filteredTasks.map(t => renderMentorTaskRow(t)).join('')}
+            </div>
+        </div>
+        `;
+    }
+
+    function renderMentorTaskRow(task) {
+        const taskStatus = getTaskStatus(task);
+        const isCompleted = taskStatus === 'completed';
+        const isNotCompleted = taskStatus === 'not_completed';
+        const proj = projects.find(p => Number(p.id) === Number(task.project_id));
+        const projName = proj ? (proj.project_name || proj.team) : 'Project #' + task.project_id;
+        const projCode = proj ? proj.project_code : null;
+
+        let badgeHtml = '';
+        if (isCompleted) {
+            badgeHtml = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 flex items-center gap-1"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Completed</span>`;
+        } else if (isNotCompleted) {
+            badgeHtml = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-500/15 text-rose-400 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Not Completed (Overdue)</span>`;
+        } else {
+            badgeHtml = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>Pending</span>`;
+        }
+
+        return `
+        <div class="p-4 sm:p-5 rounded-2xl border border-zinc-800/80 bg-zinc-950/70 hover:border-zinc-700/80 transition-all space-y-3.5 group shadow-sm">
+            <div class="flex items-start justify-between gap-3 flex-wrap">
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                        <h4 class="font-heading font-bold text-base text-white group-hover:text-sky-400 transition-colors break-words">${escapeHtml(task.title)}</h4>
+                        ${badgeHtml}
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap text-xs text-zinc-400">
+                        <span>Project:</span>
+                        <a href="#teams/${task.project_id}" class="text-sky-400 hover:text-sky-300 font-semibold hover:underline flex items-center gap-1" title="Open Project in Teams">
+                            <span>${escapeHtml(projName)}</span>
+                            ${projCode ? `<span class="px-1.5 py-0.2 rounded font-mono text-[10px] bg-sky-500/15 text-sky-300 font-bold">${escapeHtml(projCode)}</span>` : ''}
+                            <svg class="w-3 h-3 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <a href="#teams/${task.project_id}" class="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-sky-400 hover:text-sky-300 border border-zinc-800 hover:border-sky-500/40 rounded-xl text-xs font-semibold transition-all shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95" title="View Project Tasks">
+                        <span>View in Project</span>
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </a>
+                    <button onclick="MentorDashboardView.deleteTaskFromTracker('${task.id}', ${task.project_id})" class="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer" title="Delete Task">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <p class="text-xs text-zinc-300 leading-relaxed bg-zinc-900/40 p-3 rounded-xl border border-zinc-800/60 whitespace-pre-line">${escapeHtml(task.description)}</p>
+
+            <!-- Meta info: Assigned to, Mentor, Deadline -->
+            <div class="flex items-center justify-between gap-3 pt-1 border-t border-zinc-800/60 flex-wrap text-xs text-zinc-400">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-zinc-500">Assigned To:</span>
+                        <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-zinc-900 border border-zinc-800">
+                            <div class="w-4 h-4 rounded-full bg-sky-600 text-white flex items-center justify-center font-bold text-[9px]">
+                                ${task.assigned_to_name ? task.assigned_to_name.charAt(0).toUpperCase() : 'M'}
+                            </div>
+                            <span class="font-medium text-zinc-200">${escapeHtml(task.assigned_to_name || 'Team Member')}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1 text-zinc-500">
+                        <span>By:</span>
+                        <strong class="text-zinc-300 font-medium">${escapeHtml(task.created_by_name || 'Mentor')}</strong>
+                        <span class="text-zinc-600">(${formatTimeAgo(task.created_at)})</span>
+                    </div>
+                </div>
+
+                ${task.deadline ? `
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-zinc-900 border border-zinc-800">
+                        <svg class="w-3.5 h-3.5 ${isNotCompleted ? 'text-rose-400' : 'text-zinc-400'}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <span class="text-zinc-400">Deadline:</span>
+                        <span class="font-semibold ${isNotCompleted ? 'text-rose-400 font-bold' : 'text-zinc-200'}">
+                            ${formatDeadlineDate(task.deadline)} ${isNotCompleted ? '(Overdue)' : ''}
+                        </span>
+                    </div>
+                ` : ''}
+            </div>
+
+            ${isCompleted ? `
+                <div class="p-3 bg-zinc-900/60 rounded-xl border border-emerald-500/20 text-xs text-zinc-300 space-y-1">
+                    <div class="flex items-center justify-between text-emerald-400 font-semibold text-[11px]">
+                        <span>✓ Member Work Submission:</span>
+                        <span class="text-zinc-500 font-normal">Completed ${formatTimeAgo(task.completed_at)}</span>
+                    </div>
+                    <div class="prose-clean leading-relaxed break-words text-zinc-200">
+                        ${sanitizeRichText(task.submission_content) || '<span class="text-zinc-500 italic">No notes provided.</span>'}
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+        `;
+    }
+
+    function setTaskFilter(filter) {
+        taskFilter = filter;
+        const container = document.getElementById('app');
+        if (container) {
+            container.innerHTML = render();
+            bindEvents(container);
+        }
+    }
+
+    function setTaskProjectFilter(projId) {
+        taskProjectFilter = projId;
+        const container = document.getElementById('app');
+        if (container) {
+            container.innerHTML = render();
+            bindEvents(container);
+        }
+    }
+
+    async function deleteTaskFromTracker(taskId, projectId) {
+        if (!confirm('Are you sure you want to delete this task?')) return;
+        const { error } = await ICCSupabase.deleteProjectTask(taskId, projectId);
+        if (error) {
+            Toast.error('Failed to delete task: ' + (error.message || error));
+            return;
+        }
+        Toast.success('Task deleted successfully');
+        allTasks = allTasks.filter(t => t.id !== taskId);
+        const container = document.getElementById('app');
+        if (container) {
+            container.innerHTML = render();
+            bindEvents(container);
+        }
+    }
+
     function unmount() {
         selectedAppDetail = null;
         selectedProjectAudit = null;
@@ -1611,6 +1881,9 @@ const MentorDashboardView = (() => {
         unmount,
         setActiveTab,
         setFilter,
+        setTaskFilter,
+        setTaskProjectFilter,
+        deleteTaskFromTracker,
         refresh,
         refreshActiveChat,
         goToProjectAudit,

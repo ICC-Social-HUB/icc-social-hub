@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS public.project_tasks (
     project_id BIGINT NOT NULL,
     title TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
+    deadline DATE,
     assigned_to UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     assigned_to_name TEXT,
     assigned_to_avatar TEXT,
@@ -19,35 +20,40 @@ CREATE TABLE IF NOT EXISTS public.project_tasks (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Idempotent column check in case table was created earlier
+ALTER TABLE public.project_tasks ADD COLUMN IF NOT EXISTS deadline DATE;
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_project_tasks_project_id ON public.project_tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_tasks_assigned_to ON public.project_tasks(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_project_tasks_status ON public.project_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_project_tasks_deadline ON public.project_tasks(deadline);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.project_tasks ENABLE ROW LEVEL SECURITY;
 
--- 1. All authenticated users can view tasks for projects
+-- Policy 1: All authenticated users can view tasks
 DROP POLICY IF EXISTS "Allow authenticated view project tasks" ON public.project_tasks;
 CREATE POLICY "Allow authenticated view project tasks"
     ON public.project_tasks FOR SELECT
     TO authenticated
     USING (true);
 
--- 2. Mentors and Admins can create new tasks
+-- Policy 2: Strictly Mentors can create new tasks
 DROP POLICY IF EXISTS "Allow mentors and admins create tasks" ON public.project_tasks;
-CREATE POLICY "Allow mentors and admins create tasks"
+DROP POLICY IF EXISTS "Allow mentors create tasks" ON public.project_tasks;
+CREATE POLICY "Allow mentors create tasks"
     ON public.project_tasks FOR INSERT
     TO authenticated
     WITH CHECK (
         EXISTS (
             SELECT 1 FROM public.profiles 
             WHERE profiles.id = auth.uid() 
-            AND (role IN ('mentor', 'admin', 'super_admin', 'superadmin') OR email = 'iccsocialhub@gmail.com')
+            AND (role = 'mentor' OR email = 'iccsocialhub@gmail.com')
         )
     );
 
--- 3. Mentors, Admins, and the specifically assigned member can update tasks (to finish task)
+-- Policy 3: Mentors and the specifically assigned member can update tasks (to finish task)
 DROP POLICY IF EXISTS "Allow update tasks" ON public.project_tasks;
 CREATE POLICY "Allow update tasks"
     ON public.project_tasks FOR UPDATE
@@ -61,16 +67,17 @@ CREATE POLICY "Allow update tasks"
         )
     );
 
--- 4. Mentors and Admins can delete tasks
+-- Policy 4: Mentors can delete tasks
 DROP POLICY IF EXISTS "Allow mentors and admins delete tasks" ON public.project_tasks;
-CREATE POLICY "Allow mentors and admins delete tasks"
+DROP POLICY IF EXISTS "Allow mentors delete tasks" ON public.project_tasks;
+CREATE POLICY "Allow mentors delete tasks"
     ON public.project_tasks FOR DELETE
     TO authenticated
     USING (
         EXISTS (
             SELECT 1 FROM public.profiles 
             WHERE profiles.id = auth.uid() 
-            AND (role IN ('mentor', 'admin', 'super_admin', 'superadmin') OR email = 'iccsocialhub@gmail.com')
+            AND (role = 'mentor' OR email = 'iccsocialhub@gmail.com')
         )
     );
 
@@ -86,4 +93,3 @@ EXCEPTION
     WHEN duplicate_object THEN NULL;
     WHEN others THEN NULL;
 END $$;
-

@@ -1674,11 +1674,44 @@ const ICCSupabase = (() => {
         }
     }
 
+    async function fetchAllProjectTasks() {
+        if (client) {
+            try {
+                const { data, error } = await client
+                    .from('project_tasks')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (!error && Array.isArray(data)) {
+                    return data;
+                }
+                if (error) console.warn('fetchAllProjectTasks DB error, using fallback:', error);
+            } catch (e) {
+                console.warn('fetchAllProjectTasks exception, using fallback:', e);
+            }
+        }
+
+        try {
+            const allTasks = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('icc_project_tasks_')) {
+                    const list = JSON.parse(localStorage.getItem(key) || '[]');
+                    if (Array.isArray(list)) allTasks.push(...list);
+                }
+            }
+            allTasks.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            return allTasks;
+        } catch (e) {
+            return [];
+        }
+    }
+
     async function createProjectTask(projectId, taskData) {
         if (!projectId || !taskData?.title) return { error: { message: 'Project ID and Task Name are required.' } };
 
-        if (!isMentor() && !isAdmin()) {
-            return { error: { message: 'Unauthorized: Only Mentors and Admins can assign tasks.' } };
+        if (!isMentor()) {
+            return { error: { message: 'Unauthorized: Only Mentors can assign tasks.' } };
         }
 
         const newTask = {
@@ -1686,6 +1719,7 @@ const ICCSupabase = (() => {
             project_id: projectId,
             title: (taskData.title || '').trim(),
             description: (taskData.description || '').trim(),
+            deadline: taskData.deadline || null,
             assigned_to: taskData.assigned_to || null,
             assigned_to_name: taskData.assigned_to_name || 'Team Member',
             assigned_to_avatar: taskData.assigned_to_avatar || null,
