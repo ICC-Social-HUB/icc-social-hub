@@ -17,12 +17,12 @@ const TeamChatModal = (() => {
                             ${team.initials}
                         </div>
                         <div>
-                            <h2 class="font-heading font-bold text-sm leading-tight text-white">${team.team} Chat</h2>
-                            <p class="text-[10px] text-[#708499] font-medium">Team Room</p>
+                            <h2 class="font-heading font-bold text-sm leading-tight text-white">${team.project_name || team.team} Chat</h2>
+                            <p class="text-[10px] text-[#708499] font-medium">Team: ${team.team} · Project Room</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button type="button" id="back-team-chat" class="flex items-center gap-1 px-3 py-1.5 bg-[#242f3d] hover:bg-[#2b394a] text-zinc-200 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer" title="Back to team">
+                        <button type="button" id="back-team-chat" class="flex items-center gap-1 px-3 py-1.5 bg-[#242f3d] hover:bg-[#2b394a] text-zinc-200 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer" title="Back to project">
                             <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                             <span>Back</span>
                         </button>
@@ -42,7 +42,7 @@ const TeamChatModal = (() => {
                 <!-- Input Area -->
                 <form id="team-chat-form" class="p-3 bg-[#17212b] border-t border-[#101921]">
                     <div class="relative flex items-center gap-2.5">
-                        <input type="text" id="team-chat-input" placeholder="Message team..." class="flex-1 bg-[#242f3d] border border-[#2b394a] rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#708499] focus:outline-none focus:border-[#3390ec] transition-all" autocomplete="off">
+                        <input type="text" id="team-chat-input" placeholder="Message project contributors..." class="flex-1 bg-[#242f3d] border border-[#2b394a] rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#708499] focus:outline-none focus:border-[#3390ec] transition-all" autocomplete="off">
                         <button type="submit" id="team-chat-send-btn" class="w-10 h-10 bg-[#3390ec] hover:bg-[#2b7cce] text-white rounded-full flex items-center justify-center shadow-md transition-all active:scale-95 disabled:opacity-50">
                             <svg class="w-5 h-5 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
                         </button>

@@ -27,7 +27,7 @@ const Sidebar = (() => {
             { id: 'home', label: 'Home', hash: '#dashboard', icon: homeIcon(window.location.hash.startsWith('#dashboard')) },
             { id: 'feed', label: 'Innovation Feed', hash: '#feed', icon: feedIcon(window.location.hash.startsWith('#feed')) },
             { id: 'events', label: 'Events & Workshops', hash: '#events', icon: eventsIcon(window.location.hash.startsWith('#events')) },
-            { id: 'teams', label: 'Teams & Projects', hash: '#teams', icon: teamsIcon(window.location.hash.startsWith('#teams')) },
+            { id: 'teams', label: 'Projects', hash: '#teams', icon: teamsIcon(window.location.hash.startsWith('#teams')) },
             { id: 'chat', label: 'Messages', hash: '#chat', icon: chatIcon(window.location.hash.startsWith('#chat')), badge: unreadMessages },
             { id: 'attendance', label: 'Attendance', hash: '#attendance', icon: attendanceIcon() },
             { id: 'inventory', label: 'Inventory', hash: '#inventory', icon: inventoryIcon() },

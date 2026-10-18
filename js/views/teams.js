@@ -135,7 +135,7 @@ const TeamsView = (() => {
                                 </span>
                             </div>
                         ` : `
-                            <p class="text-xs text-zinc-400 mt-0.5">Manage Team Member</p>
+                            <p class="text-xs text-zinc-400 mt-0.5">Manage Project Contributor</p>
                         `}
                     </div>
                     <div class="flex items-center gap-1.5 flex-shrink-0">
@@ -171,7 +171,7 @@ const TeamsView = (() => {
                 <div class="pt-3 border-t border-zinc-800/80">
                     <button id="workforce-remove-action-btn" class="w-full py-2.5 px-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-98">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        Remove Member from Team
+                        Remove Contributor from Project
                     </button>
                 </div>
                 ` : ''}
@@ -221,7 +221,7 @@ const TeamsView = (() => {
         });
 
         document.getElementById('workforce-remove-action-btn')?.addEventListener('click', async () => {
-            if (!confirm(`Are you sure you want to remove ${memberName} from this team?`)) return;
+            if (!confirm(`Are you sure you want to remove ${memberName} from this project?`)) return;
             const rmBtn = document.getElementById('workforce-remove-action-btn');
             if (rmBtn) {
                 rmBtn.disabled = true;
@@ -236,7 +236,7 @@ const TeamsView = (() => {
             if (error) {
                 Toast.error('Could not remove member: ' + error.message);
             } else {
-                Toast.success(`${memberName} was removed from the team.`);
+                Toast.success(`${memberName} was removed from the project.`);
                 const c = document.getElementById('app');
                 mount(c, leadNum);
             }
@@ -480,13 +480,13 @@ const TeamsView = (() => {
                         <svg class="w-4 h-4 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                         <span>Back to Dashboard</span>
                     </button>
-                    <span class="text-[11px] font-medium text-zinc-500 uppercase tracking-widest hidden sm:inline">Teams & Projects</span>
+                    <span class="text-[11px] font-medium text-zinc-500 uppercase tracking-widest hidden sm:inline">Projects Directory</span>
                 </div>
 
                 <div class="text-center mb-8 px-2">
-                    <p class="text-red-500 text-xs font-semibold tracking-widest uppercase mb-2">Core Teams</p>
-                    <h1 class="font-heading font-bold text-2xl sm:text-3xl mb-2">Connect with <span class="gradient-text-static">your team</span></h1>
-                    <p class="text-zinc-500 text-sm max-w-md mx-auto">Find the team that matches your passion.</p>
+                    <p class="text-emerald-500 text-xs font-semibold tracking-widest uppercase mb-2">Projects</p>
+                    <h1 class="font-heading font-bold text-2xl sm:text-3xl mb-2">Explore <span class="gradient-text-static">Projects</span></h1>
+                    <p class="text-zinc-500 text-sm max-w-md mx-auto">Discover student-led innovation projects and collaborate with creators.</p>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" id="leads-grid">
                     ${CORE_LEADS.map((lead, i) => {
@@ -510,9 +510,9 @@ const TeamsView = (() => {
                                 ${isPending ? `<div class="absolute top-2 right-2 px-2 py-0.5 bg-amber-600 rounded-full text-[10px] font-bold flex items-center gap-1 z-10 animate-pulse">⏳ Pending</div>` : ''}
                             </div>
                             <div class="p-3">
-                                <h3 class="font-heading font-semibold text-sm truncate">${lead.team}</h3>
-                                <p class="text-zinc-400 text-[11px] mt-1">Lead: <span class="text-white">${lead.name}${ICC_CONFIG.VERIFIED_TICK}</span></p>
-                                <p class="text-zinc-500 text-[10px] mt-0.5 truncate">Project: <span class="${lead.project_name ? 'text-emerald-400' : 'text-zinc-600'}">${lead.project_name || 'TBD'}</span></p>
+                                <h3 class="font-heading font-bold text-sm sm:text-base text-white truncate" title="${lead.project_name || lead.team}">${lead.project_name || lead.team}</h3>
+                                <p class="text-zinc-400 text-[11px] mt-0.5 truncate font-medium">Team: <span class="text-zinc-300 font-semibold">${lead.team}</span></p>
+                                <p class="text-zinc-500 text-[10px] mt-0.5 truncate">Lead: <span class="text-zinc-400">${lead.name}${ICC_CONFIG.VERIFIED_TICK}</span></p>
                                 
                                 <!-- Progress Mini Indicator -->
                                 <div class="mt-3 pt-3 border-t border-zinc-800/30 space-y-1.5">
@@ -565,13 +565,16 @@ const TeamsView = (() => {
                             ? `<img src="${lead.avatar_url}" class="w-full h-full object-cover">`
                             : `<span class="font-heading font-bold text-3xl" style="color:${lead.color || '#10b981'}">${lead.initials}</span>`}
                     </div>
-                    <h1 class="font-heading font-bold text-2xl sm:text-3xl text-white tracking-tight">${lead.team}</h1>
-                    <div class="flex flex-wrap items-center justify-center gap-2 mt-2">
-                        <span class="text-zinc-400 text-sm font-medium">Lead: <span id="lead-profile-link" class="text-emerald-400 hover:text-emerald-300 cursor-pointer underline decoration-dotted transition-colors" title="View Profile">${lead.name}${ICC_CONFIG.VERIFIED_TICK}</span></span>
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold tracking-wider uppercase mb-2">
+                        <span>Projects Modal · Workspace</span>
+                    </div>
+                    <!-- Prominent Project Name -->
+                    <h1 class="font-heading font-bold text-2xl sm:text-4xl text-white tracking-tight">${lead.project_name || lead.team}</h1>
+                    <!-- Small Team Name and Lead details -->
+                    <div class="flex flex-wrap items-center justify-center gap-2 mt-2.5">
+                        <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-semibold text-zinc-400">Team: <span class="text-zinc-200 font-bold">${lead.team}</span></span>
                         <span class="text-zinc-600 hidden sm:inline">•</span>
-                        <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-semibold">
-                            Project: <span class="${lead.project_name ? 'text-emerald-400' : 'text-zinc-500'}">${lead.project_name || 'Yet to choose'}</span>
-                        </span>
+                        <span class="text-zinc-400 text-sm font-medium">Lead: <span id="lead-profile-link" class="text-emerald-400 hover:text-emerald-300 cursor-pointer underline decoration-dotted transition-colors" title="View Profile">${lead.name}${ICC_CONFIG.VERIFIED_TICK}</span></span>
                     </div>
                 </div>
             </div>
@@ -585,11 +588,11 @@ const TeamsView = (() => {
                         <!-- About & Specialties -->
                         <div class="glass-card rounded-2xl p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl space-y-5">
                             <div>
-                                <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-2">About</h3>
-                                <p class="text-sm text-zinc-300 leading-relaxed">${lead.bio || 'No bio provided yet.'}</p>
+                                <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-2">About the Project</h3>
+                                <p class="text-sm text-zinc-300 leading-relaxed">${lead.bio || 'No project description provided yet.'}</p>
                             </div>
                             <div>
-                                <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-2">Specialties</h3>
+                                <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-2">Specialties & Tech Stack</h3>
                                 <div class="flex flex-wrap gap-2">
                                     ${(lead.specialties || []).map(s => `<span class="specialty-pill px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-400">${s}</span>`).join('')}
                                 </div>
@@ -598,48 +601,48 @@ const TeamsView = (() => {
 
                         <!-- Membership Action Card & Pending/Lead Admin Controls -->
                         <div class="glass-card rounded-2xl p-5 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl">
-                            <h4 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-3">Membership</h4>
+                            <h4 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-3">Project Membership</h4>
                             ${(() => {
-                                if (!user) return `<button id="team-join-btn" class="join-btn w-full px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Join ${lead.team}</button><p class="text-[11px] text-zinc-600 mt-1.5 text-center">Sign in to join</p>`;
+                                if (!user) return `<button id="team-join-btn" class="join-btn w-full px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Join Project</button><p class="text-[11px] text-zinc-600 mt-1.5 text-center">Sign in to apply</p>`;
                                 if (isMember || isLead) return `
                                     <div class="flex flex-col gap-3">
                                         <div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600/15 border border-emerald-600/30 rounded-xl">
                                             <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                            <span class="text-emerald-400 text-sm font-semibold">${isLead ? "Team Leader" : "You're a Member"}</span>
+                                            <span class="text-emerald-400 text-sm font-semibold">${isLead ? "Project Leader" : "You're a Project Contributor"}</span>
                                         </div>
                                         <button id="open-team-chat-btn" class="flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-sm font-bold transition-all shadow-lg shadow-zinc-950/50 group">
                                             <svg class="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                                            Open Team Chat
+                                            Open Project Chat
                                         </button>
                                     </div>`;
-                                if (profile?.memberships?.length > 0 || profile?.role === 'lead') return `<div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60 w-full"><svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span class="text-zinc-500 text-sm font-semibold">Already in a Team</span></div><p class="text-[10px] text-zinc-600 mt-2 text-center">You can only be in one team at a time.</p>`;
+                                if (profile?.memberships?.length > 0 || profile?.role === 'lead') return `<div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60 w-full"><svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span class="text-zinc-500 text-sm font-semibold">Already in a Project</span></div><p class="text-[10px] text-zinc-600 mt-2 text-center">You can only be in one project at a time.</p>`;
                                 if (isPending) return `
                                     <div class="flex flex-col gap-2">
                                         <div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-amber-500/15 border border-amber-500/30 rounded-xl">
                                             <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                            <span class="text-amber-400 text-sm font-semibold">Request Pending</span>
+                                            <span class="text-amber-400 text-sm font-semibold">Application Pending</span>
                                         </div>
-                                        <button id="team-cancel-btn" class="text-[11px] text-zinc-500 hover:text-red-400 transition-colors w-fit mx-auto underline decoration-dotted">Cancel Request</button>
+                                        <button id="team-cancel-btn" class="text-[11px] text-zinc-500 hover:text-red-400 transition-colors w-fit mx-auto underline decoration-dotted">Cancel Application</button>
                                     </div>`;
 
                                 if (profile?.pending_teams?.length > 0) return `
                                     <div class="flex flex-col gap-1.5">
                                         <div class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-xl opacity-60">
                                             <svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                            <span class="text-zinc-500 text-sm font-semibold">Request Pending Elsewhere</span>
+                                            <span class="text-zinc-500 text-sm font-semibold">Application Pending Elsewhere</span>
                                         </div>
-                                        <p class="text-[10px] text-zinc-600 mt-0.5 text-center">You already have a pending request for another team. Cancel it to apply here.</p>
+                                        <p class="text-[10px] text-zinc-600 mt-0.5 text-center">You already have a pending request for another project. Cancel it to apply here.</p>
                                     </div>`;
 
-                                return `<button id="team-join-btn" class="join-btn w-full px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Request to Join ${lead.team}</button>`;
+                                return `<button id="team-join-btn" class="join-btn w-full px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Request to Join ${lead.project_name || lead.team}</button>`;
                             })()}
                         </div>
 
                         ${isLead ? `
                         <div class="glass-card rounded-2xl p-4 border border-zinc-800/80 bg-zinc-950/60" id="pending-requests-container">
-                            <h3 class="font-heading font-semibold text-sm mb-3">Pending Requests (${pendingMembers.length})</h3>
+                            <h3 class="font-heading font-semibold text-sm mb-3">Pending Applications (${pendingMembers.length})</h3>
                             <div class="space-y-2 max-h-48 overflow-y-auto">
-                                ${pendingMembers.length === 0 ? '<p class="text-xs text-zinc-600">No pending requests</p>' : pendingMembers.map(m => `
+                                ${pendingMembers.length === 0 ? '<p class="text-xs text-zinc-600">No pending applications</p>' : pendingMembers.map(m => `
                                 <div class="bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden mb-3">
                                     <div class="flex items-center justify-between px-3 py-2 bg-zinc-900/50">
                                         <div class="flex items-center gap-2 min-w-0 pr-2">
@@ -668,7 +671,7 @@ const TeamsView = (() => {
                             </div>
                             
                             <div class="flex items-center justify-between mt-5 mb-2 pt-3 border-t border-zinc-800/60">
-                                <h3 class="font-heading font-semibold text-xs text-zinc-300">Team Configuration</h3>
+                                <h3 class="font-heading font-semibold text-xs text-zinc-300">Project Configuration</h3>
                                 <button id="toggle-config-btn" class="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500 hover:text-emerald-400" title="Edit Configuration">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                 </button>
@@ -676,12 +679,12 @@ const TeamsView = (() => {
                             
                             <div id="team-config-expandable" class="hidden animate-slide-down overflow-hidden">
                                 <form id="lead-edit-team-form" class="space-y-3 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
-                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team Profile Picture (Optional)</label><input type="file" id="lead-avatar-input" accept="image/jpeg, image/png, image/webp" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
-                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Project Name</label><input type="text" id="lead-project-name" value="${lead.project_name || ''}" placeholder="Yet to choose" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
-                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team Name</label><input type="text" id="lead-team-name" value="${lead.team}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
-                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Bio</label><textarea id="lead-bio" rows="3" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${lead.bio}</textarea></div>
-                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Specialties (comma-separated)</label><input type="text" id="lead-specialties" value="${lead.specialties.join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
-                                    <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold mt-2 transition-all shadow-lg shadow-emerald-600/20">Save Configuration</button>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Project Name (Primary Title)</label><input type="text" id="lead-project-name" value="${lead.project_name || ''}" placeholder="e.g. Autonomous Ground Vehicle" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Team Name (Secondary)</label><input type="text" id="lead-team-name" value="${lead.team}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white" required></div>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Project Avatar / Icon (Optional)</label><input type="file" id="lead-avatar-input" accept="image/jpeg, image/png, image/webp" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Project Overview & Objectives</label><textarea id="lead-bio" rows="3" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none">${lead.bio}</textarea></div>
+                                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Specialties & Tech Stack (comma-separated)</label><input type="text" id="lead-specialties" value="${lead.specialties.join(', ')}" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white"></div>
+                                    <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold mt-2 transition-all shadow-lg shadow-emerald-600/20">Save Project Configuration</button>
                                 </form>
                             </div>
                         </div>
@@ -697,10 +700,10 @@ const TeamsView = (() => {
                             <div class="flex items-center justify-between gap-3 mb-6 pb-4 border-b border-zinc-800/60">
                                 <div>
                                     <div class="flex items-center gap-2.5">
-                                        <h3 class="font-heading font-bold text-lg sm:text-xl text-white tracking-tight">Active Workforce</h3>
+                                        <h3 class="font-heading font-bold text-lg sm:text-xl text-white tracking-tight">Project Workforce</h3>
                                         <span id="team-member-count" class="px-2.5 py-0.5 bg-red-600/15 text-red-400 border border-red-500/20 rounded-full text-xs font-bold">${teamMembers.length}</span>
                                     </div>
-                                    <p class="text-xs text-zinc-400 mt-1">Dedicated contributors powering ${lead.team}</p>
+                                    <p class="text-xs text-zinc-400 mt-1">Dedicated contributors powering ${lead.project_name || lead.team}</p>
                                 </div>
                                 <div class="flex items-center gap-2 px-3 py-1 bg-zinc-900/80 border border-zinc-800 rounded-full flex-shrink-0">
                                     <span class="relative flex h-2 w-2">
@@ -713,7 +716,7 @@ const TeamsView = (() => {
 
                             <!-- Seamless circle-only grid in workforce column -->
                             <div id="team-roster" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-y-8 gap-x-4 justify-items-center">
-                                ${teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No workforce members yet — be first to join!</div>'
+                                ${teamMembers.length === 0 ? '<div class="col-span-full text-sm text-zinc-500 text-center py-12">No project members yet — be first to join!</div>'
                         : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLead, profile?.id, memberTags, lead.id, lead)).join('')}
                             </div>
                         </div>
@@ -954,12 +957,12 @@ const TeamsView = (() => {
         });
 
         document.getElementById('team-cancel-btn')?.addEventListener('click', async () => {
-            if (!confirm('Cancel your join request?')) return;
+            if (!confirm('Cancel your application to this project?')) return;
             const btn = document.getElementById('team-cancel-btn');
             btn.disabled = true; btn.textContent = 'Cancelling...';
             const { error } = await ICCSupabase.cancelJoinRequest(lead.id);
-            if (error) { Toast.error('Failed to cancel: ' + error.message); btn.disabled = false; btn.textContent = 'Cancel Request'; }
-            else { Toast.success('Request cancelled'); const c = document.getElementById('app'); mount(c, lead.id); }
+            if (error) { Toast.error('Failed to cancel: ' + error.message); btn.disabled = false; btn.textContent = 'Cancel Application'; }
+            else { Toast.success('Application cancelled'); const c = document.getElementById('app'); mount(c, lead.id); }
         });
 
         document.getElementById('team-roster')?.addEventListener('click', (e) => {
@@ -987,7 +990,7 @@ const TeamsView = (() => {
                 const { error } = await ICCSupabase.approveMember(userId, lead.id);
                 if (error) Toast.error('Failed to approve member');
                 else {
-                    Toast.success('Member approved!');
+                    Toast.success('Member approved for project!');
                     const c = document.getElementById('app'); mount(c, lead.id);
                 }
             });
@@ -999,9 +1002,9 @@ const TeamsView = (() => {
                 const { error } = await ICCSupabase.denyMember(userId, lead.id);
                 if (error) {
                     console.error('Denial error:', error);
-                    Toast.error('Error: Could not deny request');
+                    Toast.error('Error: Could not deny application');
                 } else {
-                    Toast.info('Join request denied');
+                    Toast.info('Project application denied');
                     const c = document.getElementById('app'); mount(c, lead.id);
                 }
             });
@@ -1031,9 +1034,9 @@ const TeamsView = (() => {
 
             if (fileInput.files && fileInput.files[0]) {
                 const file = fileInput.files[0];
-                if (file.size > 2 * 1024 * 1024) { Toast.error('Image must be under 2MB'); btn.disabled = false; btn.textContent = 'Save Configuration'; return; }
+                if (file.size > 2 * 1024 * 1024) { Toast.error('Image must be under 2MB'); btn.disabled = false; btn.textContent = 'Save Project Configuration'; return; }
                 const { url, error: uploadError } = await ICCSupabase.uploadImage('avatars', file);
-                if (uploadError) { Toast.error('Image upload failed: ' + uploadError.message); btn.disabled = false; btn.textContent = 'Save Configuration'; return; }
+                if (uploadError) { Toast.error('Image upload failed: ' + uploadError.message); btn.disabled = false; btn.textContent = 'Save Project Configuration'; return; }
                 newAvatarUrl = url;
             }
 
@@ -1046,8 +1049,8 @@ const TeamsView = (() => {
             };
 
             const { error } = await ICCSupabase.updateLead(lead.id, fields);
-            if (error) { Toast.error('Failed to update team: ' + error.message); btn.disabled = false; btn.textContent = 'Save Configuration'; }
-            else { Toast.success('Team configuration updated!'); await loadLeads(); const c = document.getElementById('app'); mount(c, lead.id); }
+            if (error) { Toast.error('Failed to update project: ' + error.message); btn.disabled = false; btn.textContent = 'Save Project Configuration'; }
+            else { Toast.success('Project configuration updated!'); await loadLeads(); const c = document.getElementById('app'); mount(c, lead.id); }
         });
 
         // Milestone Progress Events

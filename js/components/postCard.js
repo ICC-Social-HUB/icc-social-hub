@@ -39,7 +39,7 @@ const PostCard = (() => {
                     </div>
                     <div class="flex items-center gap-2 mt-0.5">
                         <span class="text-[12px] text-zinc-500 font-medium">${timeAgo}</span>
-                        ${teamLead ? `<a href="#teams/${post.team_tag}" class="text-[12px] text-zinc-500 hover:text-crimson transition-colors font-medium">· ${teamLead.team}</a>` : ''}
+                        ${teamLead ? `<a href="#teams/${post.team_tag}" class="text-[12px] text-zinc-500 hover:text-emerald-400 transition-colors font-medium">· ${teamLead.project_name || teamLead.team}</a>` : ''}
                     </div>
                 </div>
             </div>

@@ -35,8 +35,9 @@ const JoinTeamModal = (() => {
                 <div class="p-6">
                     <div class="flex items-center justify-between mb-6">
                         <div>
-                            <h3 class="font-heading font-bold text-xl">Join ${currentTeam.team}</h3>
-                            <p class="text-zinc-500 text-sm mt-1">Lead: <span class="text-zinc-300 font-medium">${currentTeam.name}${ICC_CONFIG.VERIFIED_TICK}</span></p>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-1">Project Application</span>
+                            <h3 class="font-heading font-bold text-xl text-white">${currentTeam.project_name || currentTeam.team}</h3>
+                            <p class="text-zinc-400 text-xs mt-1">Team: <span class="text-zinc-300 font-semibold">${currentTeam.team}</span> · Lead: <span class="text-zinc-300 font-medium">${currentTeam.name}${ICC_CONFIG.VERIFIED_TICK}</span></p>
                         </div>
                         <div class="flex items-center gap-2">
                             <button type="button" id="join-modal-back-btn" class="flex items-center gap-1 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer" title="Go Back">
@@ -96,7 +97,7 @@ const JoinTeamModal = (() => {
                         </div>
 
                         <button type="submit" id="join-submit-btn" class="w-full py-4 bg-red-600 hover:bg-red-500 rounded-xl font-bold text-sm shadow-lg shadow-red-600/20 transition-all active:scale-[0.98] disabled:opacity-50" ${loading ? 'disabled' : ''}>
-                            ${loading ? '<div class="spinner spinner-sm mx-auto"></div>' : `Send Join Request`}
+                            ${loading ? '<div class="spinner spinner-sm mx-auto"></div>' : `Send Project Application`}
                         </button>
                     </form>
                 </div>
@@ -137,7 +138,7 @@ const JoinTeamModal = (() => {
             loading = false;
             mount();
         } else {
-            Toast.success(`Join request sent! The Team Lead will review it shortly.`);
+            Toast.success(`Project application sent! The Project Lead will review it shortly.`);
             close();
             // Refresh the teams view
             const app = document.getElementById('app');

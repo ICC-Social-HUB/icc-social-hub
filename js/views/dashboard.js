@@ -112,11 +112,11 @@ const DashboardView = (() => {
                     <div class="bento-tile tile-progress animate-slide-up delay-100 cursor-pointer" onclick="window.location.hash = '#teams/${team?.id || ''}'">
                         <div class="tile-label">
                             <svg class="w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                            My Team Progress
+                            My Project Progress
                         </div>
                         ${team ? `
-                            <h2 class="tile-title mb-2">${team.team}</h2>
-                            <p class="text-[11px] text-zinc-500 mb-4">${team.project_name || 'No project name set'}</p>
+                            <h2 class="tile-title mb-1 text-white">${team.project_name || team.team}</h2>
+                            <p class="text-[11px] text-zinc-400 font-medium mb-4">Team: ${team.team}</p>
                             <div class="mt-auto">
                                 <div class="flex items-center justify-between mb-2">
                                     <span class="text-[10px] font-bold text-emerald-400">${progress}% Complete</span>
@@ -128,8 +128,8 @@ const DashboardView = (() => {
                             </div>
                         ` : `
                             <div class="flex flex-col items-center justify-center h-full text-center py-4">
-                                <p class="text-xs text-zinc-500 mb-3">You haven't joined a team yet.</p>
-                                <button onclick="event.stopPropagation(); window.location.hash='#teams'" class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-[10px] font-bold hover:bg-zinc-800 transition-colors">Find a Team</button>
+                                <p class="text-xs text-zinc-500 mb-3">You haven't joined a project yet.</p>
+                                <button onclick="event.stopPropagation(); window.location.hash='#teams'" class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-[10px] font-bold hover:bg-zinc-800 transition-colors">Find a Project</button>
                             </div>
                         `}
                         <div class="tile-icon-bg"><svg class="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
