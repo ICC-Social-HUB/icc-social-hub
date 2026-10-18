@@ -12,6 +12,8 @@
 -- - users_edit: Permission for administrators to submit member profile edit requests (subject to Super Admin review & approval)
 -- - users_export: Permission to view user roster table and export/download member Excel (.xlsx)
 -- - users: Legacy backward compatibility flag (true if either users_edit or users_export is true)
+-- - mom: Permission to create, edit, & delete Minutes of Meeting in Core Space
+-- - inventory: Permission to manage inventory (add, edit, delete items, view orders & control stock)
 --
 -- Security note: Regular administrators cannot directly approve user changes or bypass approval.
 -- Only Super Admins (role: 'super_admin' or 'superadmin') can review and approve/reject user edits.

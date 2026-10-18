@@ -1498,6 +1498,25 @@ const ICCSupabase = (() => {
         return perms.mom === true;
     }
 
+    function canManageInventory(prof = currentProfile) {
+        const target = prof || currentProfile;
+        if (!target && !currentUser) return false;
+        if (isSuperAdmin(target)) return true;
+        
+        const role = (target?.role || '').toLowerCase().trim();
+        if (role !== 'admin' && role !== 'mentor') return false;
+
+        // Authorized admins: Only admins explicitly authorized by super admin with 'inventory' permission can edit/add/delete/manage
+        if (target.admin_permissions && typeof target.admin_permissions === 'object') {
+            return target.admin_permissions.inventory === true;
+        }
+        if (Array.isArray(target.admin_permissions)) {
+            return target.admin_permissions.includes('inventory');
+        }
+        const perms = getAdminPermissions(target);
+        return perms.inventory === true;
+    }
+
     function updateMomCache(item, action = 'add') {
         try {
             let list = [];
@@ -1848,7 +1867,8 @@ const ICCSupabase = (() => {
         users_edit: true,
         users_export: true,
         users: true,
-        mom: false
+        mom: false,
+        inventory: false
     };
 
     function isSuperAdmin(prof = currentProfile) {
@@ -1861,7 +1881,7 @@ const ICCSupabase = (() => {
     function getAdminPermissions(prof = currentProfile) {
         const target = prof || currentProfile;
         if (!target && !currentUser) {
-            return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, mom: false, all: false };
+            return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, mom: false, inventory: false, all: false };
         }
         const role = (target?.role || '').toLowerCase().trim();
         const isSuper = role === 'super_admin' || role === 'superadmin' || target?.email === 'iccsocialhub@gmail.com';
@@ -1870,22 +1890,22 @@ const ICCSupabase = (() => {
 
         // Non-admins and non-mentors have no admin permissions
         if (!isSuper && !isAdminRole && !isMentorRole) {
-            return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, mom: false, all: false };
+            return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, mom: false, inventory: false, all: false };
         }
 
         // Super Admins ALWAYS have ALL permissions permanently — immutable and non-degradable
         if (isSuper) {
-            return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, mom: true, all: true };
+            return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, mom: true, inventory: true, all: true };
         }
 
-        // Standard Admins: Backward compatibility: If admin_permissions is undefined/null, grant all by default
+        // Standard Admins: Backward compatibility: If admin_permissions is undefined/null, grant default (inventory requires explicit grant)
         if (isAdminRole && (target.admin_permissions === undefined || target.admin_permissions === null)) {
-            return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, mom: false, all: false };
+            return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, mom: false, inventory: false, all: false };
         }
 
         // Mentors: if admin_permissions is undefined/null, grant none by default
         if (isMentorRole && (target.admin_permissions === undefined || target.admin_permissions === null)) {
-            return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, mom: false, all: false };
+            return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, mom: false, inventory: false, all: false };
         }
 
         // If stored as JSON object
@@ -1894,9 +1914,9 @@ const ICCSupabase = (() => {
             const keys = Object.keys(p);
             if (keys.length === 0) {
                 if (isAdminRole) {
-                    return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, all: true };
+                    return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, mom: false, inventory: false, all: false };
                 }
-                return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, mom: false, all: false };
+                return { broadcast: false, moderate: false, events: false, leads: false, users_edit: false, users_export: false, users: false, mom: false, inventory: false, all: false };
             }
 
             // Backward compatibility for legacy 'users' key (before users_edit/users_export split)
@@ -1909,11 +1929,12 @@ const ICCSupabase = (() => {
             const e = !!p.events;
             const l = !!p.leads;
             const mom = !!p.mom;
+            const inv = !!p.inventory;
 
-            // `all` is TRUE only if explicitly stored as true OR if all 7 individual features are on.
+            // `all` is TRUE only if explicitly stored as true OR if all 8 individual features are on.
             // Individual feature flags are ALWAYS authoritative — never override them based on `all`.
-            const allSeven = (b && m && e && l && ue && ux && mom);
-            const all = (p.all === true) || allSeven;
+            const allEight = (b && m && e && l && ue && ux && mom && inv);
+            const all = (p.all === true) || allEight;
 
             return {
                 broadcast: b,
@@ -1924,6 +1945,7 @@ const ICCSupabase = (() => {
                 users_export: ux,
                 users: (ue || ux),
                 mom: mom,
+                inventory: inv,
                 all: all
             };
         }
@@ -1935,7 +1957,8 @@ const ICCSupabase = (() => {
             const ue = arr.includes('users_edit') || hasLegacyUsers;
             const ux = arr.includes('users_export') || hasLegacyUsers;
             const mom = arr.includes('mom');
-            const hasAll = arr.includes('all') || (arr.includes('broadcast') && arr.includes('moderate') && arr.includes('events') && arr.includes('leads') && ue && ux && mom);
+            const inv = arr.includes('inventory');
+            const hasAll = arr.includes('all') || (arr.includes('broadcast') && arr.includes('moderate') && arr.includes('events') && arr.includes('leads') && ue && ux && mom && inv);
             return {
                 broadcast: hasAll || arr.includes('broadcast'),
                 moderate: hasAll || arr.includes('moderate'),
@@ -1945,17 +1968,24 @@ const ICCSupabase = (() => {
                 users_export: hasAll || ux,
                 users: hasAll || ue || ux,
                 mom: hasAll || mom,
+                inventory: hasAll || inv,
                 all: hasAll
             };
         }
 
-        return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, mom: false, all: false };
+        return { broadcast: true, moderate: true, events: true, leads: true, users_edit: true, users_export: true, users: true, mom: false, inventory: false, all: false };
     }
 
     function hasAdminPermission(permKey, prof = currentProfile) {
         const perms = getAdminPermissions(prof);
         if (permKey === 'users') {
             return !!(perms.all || perms.users || perms.users_edit || perms.users_export);
+        }
+        if (permKey === 'inventory') {
+            return canManageInventory(prof);
+        }
+        if (permKey === 'mom') {
+            return canManageMom(prof);
         }
         return !!(perms.all || perms[permKey]);
     }
@@ -2717,20 +2747,20 @@ const ICCSupabase = (() => {
     }
 
     async function createInventoryItem(fields) {
-        if (!client || !isAdmin()) return { error: { message: 'Not authorized' } };
+        if (!client || !canManageInventory()) return { error: { message: 'Not authorized: Inventory management permissions required.' } };
         const { data, error } = await client.from('inventory').insert(fields).select().single();
         return { data, error };
     }
 
     async function updateInventoryItem(itemId, fields) {
-        if (!client || !isAdmin()) return { error: { message: 'Not authorized' } };
+        if (!client || !canManageInventory()) return { error: { message: 'Not authorized: Inventory management permissions required.' } };
         fields.updated_at = new Date().toISOString();
         const { data, error } = await client.from('inventory').update(fields).eq('id', itemId).select().single();
         return { data, error };
     }
 
     async function deleteInventoryItem(itemId) {
-        if (!client || !isAdmin()) return { error: { message: 'Not authorized' } };
+        if (!client || !canManageInventory()) return { error: { message: 'Not authorized: Inventory management permissions required.' } };
         const { error } = await client.from('inventory').delete().eq('id', itemId);
         return { error };
     }
@@ -2782,7 +2812,7 @@ const ICCSupabase = (() => {
     }
 
     async function fetchInventoryRequests(status = null) {
-        if (!client || !isAdmin()) return [];
+        if (!client || !canManageInventory()) return [];
         let query = client.from('inventory_requests')
             .select('*, inventory:item_id(*), profiles:user_id(id, full_name, usn, phone, section, avatar_url, email, role)')
             .order('requested_at', { ascending: false });
@@ -2817,7 +2847,7 @@ const ICCSupabase = (() => {
         const requestData = (req && req.length > 0) ? req[0] : null;
         if (!requestData) return { error: { message: 'Request not found' } };
         
-        const isAdminUser = isAdmin();
+        const isAdminUser = canManageInventory();
         
         // 2. Permission Check
         if (!isAdminUser) {
@@ -4559,7 +4589,7 @@ const ICCSupabase = (() => {
         fetchProjectMentorMessages, fetchAllProjectMentorMessages, sendProjectMentorMessage, deleteProjectMentorMessage,
         subscribeToProjectMentorChat, canAccessProjectMentorChat, canUserAccessProjectMentorChat,
         // Core Space & Minutes of Meeting (MoM) API
-        fetchCoreProfiles, fetchMinutesOfMeeting, createMinutesOfMeeting, updateMinutesOfMeeting, deleteMinutesOfMeeting, canManageMom,
+        fetchCoreProfiles, fetchMinutesOfMeeting, createMinutesOfMeeting, updateMinutesOfMeeting, deleteMinutesOfMeeting, canManageMom, canManageInventory,
         // Project Tasks API
         fetchProjectTasks, fetchAllProjectTasks, createProjectTask, completeProjectTask, deleteProjectTask
     };

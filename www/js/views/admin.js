@@ -936,6 +936,14 @@ const AdminView = (() => {
                                     </div>
                                     <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="mom" ${appointingUserDraft?.mom ? 'checked' : ''}>
                                 </label>
+
+                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
+                                    <div>
+                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">📦 Inventory Management</span>
+                                        <span class="text-[10px] text-zinc-500">Add, edit, delete items & manage stock/orders</span>
+                                    </div>
+                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="inventory" ${appointingUserDraft?.inventory ? 'checked' : ''}>
+                                </label>
                             </div>
                         </div>
 
@@ -1209,6 +1217,18 @@ const AdminView = (() => {
                                             </div>
                                             <label class="switch-container flex-shrink-0">
                                                 <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="mom" data-name="${escapeHtml(fullName)}" ${perms.mom ? 'checked' : ''}>
+                                                <span class="switch-slider"></span>
+                                            </label>
+                                        </div>
+
+                                        <!-- 8. Inventory Management -->
+                                        <div class="flex items-center justify-between p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
+                                            <div class="min-w-0 pr-2">
+                                                <span class="text-xs font-medium text-white flex items-center gap-1.5 truncate">📦 Inventory Management</span>
+                                                <span class="text-[10px] text-zinc-500 block truncate">Add, edit, delete items & manage stock/orders</span>
+                                            </div>
+                                            <label class="switch-container flex-shrink-0">
+                                                <input type="checkbox" class="switch-input admin-perm-toggle" data-user-id="${u.id}" data-perm="inventory" data-name="${escapeHtml(fullName)}" ${perms.inventory ? 'checked' : ''}>
                                                 <span class="switch-slider"></span>
                                             </label>
                                         </div>
@@ -2423,6 +2443,7 @@ const AdminView = (() => {
                     users_export: targetRole === 'admin',
                     users: targetRole === 'admin',
                     mom: false,
+                    inventory: false,
                     all: false,
                     isSuperAdmin: targetRole === 'super_admin'
                 };
@@ -2482,6 +2503,7 @@ const AdminView = (() => {
                 appointingUserDraft.users_export = checked;
                 appointingUserDraft.users = checked;
                 appointingUserDraft.mom = checked;
+                appointingUserDraft.inventory = checked;
                 container.querySelectorAll('.appoint-perm-check').forEach(cb => {
                     cb.checked = checked;
                 });
@@ -2497,7 +2519,7 @@ const AdminView = (() => {
                     if (perm === 'users_edit' || perm === 'users_export') {
                         appointingUserDraft.users = !!(appointingUserDraft.users_edit || appointingUserDraft.users_export);
                     }
-                    const allTrue = appointingUserDraft.broadcast && appointingUserDraft.moderate && appointingUserDraft.events && appointingUserDraft.leads && appointingUserDraft.users_edit && appointingUserDraft.users_export && appointingUserDraft.mom;
+                    const allTrue = appointingUserDraft.broadcast && appointingUserDraft.moderate && appointingUserDraft.events && appointingUserDraft.leads && appointingUserDraft.users_edit && appointingUserDraft.users_export && appointingUserDraft.mom && appointingUserDraft.inventory;
                     appointingUserDraft.all = allTrue;
                     const allToggle = container.querySelector('#appoint-all-toggle');
                     if (allToggle) allToggle.checked = allTrue;
@@ -2526,6 +2548,7 @@ const AdminView = (() => {
                 users_export: !!appointingUserDraft.users_export,
                 users: !!(appointingUserDraft.users_edit || appointingUserDraft.users_export),
                 mom: !!appointingUserDraft.mom,
+                inventory: !!appointingUserDraft.inventory,
                 all: !!appointingUserDraft.all
             };
 
@@ -2588,7 +2611,8 @@ const AdminView = (() => {
                     users_edit: isAll,
                     users_export: isAll,
                     users: isAll,
-                    mom: isAll
+                    mom: isAll,
+                    inventory: isAll
                 };
 
                 const res = await ICCSupabase.updateAdminPermissions(userId, updated);
@@ -2625,8 +2649,8 @@ const AdminView = (() => {
                     currentPerms.users = !!(currentPerms.users_edit || currentPerms.users_export);
                 }
 
-                const allSeven = !!(currentPerms.broadcast && currentPerms.moderate && currentPerms.events && currentPerms.leads && currentPerms.users_edit && currentPerms.users_export && currentPerms.mom);
-                currentPerms.all = allSeven;
+                const allEight = !!(currentPerms.broadcast && currentPerms.moderate && currentPerms.events && currentPerms.leads && currentPerms.users_edit && currentPerms.users_export && currentPerms.mom && currentPerms.inventory);
+                currentPerms.all = allEight;
 
                 const res = await ICCSupabase.updateAdminPermissions(userId, currentPerms);
                 if (res.error) {
@@ -2641,7 +2665,8 @@ const AdminView = (() => {
                         users_edit: 'Request User Edits',
                         users_export: 'View & Download Excel',
                         users: 'User Management',
-                        mom: 'Minutes of Meeting (MoM)'
+                        mom: 'Minutes of Meeting (MoM)',
+                        inventory: 'Inventory Management'
                     };
                     Toast.success(`${permNames[perm] || perm} ${checked ? 'enabled' : 'disabled'} for ${userName}`);
                     // Re-fetch fresh data from DB to ensure UI reflects actual persisted state

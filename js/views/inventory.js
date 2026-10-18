@@ -10,6 +10,13 @@ const InventoryView = (() => {
     let searchQuery = '';
     let managementFilter = 'all'; // all, pending, taken, completed, cancelled
 
+    function canManage() {
+        if (typeof ICCSupabase.canManageInventory === 'function') {
+            return ICCSupabase.canManageInventory();
+        }
+        return ICCSupabase.isSuperAdmin() || ICCSupabase.hasAdminPermission('inventory');
+    }
+
     async function mount(container) {
         try {
             container.innerHTML = `<div class="flex items-center justify-center min-h-[60vh]"><div class="spinner"></div></div>`;
@@ -29,8 +36,8 @@ const InventoryView = (() => {
                 return;
             }
 
-            // Set default tab based on role
-            if (ICCSupabase.isAdmin()) {
+            // Set default tab based on role and inventory authorization
+            if (canManage()) {
                 currentTab = 'management';
             } else {
                 currentTab = 'storefront';
@@ -50,8 +57,10 @@ const InventoryView = (() => {
         try {
             inventory = await ICCSupabase.fetchInventory();
             myRequests = await ICCSupabase.fetchMyInventoryRequests();
-            if (ICCSupabase.isAdmin()) {
+            if (canManage()) {
                 allRequests = await ICCSupabase.fetchInventoryRequests();
+            } else {
+                allRequests = [];
             }
         } catch (err) {
             console.error('Inventory refresh error:', err);
@@ -78,7 +87,7 @@ const InventoryView = (() => {
     }
 
     function render(container) {
-        const isAdmin = ICCSupabase.isAdmin();
+        const isAdmin = canManage();
         
         container.innerHTML = `
             <div class="min-h-screen pb-24 px-4 pt-4 animate-fade-in">
@@ -130,10 +139,10 @@ const InventoryView = (() => {
         } else if (currentTab === 'my-requests') {
             return renderMyRequests();
         } else if (currentTab === 'management') {
-            if (!ICCSupabase.isAdmin()) { currentTab = 'storefront'; return renderStorefront(); }
+            if (!canManage()) { currentTab = 'storefront'; return renderStorefront(); }
             return renderManagement();
         } else if (currentTab === 'stock-control') {
-            if (!ICCSupabase.isAdmin()) { currentTab = 'storefront'; return renderStorefront(); }
+            if (!canManage()) { currentTab = 'storefront'; return renderStorefront(); }
             return renderStockControl();
         }
     }
@@ -751,7 +760,10 @@ const InventoryView = (() => {
 
     // Admin CRUD Helpers
     function openAddModal() {
-        if (!ICCSupabase.isAdmin()) return;
+        if (!canManage()) {
+            Toast.show('Only authorized administrators can add inventory items.', 'error');
+            return;
+        }
         const root = document.getElementById('modal-root');
         root.innerHTML = `
             <div class="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in overflow-y-auto">
@@ -819,6 +831,10 @@ const InventoryView = (() => {
 
     async function submitAddItem(e) {
         e.preventDefault();
+        if (!canManage()) {
+            Toast.show('Unauthorized: Inventory management permission required.', 'error');
+            return;
+        }
         const btn = e.target.querySelector('button');
         btn.disabled = true;
         btn.innerHTML = `<div class="spinner mx-auto"></div>`;
@@ -868,8 +884,8 @@ const InventoryView = (() => {
     }
 
     async function updateStatus(requestId, status) {
-        if (!ICCSupabase.isAdmin()) {
-            Toast.show('Admin permissions required', 'error');
+        if (!canManage()) {
+            Toast.show('Inventory management permissions required', 'error');
             return;
         }
         const { error } = await ICCSupabase.updateInventoryRequestStatus(requestId, status);
@@ -992,8 +1008,8 @@ const InventoryView = (() => {
     }
 
     async function deleteItem(itemId) {
-        if (!ICCSupabase.isAdmin()) {
-            Toast.show('Admin permissions required', 'error');
+        if (!canManage()) {
+            Toast.show('Inventory management permissions required', 'error');
             return;
         }
         if (!confirm('Are you sure you want to remove this item? This action cannot be undone.')) return;
@@ -1007,6 +1023,10 @@ const InventoryView = (() => {
 
     function openEditModal(itemId) {
         console.log('🛠️ openEditModal called for:', itemId);
+        if (!canManage()) {
+            Toast.show('Inventory management permissions required', 'error');
+            return;
+        }
         
         const item = inventory.find(i => String(i.id) === String(itemId));
         if (!item) {
@@ -1080,6 +1100,10 @@ const InventoryView = (() => {
     async function submitEditItem(e, itemId) {
         e.preventDefault();
         console.log('🚀 Submitting edit for item:', itemId);
+        if (!canManage()) {
+            Toast.show('Inventory management permissions required', 'error');
+            return;
+        }
         
         const btn = e.target.querySelector('button[type="submit"]');
         if (!btn) {
@@ -1253,7 +1277,7 @@ const InventoryView = (() => {
     // Explicitly attach to window for global access (especially for onclick handlers)
     window.InventoryView = { 
         mount, setTab, openRequestModal, closeModal, submitRequest, confirmBorrowRequest,
-        openAddModal, submitAddItem, updateStatus, deleteItem,
+        openAddModal, submitAddItem, updateStatus, deleteItem, canManage,
         openEditModal, submitEditItem, handleSearch, clearSearch,
         cancelMyRequest, openCancelConfirmModal, confirmCancelMyRequest,
         refreshAndRender, setManagementFilter, toggleCardTimeline
