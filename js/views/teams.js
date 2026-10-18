@@ -394,67 +394,107 @@ const TeamsView = (() => {
     }
 
     const MILESTONE_PHASES = [
-        { id: 'planning', name: 'Planning Phase', desc: 'Purpose, objectives, requirements, and constraints' },
-        { id: 'design', name: 'Design Phase', desc: 'Architecture, system design, and technical plans' },
-        { id: 'selection', name: 'Component Selection', desc: 'Hardware/software selection (controllers, sensors, motors)' },
-        { id: 'development', name: 'Construction Phase', desc: 'Mechanical assembly and hardware integration' },
-        { id: 'programming', name: 'Programming Phase', desc: 'Control logic, software development, and sensor configuration' },
-        { id: 'testing', name: 'Testing Phase', desc: 'Performance testing and debugging' },
-        { id: 'optimization', name: 'Optimization Phase', desc: 'Fine-tuning speed, stability, and accuracy' },
-        { id: 'deployment', name: 'Deployment Phase', desc: 'Final documentation and demonstration' }
+        { id: 'planning', name: 'Planning Phase', label: 'Planning', desc: 'Purpose, objectives, requirements, and constraints' },
+        { id: 'design', name: 'Design Phase', label: 'Design', desc: 'Architecture, system design, and technical plans' },
+        { id: 'selection', name: 'Component Selection', label: 'Selection', desc: 'Hardware/software selection (controllers, sensors, motors)' },
+        { id: 'development', name: 'Construction Phase', label: 'Development', desc: 'Mechanical assembly and hardware integration' },
+        { id: 'programming', name: 'Programming Phase', label: 'Programming', desc: 'Control logic, software development, and sensor configuration' },
+        { id: 'testing', name: 'Testing Phase', label: 'Testing', desc: 'Performance testing and debugging' },
+        { id: 'optimization', name: 'Optimization Phase', label: 'Optimization', desc: 'Fine-tuning speed, stability, and accuracy' },
+        { id: 'deployment', name: 'Deployment Phase', label: 'Deployment', desc: 'Final documentation and demonstration' }
     ];
 
     function renderMilestones(lead, isLead) {
         const milestones = lead.milestones || {};
         const completedCount = MILESTONE_PHASES.filter(p => milestones[p.id]).length;
-        const progress = (completedCount / MILESTONE_PHASES.length) * 100;
+        const progress = Math.round((completedCount / MILESTONE_PHASES.length) * 100);
         
+        // Find index of first uncompleted phase to set as "In Progress"
+        const firstUncompletedIndex = MILESTONE_PHASES.findIndex(p => !milestones[p.id]);
+
         return `
-        <div class="glass-card rounded-2xl p-5 sm:p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl">
-            <div class="flex items-center justify-between mb-4">
-                <div>
-                    <h3 class="font-heading font-semibold text-sm sm:text-base text-white">Project Progress</h3>
-                    <p class="text-[11px] text-zinc-400 mt-0.5">${completedCount} of 8 phases completed</p>
+        <div class="glass-card rounded-2xl p-5 sm:p-6 border border-zinc-800/80 bg-zinc-950/70 backdrop-blur-xl">
+            <!-- Header matching the picture -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-[#f97316] flex items-center justify-center text-zinc-950 shadow-md shadow-orange-500/20 flex-shrink-0">
+                        <svg class="w-5 h-5 text-zinc-950 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-heading font-bold text-lg sm:text-xl text-white tracking-tight leading-tight">Project Progress</h3>
+                        <p class="text-xs sm:text-sm text-zinc-400 font-normal mt-0.5">${completedCount} of ${MILESTONE_PHASES.length} phases completed</p>
+                    </div>
                 </div>
                 <div class="text-right">
-                    <span class="text-xl font-bold gradient-text-static">${Math.round(progress)}%</span>
+                    <span class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">${progress}%</span>
                 </div>
             </div>
             
-            <!-- Progress Bar -->
-            <div class="w-full h-2 bg-zinc-900 rounded-full overflow-hidden mb-6 border border-zinc-800/50">
-                <div class="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-700 ease-out" style="width: ${progress}%"></div>
+            <!-- Progress Bar with emerald glow matching the picture -->
+            <div class="w-full h-2.5 bg-[#1e293b]/80 rounded-full overflow-hidden my-6 border border-zinc-800/40">
+                <div class="h-full bg-[#34d399] rounded-full transition-all duration-700 ease-out shadow-[0_0_12px_rgba(52,211,153,0.5)]" style="width: ${progress}%"></div>
             </div>
 
-            <!-- Phase Indicators -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                ${MILESTONE_PHASES.map((phase, i) => {
-                    const isCompleted = milestones[phase.id];
-                    const isNext = !isCompleted && (i === 0 || milestones[MILESTONE_PHASES[i-1].id]);
-                    const statusClass = isCompleted ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 
-                                      isNext ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' : 
-                                      'bg-zinc-900/50 border-zinc-800/50 text-zinc-500';
-                    const iconClass = isCompleted ? 'text-emerald-500' : isNext ? 'text-blue-500' : 'text-zinc-700';
-                    
-                    return `
-                    <div class="flex items-start gap-3 p-3 rounded-xl border ${statusClass} transition-all duration-300">
-                        <div class="mt-0.5 ${iconClass}">
-                            ${isCompleted ? 
-                                `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>` : 
-                                `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" /></svg>`
-                            }
+            <!-- Connected Horizontal Stepper Pipeline matching picture -->
+            <div class="overflow-x-auto pb-2 pt-1 -mx-2 px-2 scrollbar-none">
+                <div class="min-w-[680px] w-full flex items-start justify-between relative">
+                    ${MILESTONE_PHASES.map((phase, i) => {
+                        const isCompleted = Boolean(milestones[phase.id]);
+                        const isInProgress = !isCompleted && (firstUncompletedIndex === i || (firstUncompletedIndex === -1 && i === 0));
+                        const isLast = i === MILESTONE_PHASES.length - 1;
+
+                        // Connector line style: green if current phase completed, otherwise dark gray
+                        const connectorClass = isCompleted ? 'bg-[#34d399] shadow-[0_0_6px_rgba(52,211,153,0.4)]' : 'bg-zinc-700/60';
+
+                        return `
+                        <div class="relative flex-1 flex flex-col items-center text-center group">
+                            <!-- Connecting Line to next step -->
+                            ${!isLast ? `
+                            <div class="absolute top-4 left-1/2 w-full h-[2px] -translate-y-1/2 z-0 ${connectorClass}"></div>
+                            ` : ''}
+
+                            <!-- Node Icon Circle -->
+                            <div class="relative z-10 w-8 h-8 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
+                                ${isCompleted ? `
+                                    <div class="w-8 h-8 rounded-full bg-[#34d399] flex items-center justify-center text-zinc-950 shadow-md shadow-emerald-500/25">
+                                        <svg class="w-4 h-4 stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                    </div>
+                                ` : isInProgress ? `
+                                    <div class="w-8 h-8 rounded-full border-2 border-[#f59e0b] bg-zinc-950 flex items-center justify-center shadow-md shadow-amber-500/25">
+                                        <div class="w-3.5 h-3.5 rounded-full bg-[#f59e0b] shadow-[0_0_8px_rgba(245,158,11,0.8)]"></div>
+                                    </div>
+                                ` : `
+                                    <div class="w-8 h-8 rounded-full border-2 border-zinc-700/80 bg-zinc-950 flex items-center justify-center">
+                                    </div>
+                                `}
+                            </div>
+
+                            <!-- Phase Title & Status Label -->
+                            <div class="mt-2.5 flex flex-col items-center">
+                                <span class="text-xs sm:text-sm font-semibold tracking-tight ${isCompleted || isInProgress ? 'text-white' : 'text-zinc-300'}">
+                                    ${phase.label}
+                                </span>
+                                <span class="text-[11px] font-medium tracking-tight mt-0.5 ${
+                                    isCompleted ? 'text-[#34d399]' :
+                                    isInProgress ? 'text-[#f59e0b] font-semibold' :
+                                    'text-zinc-500'
+                                }">
+                                    ${isCompleted ? 'Completed' : isInProgress ? 'In Progress' : 'Not Started'}
+                                </span>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-xs font-bold leading-tight">${phase.name}</p>
-                            <p class="text-[9px] opacity-70 mt-0.5 leading-tight">${phase.desc}</p>
-                        </div>
-                    </div>`;
-                }).join('')}
+                        `;
+                    }).join('')}
+                </div>
             </div>
 
             ${isLead ? `
-            <button id="update-progress-btn" class="w-full mt-6 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 group">
-                <svg class="w-4 h-4 text-emerald-500 group-hover:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <button id="update-progress-btn" class="w-full mt-6 py-2.5 sm:py-3 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white transition-all flex items-center justify-center gap-2 group shadow-sm">
+                <svg class="w-4 h-4 text-emerald-400 group-hover:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                 Update Project Milestones
             </button>
 
