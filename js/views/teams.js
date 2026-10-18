@@ -955,13 +955,13 @@ const TeamsView = (() => {
                             ` : ''}
                         </div>
 
-                        <!-- 3. Project Links & Resources Section (Only shown if links exist, or lead edit trigger) -->
-                        ${renderProjectLinksSection(lead, isLead)}
-
-                        <!-- 4. Project Progress Section (Below "About the Project" and Links) -->
+                        <!-- 3. Project Progress Section (Below "About the Project") -->
                         <div id="project-progress-container">
                             ${renderMilestones(lead, isLead)}
                         </div>
+
+                        <!-- 4. Project Links & Resources Section (Below Project Progress) -->
+                        ${renderProjectLinksSection(lead, isLead)}
 
                     </div>
 
