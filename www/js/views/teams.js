@@ -372,14 +372,14 @@ const TeamsView = (() => {
         const progress = (completedCount / MILESTONE_PHASES.length) * 100;
         
         return `
-        <div class="mt-8 pt-6 border-t border-zinc-800/50">
+        <div class="glass-card rounded-2xl p-5 sm:p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl">
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h3 class="font-heading font-semibold text-sm text-zinc-400">Project Progress</h3>
-                    <p class="text-[10px] text-zinc-500">${completedCount} of 8 phases completed</p>
+                    <h3 class="font-heading font-semibold text-sm sm:text-base text-white">Project Progress</h3>
+                    <p class="text-[11px] text-zinc-400 mt-0.5">${completedCount} of 8 phases completed</p>
                 </div>
                 <div class="text-right">
-                    <span class="text-lg font-bold gradient-text-static">${Math.round(progress)}%</span>
+                    <span class="text-xl font-bold gradient-text-static">${Math.round(progress)}%</span>
                 </div>
             </div>
             
@@ -537,70 +537,92 @@ const TeamsView = (() => {
             </button>
 
             <!-- Top Section: Left-aligned Project Header (reduced size) & Active Workforce at top -->
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-6 border-b border-zinc-800/60">
-                <div class="flex items-center justify-between mb-4">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-8">
+                <!-- Top Navigation Bar with Back Button -->
+                <div class="flex items-center justify-between mb-5">
                     <button id="team-back-btn" onclick="TeamsView.goBack(event)" class="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900/90 hover:bg-zinc-800 rounded-xl text-xs font-semibold text-white border border-zinc-800 transition-all cursor-pointer shadow-md active:scale-95">
                         <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                         <span>Back</span>
                     </button>
                 </div>
 
-                <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-                    <!-- Left: Reduced Project Identity shifted to the left -->
-                    <div class="flex items-start gap-4 flex-1 min-w-0">
-                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-zinc-900 ring-2 ring-zinc-800/80 shadow-xl flex items-center justify-center overflow-hidden flex-shrink-0 ${lead.avatar_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}" ${lead.avatar_url ? `data-full-image="${lead.avatar_url}"` : ''}>
-                            ${lead.avatar_url
-                                ? `<img src="${lead.avatar_url}" class="w-full h-full object-cover">`
-                                : `<span class="font-heading font-bold text-2xl sm:text-3xl" style="color:${lead.color || '#10b981'}">${lead.initials}</span>`}
-                        </div>
-                        <div class="min-w-0 flex-1 text-left">
-                            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold tracking-wider uppercase mb-1.5">
-                                <span>Projects Modal · Workspace</span>
-                            </div>
-                            <h1 class="font-heading font-bold text-xl sm:text-2xl lg:text-3xl text-white tracking-tight break-words leading-tight">${lead.project_name || lead.team}</h1>
-                            <div class="flex flex-wrap items-center gap-2 mt-2 text-xs">
-                                <span class="px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded-full font-semibold text-zinc-400">Team: <span class="text-zinc-200 font-bold">${lead.team}</span></span>
-                                <span class="text-zinc-600 hidden sm:inline">•</span>
-                                <span class="text-zinc-400 font-medium">Lead: <span id="lead-profile-link" class="text-emerald-400 hover:text-emerald-300 cursor-pointer underline decoration-dotted transition-colors" title="View Profile">${lead.name}${ICC_CONFIG.VERIFIED_TICK}</span></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right / Top: Active Workforce Section with reduced horizontal space & 3 in a column -->
-                    <div class="w-full lg:w-[320px] max-w-[340px] flex-shrink-0 mx-auto lg:mx-0" id="workforce-section">
-                        <div class="glass-card rounded-2xl p-3.5 sm:p-4 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl">
-                            <div class="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-zinc-800/60">
-                                <div class="flex items-center gap-2">
-                                    <h3 class="font-heading font-bold text-sm text-white tracking-tight">Active Workforce</h3>
-                                    <span id="team-member-count" class="px-2 py-0.5 bg-red-600/15 text-red-400 border border-red-500/20 rounded-full text-[11px] font-bold">${teamMembers.length}</span>
-                                </div>
-                                <div class="flex items-center gap-1.5 px-2.5 py-0.5 bg-zinc-900/80 border border-zinc-800 rounded-full flex-shrink-0">
-                                    <span class="relative flex h-2 w-2">
-                                        <span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                        <span class="relative rounded-full h-2 w-2 bg-emerald-500"></span>
-                                    </span>
-                                    <span class="text-[10px] text-zinc-400 font-medium">Live Roster</span>
-                                </div>
-                            </div>
-
-                            <!-- 3 profiles in a column (grid-cols-3) -->
-                            <div id="team-roster" class="grid grid-cols-3 gap-y-3.5 gap-x-2 justify-items-center">
-                                ${teamMembers.length === 0 ? '<div class="col-span-full text-xs text-zinc-500 text-center py-6">No project members yet — be first to join!</div>'
-                        : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLead, profile?.id, memberTags, lead.id, lead)).join('')}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <!-- Two-Column Layout for lower workspace content -->
+                <!-- 2-Column Main Workspace Grid -->
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                     
-                    <!-- Left Area: Details & Membership (lg:col-span-5) -->
-                    <div class="lg:col-span-5 space-y-6">
-                        <!-- Membership Action Card & Pending/Lead Admin Controls -->
-                        <div class="glass-card rounded-2xl p-5 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl">
+                    <!-- Left Column (lg:col-span-7 xl:col-span-8): Project Name & Team Name -> About the Project -> Project Progress -->
+                    <div class="lg:col-span-7 xl:col-span-8 space-y-5">
+                        
+                        <!-- 1. Project Name & Team Name Section (Shifted to left, compact) -->
+                        <div class="flex items-start gap-4 pb-1">
+                            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-zinc-900 ring-2 ring-zinc-800/80 shadow-xl flex items-center justify-center overflow-hidden flex-shrink-0 ${lead.avatar_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}" ${lead.avatar_url ? `data-full-image="${lead.avatar_url}"` : ''}>
+                                ${lead.avatar_url
+                                    ? `<img src="${lead.avatar_url}" class="w-full h-full object-cover">`
+                                    : `<span class="font-heading font-bold text-2xl sm:text-3xl" style="color:${lead.color || '#10b981'}">${lead.initials}</span>`}
+                            </div>
+                            <div class="min-w-0 flex-1 text-left">
+                                <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold tracking-wider uppercase mb-1.5">
+                                    <span>Projects Modal · Workspace</span>
+                                </div>
+                                <h1 class="font-heading font-bold text-xl sm:text-2xl lg:text-3xl text-white tracking-tight break-words leading-tight">${lead.project_name || lead.team}</h1>
+                                <div class="flex flex-wrap items-center gap-2 mt-2 text-xs">
+                                    <span class="px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded-full font-semibold text-zinc-400">Team: <span class="text-zinc-200 font-bold">${lead.team}</span></span>
+                                    <span class="text-zinc-600 hidden sm:inline">•</span>
+                                    <span class="text-zinc-400 font-medium">Lead: <span id="lead-profile-link" class="text-emerald-400 hover:text-emerald-300 cursor-pointer underline decoration-dotted transition-colors" title="View Profile">${lead.name}${ICC_CONFIG.VERIFIED_TICK}</span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. "About the Project" Section (Shifted to top, below project name and team name) -->
+                        <div class="glass-card rounded-2xl p-5 sm:p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl space-y-4">
+                            <div>
+                                <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-2">About the Project</h3>
+                                <p class="text-sm text-zinc-300 leading-relaxed">${lead.bio || 'No project description provided yet.'}</p>
+                            </div>
+                            <div>
+                                <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-2">Specialties & Tech Stack</h3>
+                                <div class="flex flex-wrap gap-2">
+                                    ${(lead.specialties || []).map(s => `<span class="specialty-pill px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-400">${s}</span>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Project Progress Section (Below "About the Project") -->
+                        <div id="project-progress-container">
+                            ${renderMilestones(lead, isLead)}
+                        </div>
+
+                    </div>
+
+                    <!-- Right Column (lg:col-span-5 xl:col-span-4): Active Workforce at top, then Membership -->
+                    <div class="lg:col-span-5 xl:col-span-4 space-y-5 w-full max-w-[340px] mx-auto lg:mx-0">
+                        
+                        <!-- Active Workforce Section (At top, 3 in a column, reduced horizontal space) -->
+                        <div class="w-full" id="workforce-section">
+                            <div class="glass-card rounded-2xl p-3.5 sm:p-4 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl">
+                                <div class="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-zinc-800/60">
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="font-heading font-bold text-sm text-white tracking-tight">Active Workforce</h3>
+                                        <span id="team-member-count" class="px-2 py-0.5 bg-red-600/15 text-red-400 border border-red-500/20 rounded-full text-[11px] font-bold">${teamMembers.length}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 px-2.5 py-0.5 bg-zinc-900/80 border border-zinc-800 rounded-full flex-shrink-0">
+                                        <span class="relative flex h-2 w-2">
+                                            <span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                            <span class="relative rounded-full h-2 w-2 bg-emerald-500"></span>
+                                        </span>
+                                        <span class="text-[10px] text-zinc-400 font-medium">Live Roster</span>
+                                    </div>
+                                </div>
+
+                                <!-- 3 profiles in a column (grid-cols-3) -->
+                                <div id="team-roster" class="grid grid-cols-3 gap-y-3.5 gap-x-2 justify-items-center">
+                                    ${teamMembers.length === 0 ? '<div class="col-span-full text-xs text-zinc-500 text-center py-6">No project members yet — be first to join!</div>'
+                            : teamMembers.map((m, i) => renderWorkforceCard(m, i, isLead, profile?.id, memberTags, lead.id, lead)).join('')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Project Membership Card -->
+                        <div class="glass-card rounded-2xl p-4 sm:p-5 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl">
                             <h4 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-3">Project Membership</h4>
                             ${(() => {
                                 if (!user) return `<button id="team-join-btn" class="join-btn w-full px-6 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-red-600/25">Join Project</button><p class="text-[11px] text-zinc-600 mt-1.5 text-center">Sign in to apply</p>`;
@@ -690,24 +712,6 @@ const TeamsView = (() => {
                         </div>
                         ` : ''}
 
-                        <!-- About & Specialties -->
-                        <div class="glass-card rounded-2xl p-6 border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl space-y-5">
-                            <div>
-                                <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-2">About the Project</h3>
-                                <p class="text-sm text-zinc-300 leading-relaxed">${lead.bio || 'No project description provided yet.'}</p>
-                            </div>
-                            <div>
-                                <h3 class="font-heading font-semibold text-xs uppercase tracking-wider text-zinc-400 mb-2">Specialties & Tech Stack</h3>
-                                <div class="flex flex-wrap gap-2">
-                                    ${(lead.specialties || []).map(s => `<span class="specialty-pill px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-400">${s}</span>`).join('')}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right Area: Milestone Tracker (lg:col-span-7) -->
-                    <div class="lg:col-span-7">
-                        ${renderMilestones(lead, isLead)}
                     </div>
 
                 </div>
