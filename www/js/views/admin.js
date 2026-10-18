@@ -2422,7 +2422,8 @@ const AdminView = (() => {
                     users_edit: targetRole === 'admin',
                     users_export: targetRole === 'admin',
                     users: targetRole === 'admin',
-                    all: targetRole === 'admin',
+                    mom: false,
+                    all: false,
                     isSuperAdmin: targetRole === 'super_admin'
                 };
                 container.innerHTML = render();
@@ -2480,6 +2481,7 @@ const AdminView = (() => {
                 appointingUserDraft.users_edit = checked;
                 appointingUserDraft.users_export = checked;
                 appointingUserDraft.users = checked;
+                appointingUserDraft.mom = checked;
                 container.querySelectorAll('.appoint-perm-check').forEach(cb => {
                     cb.checked = checked;
                 });
@@ -2495,7 +2497,7 @@ const AdminView = (() => {
                     if (perm === 'users_edit' || perm === 'users_export') {
                         appointingUserDraft.users = !!(appointingUserDraft.users_edit || appointingUserDraft.users_export);
                     }
-                    const allTrue = appointingUserDraft.broadcast && appointingUserDraft.moderate && appointingUserDraft.events && appointingUserDraft.leads && appointingUserDraft.users_edit && appointingUserDraft.users_export;
+                    const allTrue = appointingUserDraft.broadcast && appointingUserDraft.moderate && appointingUserDraft.events && appointingUserDraft.leads && appointingUserDraft.users_edit && appointingUserDraft.users_export && appointingUserDraft.mom;
                     appointingUserDraft.all = allTrue;
                     const allToggle = container.querySelector('#appoint-all-toggle');
                     if (allToggle) allToggle.checked = allTrue;
@@ -2585,7 +2587,8 @@ const AdminView = (() => {
                     leads: isAll,
                     users_edit: isAll,
                     users_export: isAll,
-                    users: isAll
+                    users: isAll,
+                    mom: isAll
                 };
 
                 const res = await ICCSupabase.updateAdminPermissions(userId, updated);
