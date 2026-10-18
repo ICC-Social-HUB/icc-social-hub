@@ -416,30 +416,30 @@ const TeamsView = (() => {
         <div class="glass-card rounded-2xl p-5 sm:p-6 border border-zinc-800/80 bg-zinc-950/70 backdrop-blur-xl">
             <!-- Header matching the picture -->
             <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-[#f97316] flex items-center justify-center text-zinc-950 shadow-md shadow-orange-500/20 flex-shrink-0">
-                        <svg class="w-5 h-5 text-zinc-950 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div class="flex items-center gap-2.5 sm:gap-3">
+                    <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#f97316] flex items-center justify-center text-zinc-950 shadow-md shadow-orange-500/20 flex-shrink-0">
+                        <svg class="w-4 h-4 sm:w-4.5 sm:h-4.5 text-zinc-950 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                         </svg>
                     </div>
                     <div>
-                        <h3 class="font-heading font-bold text-lg sm:text-xl text-white tracking-tight leading-tight">Project Progress</h3>
-                        <p class="text-xs sm:text-sm text-zinc-400 font-normal mt-0.5">${completedCount} of ${MILESTONE_PHASES.length} phases completed</p>
+                        <h3 class="font-heading font-bold text-sm sm:text-base text-white tracking-tight leading-tight">Project Progress</h3>
+                        <p class="text-[11px] sm:text-xs text-zinc-400 font-normal mt-0.5">${completedCount} of ${MILESTONE_PHASES.length} phases completed</p>
                     </div>
                 </div>
                 <div class="text-right">
-                    <span class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">${progress}%</span>
+                    <span class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">${progress}%</span>
                 </div>
             </div>
             
             <!-- Progress Bar with emerald glow matching the picture -->
-            <div class="w-full h-2.5 bg-[#1e293b]/80 rounded-full overflow-hidden my-6 border border-zinc-800/40">
+            <div class="w-full h-2 sm:h-2.5 bg-[#1e293b]/80 rounded-full overflow-hidden my-5 border border-zinc-800/40">
                 <div class="h-full bg-[#34d399] rounded-full transition-all duration-700 ease-out shadow-[0_0_12px_rgba(52,211,153,0.5)]" style="width: ${progress}%"></div>
             </div>
 
             <!-- Connected Horizontal Stepper Pipeline matching picture -->
             <div class="overflow-x-auto pb-2 pt-1 -mx-2 px-2 scrollbar-none">
-                <div class="min-w-[680px] w-full flex items-start justify-between relative">
+                <div class="min-w-[660px] w-full flex items-start justify-between relative">
                     ${MILESTONE_PHASES.map((phase, i) => {
                         const isCompleted = Boolean(milestones[phase.id]);
                         const isInProgress = !isCompleted && (firstUncompletedIndex === i || (firstUncompletedIndex === -1 && i === 0));
@@ -474,11 +474,11 @@ const TeamsView = (() => {
                             </div>
 
                             <!-- Phase Title & Status Label -->
-                            <div class="mt-2.5 flex flex-col items-center">
-                                <span class="text-xs sm:text-sm font-semibold tracking-tight ${isCompleted || isInProgress ? 'text-white' : 'text-zinc-300'}">
+                            <div class="mt-2 flex flex-col items-center">
+                                <span class="text-[11px] sm:text-xs font-semibold tracking-tight ${isCompleted || isInProgress ? 'text-white' : 'text-zinc-300'}">
                                     ${phase.label}
                                 </span>
-                                <span class="text-[11px] font-medium tracking-tight mt-0.5 ${
+                                <span class="text-[9.5px] sm:text-[10.5px] font-medium tracking-tight mt-0.5 ${
                                     isCompleted ? 'text-[#34d399]' :
                                     isInProgress ? 'text-[#f59e0b] font-semibold' :
                                     'text-zinc-500'
@@ -493,7 +493,7 @@ const TeamsView = (() => {
             </div>
 
             ${isLead ? `
-            <button id="update-progress-btn" class="w-full mt-6 py-2.5 sm:py-3 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white transition-all flex items-center justify-center gap-2 group shadow-sm">
+            <button id="update-progress-btn" class="w-full mt-5 py-2.5 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center justify-center gap-2 group shadow-sm">
                 <svg class="w-4 h-4 text-emerald-400 group-hover:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                 Update Project Milestones
             </button>
