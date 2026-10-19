@@ -126,6 +126,57 @@ header[class*="sticky"] {
     box-sizing: border-box !important;
 }
 
+/* ========================================================
+   Registration Mode Chrome Isolation:
+   Hides sidebar, header, notification bell, bottom navigation,
+   and expands the app container to full screen.
+   ======================================================== */
+body.is-registration-mode header,
+html.is-registration-mode header,
+body.is-registration-mode #sidebar-drawer,
+html.is-registration-mode #sidebar-drawer,
+body.is-registration-mode #sidebar-backdrop,
+html.is-registration-mode #sidebar-backdrop,
+body.is-registration-mode #sidebar-toggle-root,
+html.is-registration-mode #sidebar-toggle-root,
+body.is-registration-mode #notif-bell-root,
+html.is-registration-mode #notif-bell-root,
+body.is-registration-mode #bottom-nav-root,
+html.is-registration-mode #bottom-nav-root,
+body.is-registration-mode aside,
+html.is-registration-mode aside,
+body.is-registration-mode .sidebar,
+html.is-registration-mode .sidebar {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+body.is-registration-mode main#app,
+html.is-registration-mode main#app {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    padding-bottom: 0 !important;
+}
+
+body.is-registration-mode #toast-root,
+html.is-registration-mode #toast-root {
+    padding-left: 0 !important;
+}
+
+/* Tech Matrix Glow & Subtle Grid Background */
+.tech-grid-bg {
+    background-color: #060c16;
+    background-image: 
+        radial-gradient(circle at 50% 0%, rgba(14, 165, 233, 0.14) 0%, transparent 65%),
+        radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+}
+
+
 /* Sidebar Drawer Header Safe Area */
 #sidebar-drawer > div:first-child {
     padding-top: var(--safe-top, 0px) !important;

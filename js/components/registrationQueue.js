@@ -92,79 +92,66 @@ const RegistrationQueue = (() => {
     function renderRegistrationLinkCard() {
         if (!ICCSupabase.isAdmin()) return '';
 
-        const isSuper = ICCSupabase.isSuperAdmin();
         const hasActiveLink = linkData && linkData.is_active;
         const isExpired = linkData && linkData.expires_at && new Date(linkData.expires_at).getTime() < Date.now();
-        const fullUrl = lastGeneratedToken ? getBaseJoinUrl(lastGeneratedToken) : null;
+        const token = lastGeneratedToken || linkData?.token;
+        const fullUrl = token ? getBaseJoinUrl(token) : null;
 
         return `
-        <div class="glass-card rounded-2xl p-5 border border-sky-500/30 bg-gradient-to-r from-sky-500/10 via-zinc-900 to-zinc-900 shadow-xl mb-6 animate-fade-in">
+        <div class="glass-card rounded-2xl p-5 border border-cyan-500/30 bg-gradient-to-r from-cyan-950/20 via-zinc-900 to-zinc-900 shadow-xl mb-6 animate-fade-in">
             <div class="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-zinc-800/80">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center text-lg font-bold shadow-inner">
+                    <div class="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 flex items-center justify-center text-lg font-bold shadow-inner">
                         🔗
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <h3 class="font-heading font-bold text-sm text-white">Private Registration Link</h3>
-                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${hasActiveLink && !isExpired ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/15 text-red-400 border border-red-500/30'}">
+                            <h3 class="font-heading font-bold text-sm text-white">Your Personal Registration Link</h3>
+                            <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider ${hasActiveLink && !isExpired ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/15 text-red-400 border border-red-500/30'}">
                                 ${hasActiveLink && !isExpired ? 'Active' : (isExpired ? 'Expired' : 'Disabled')}
                             </span>
                         </div>
                         <p class="text-[11px] text-zinc-400 mt-0.5">
-                            Share manually with prospective students. Link is protected by SHA-256 token hashing and blocked from public indexing.
+                            Unique permanent invitation link. Any student who registers with this link routes directly to your review queue.
                         </p>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <button id="reg-link-generate-btn" class="px-3.5 py-2 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white rounded-xl text-xs font-semibold shadow-md shadow-sky-600/20 transition-all flex items-center gap-1.5 cursor-pointer">
-                        <span>⚡ ${linkData ? 'Regenerate Link' : 'Generate New Link'}</span>
-                    </button>
                     ${linkData ? `
-                        <button id="reg-link-toggle-btn" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-medium transition-all cursor-pointer">
-                            ${hasActiveLink ? 'Disable Registrations' : 'Enable Registrations'}
+                        <button id="reg-link-toggle-btn" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${hasActiveLink ? 'bg-red-950/40 hover:bg-red-900/50 text-red-300 border border-red-500/30' : 'bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 border border-emerald-500/30'}">
+                            ${hasActiveLink ? 'Disable My Link' : 'Enable My Link'}
                         </button>
                     ` : ''}
+                    <button id="reg-link-generate-btn" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-medium transition-all cursor-pointer">
+                        <span>⚡ ${linkData ? 'Reset / Regenerate' : 'Generate Link'}</span>
+                    </button>
                 </div>
             </div>
 
             <!-- Link Display & Copy Control -->
             <div class="mt-4">
                 ${fullUrl ? `
-                    <div id="reg-link-container" class="p-3.5 bg-zinc-950/80 rounded-xl border border-sky-500/40 flex items-center justify-between gap-3 flex-wrap transition-all duration-300">
+                    <div id="reg-link-container" class="p-3.5 bg-zinc-950/80 rounded-xl border border-cyan-500/40 flex items-center justify-between gap-3 flex-wrap transition-all duration-300">
                         <div class="flex items-center gap-2 min-w-0 flex-1 cursor-pointer group" id="copy-reg-link-bar" title="Click to copy link">
-                            <span class="text-xs text-sky-400 font-mono font-bold">New Link:</span>
-                            <span class="text-xs text-white font-mono truncate select-all group-hover:text-sky-300 transition-colors" id="active-join-url">${escapeHtml(fullUrl)}</span>
+                            <span class="text-xs text-cyan-400 font-mono font-bold">Personal URL:</span>
+                            <span class="text-xs text-white font-mono truncate select-all group-hover:text-cyan-300 transition-colors" id="active-join-url">${escapeHtml(fullUrl)}</span>
                             <span class="text-[10px] text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline">(click to copy)</span>
                         </div>
-                        <button id="copy-reg-link-btn" data-url="${escapeHtml(fullUrl)}" class="px-3.5 py-1.5 bg-sky-500 hover:bg-sky-400 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all duration-200 cursor-pointer flex-shrink-0 active:scale-95">
+                        <button id="copy-reg-link-btn" data-url="${escapeHtml(fullUrl)}" class="px-3.5 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition-all duration-200 cursor-pointer flex-shrink-0 active:scale-95">
                             <svg class="w-3.5 h-3.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                             <span class="copy-label">Copy Link</span>
                         </button>
                     </div>
                     <div id="reg-link-copied-badge" class="hidden mt-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
                         <svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                        <span>Registration link copied to clipboard! You can now send it to the student.</span>
-                    </div>
-                    <p class="text-[10px] text-amber-400/90 mt-2">
-                        ⚠️ Please copy this link now. For maximum security, the raw token is never stored in plain text and cannot be retrieved again once refreshed.
-                    </p>
-                ` : (linkData ? `
-                    <div class="flex items-center justify-between gap-3 text-xs text-zinc-400 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/80">
-                        <div class="flex items-center gap-2">
-                            <span class="text-emerald-400 font-bold">●</span>
-                            <span>Active Token Hash: <code class="text-zinc-500 font-mono text-[11px]">${linkData.id.slice(0, 16)}...</code></span>
-                            <span class="text-zinc-600">·</span>
-                            <span class="text-zinc-500">Created by ${escapeHtml(linkData.creator_name || 'Admin')} on ${formatDate(linkData.created_at)}</span>
-                        </div>
-                        <span class="text-[11px] text-zinc-500">Click "Regenerate" to create a new sharable URL</span>
+                        <span>Personal registration link copied to clipboard! Share it with your prospective candidate.</span>
                     </div>
                 ` : `
-                    <div class="p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/60 text-center">
-                        <p class="text-xs text-zinc-400">No active registration link. Click <strong>Generate New Link</strong> above to create one.</p>
+                    <div class="p-3.5 bg-zinc-950/50 rounded-xl border border-zinc-800/60 text-center">
+                        <p class="text-xs text-zinc-400">Click <strong>Generate Link</strong> above to create your unique personal registration link.</p>
                     </div>
-                `)}
+                `}
             </div>
         </div>`;
     }
@@ -286,6 +273,11 @@ const RegistrationQueue = (() => {
                             <span class="text-xs text-zinc-500">·</span>
                             <span class="text-xs text-zinc-300">${escapeHtml(r.branch)}</span>
                             <span class="text-xs text-zinc-500">(${escapeHtml(r.year)})</span>
+                            ${r.assigned_admin_name ? `
+                                <span class="px-2 py-0.5 rounded-md bg-cyan-950/60 border border-cyan-800/40 text-[10px] font-mono text-cyan-300">
+                                    Assigned: ${escapeHtml(r.assigned_admin_name)}
+                                </span>
+                            ` : ''}
                         </div>
                         <p class="text-[11px] text-zinc-500 mt-0.5 font-mono">
                             ${escapeHtml(r.email)} · ${escapeHtml(r.phone)}

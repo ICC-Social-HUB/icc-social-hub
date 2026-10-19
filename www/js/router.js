@@ -101,7 +101,11 @@ const Router = (() => {
 
         container.classList.remove('view-exit');
         const isAuthenticated = !!ICCSupabase.getUser();
-        const isPublicRoute = hash === '#feed' || hash.startsWith('#post/') || hash === '#events' || hash.startsWith('#event/') || hash.startsWith('#join/') || hash === '#join';
+        const isRegistrationRoute = hash.startsWith('#join/') || hash === '#join';
+        document.body.classList.toggle('is-registration-mode', isRegistrationRoute);
+        document.documentElement.classList.toggle('is-registration-mode', isRegistrationRoute);
+
+        const isPublicRoute = hash === '#feed' || hash.startsWith('#post/') || hash === '#events' || hash.startsWith('#event/') || isRegistrationRoute;
 
         if (!isAuthenticated && !isPublicRoute) {
             previousView = 'auth-required';

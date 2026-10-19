@@ -29,23 +29,41 @@ module.exports = async (req, res) => {
         // ----------------------------------------------------
         if (action === 'validate') {
             const token = (params.token || '').trim();
-            if (!token || token.length < 16) {
+            if (!token || token.length < 12) {
                 return res.status(200).json({ valid: false, reason: 'invalid' });
             }
 
             const tokenHash = hashToken(token);
-            const { data: linkRecord, error: linkErr } = await supabase
+            let linkRecord = null;
+
+            // Try finding by token_hash first, then fallback by raw token
+            const { data: byHash } = await supabase
                 .from('registration_links')
-                .select('id, is_active, expires_at')
+                .select('id, is_active, expires_at, created_by, creator_name, creator_role')
                 .eq('token_hash', tokenHash)
                 .maybeSingle();
 
-            if (linkErr || !linkRecord) {
+            if (byHash) {
+                linkRecord = byHash;
+            } else {
+                const { data: byToken } = await supabase
+                    .from('registration_links')
+                    .select('id, is_active, expires_at, created_by, creator_name, creator_role')
+                    .eq('token', token)
+                    .maybeSingle();
+                if (byToken) linkRecord = byToken;
+            }
+
+            if (!linkRecord) {
                 return res.status(200).json({ valid: false, reason: 'invalid' });
             }
 
             if (!linkRecord.is_active) {
-                return res.status(200).json({ valid: false, reason: 'disabled' });
+                return res.status(200).json({ 
+                    valid: false, 
+                    reason: 'disabled',
+                    admin_name: linkRecord.creator_name || 'Admin'
+                });
             }
 
             if (linkRecord.expires_at) {
@@ -55,7 +73,12 @@ module.exports = async (req, res) => {
                 }
             }
 
-            return res.status(200).json({ valid: true });
+            return res.status(200).json({ 
+                valid: true,
+                admin_id: linkRecord.created_by,
+                admin_name: linkRecord.creator_name || 'Admin',
+                admin_role: linkRecord.creator_role || 'Admin'
+            });
         }
 
         // ----------------------------------------------------
@@ -92,112 +115,102 @@ module.exports = async (req, res) => {
         const isSuperAdmin = role === 'super_admin' || role === 'superadmin' || (adminEmail && callerEmail === adminEmail);
         const isAdmin = role === 'admin' || isSuperAdmin;
 
-        // Explicit check: Mentors cannot manage registration links!
         if (!isAdmin) {
-            return sendError(403, 'Forbidden: Only Super Admins and Admins can manage the registration link');
+            return sendError(403, 'Forbidden: Only Super Admins and Admins can manage registration links');
         }
 
+        const creatorName = callerProfile.full_name || callerProfile.username || 'Admin';
+        const creatorRole = isSuperAdmin ? 'Super Admin' : 'Admin';
+
+        // Helper to generate unique permanent token
+        const generatePermanentToken = () => {
+            const seed = callerId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
+            const rand = crypto.randomBytes(8).toString('hex');
+            return `reg_${seed}_${rand}`;
+        };
+
         // ----------------------------------------------------
-        // 2A. GET ACTIVE LINK METADATA
+        // 2A. GET MY PERMANENT LINK (Auto-creates if none exists)
         // ----------------------------------------------------
-        if (action === 'get-active' || action === 'status') {
-            const { data: activeLink, error: fetchErr } = await supabase
+        if (action === 'get-active' || action === 'get-my-link' || action === 'status') {
+            // Find this admin's personal registration link
+            let { data: myLink, error: fetchErr } = await supabase
                 .from('registration_links')
-                .select('id, is_active, expires_at, creator_name, creator_role, created_at, updated_at')
+                .select('*')
+                .eq('created_by', callerId)
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
 
             if (fetchErr) {
-                return sendError(500, fetchErr.message);
+                console.warn('Error fetching personal registration link:', fetchErr.message);
+            }
+
+            // If no permanent link exists yet for this admin, generate one now!
+            if (!myLink) {
+                const tokenStr = generatePermanentToken();
+                const tokenHash = hashToken(tokenStr);
+                const now = new Date().toISOString();
+
+                const { data: createdLink, error: insertErr } = await supabase
+                    .from('registration_links')
+                    .insert({
+                        token: tokenStr,
+                        token_hash: tokenHash,
+                        is_active: true,
+                        created_by: callerId,
+                        creator_name: creatorName,
+                        creator_role: creatorRole,
+                        created_at: now,
+                        updated_at: now
+                    })
+                    .select()
+                    .single();
+
+                if (insertErr) {
+                    return sendError(500, `Failed to initialize personal link: ${insertErr.message}`);
+                }
+                myLink = createdLink;
+            } else if (!myLink.token) {
+                // Backward compatibility: if token was not stored, assign permanent token
+                const tokenStr = generatePermanentToken();
+                const tokenHash = hashToken(tokenStr);
+                const { data: updatedLink } = await supabase
+                    .from('registration_links')
+                    .update({
+                        token: tokenStr,
+                        token_hash: tokenHash,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', myLink.id)
+                    .select()
+                    .single();
+                if (updatedLink) myLink = updatedLink;
             }
 
             return res.status(200).json({
                 success: true,
-                link: activeLink || null
+                link: myLink,
+                token: myLink.token
             });
         }
 
         // ----------------------------------------------------
-        // 2B. GENERATE OR REGENERATE LINK
-        // ----------------------------------------------------
-        if (action === 'generate' || action === 'regenerate') {
-            const rawToken = crypto.randomBytes(32).toString('hex');
-            const tokenHash = hashToken(rawToken);
-            const expiresAt = params.expires_at ? new Date(params.expires_at).toISOString() : null;
-
-            // Invalidate all existing active links immediately
-            await supabase
-                .from('registration_links')
-                .update({ is_active: false, updated_at: new Date().toISOString() })
-                .eq('is_active', true);
-
-            const creatorName = callerProfile.full_name || callerProfile.username || 'Admin';
-            const creatorRole = isSuperAdmin ? 'Super Admin' : 'Admin';
-
-            const { data: newLink, error: insertErr } = await supabase
-                .from('registration_links')
-                .insert({
-                    token_hash: tokenHash,
-                    is_active: true,
-                    expires_at: expiresAt,
-                    created_by: callerId,
-                    creator_name: creatorName,
-                    creator_role: creatorRole,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                })
-                .select('id, is_active, expires_at, created_at')
-                .single();
-
-            if (insertErr) {
-                return sendError(500, `Failed to generate link: ${insertErr.message}`);
-            }
-
-            // Return plain token ONLY ONCE during generation/regeneration
-            return res.status(200).json({
-                success: true,
-                token: rawToken,
-                link: newLink
-            });
-        }
-
-        // ----------------------------------------------------
-        // 2C. TOGGLE LINK STATUS OR UPDATE EXPIRY
+        // 2B. TOGGLE MY LINK (Enable / Disable)
         // ----------------------------------------------------
         if (action === 'toggle' || action === 'update') {
-            const linkId = params.id;
-            const updatePayload = {
-                updated_at: new Date().toISOString()
-            };
-
-            if (typeof params.is_active === 'boolean') {
-                updatePayload.is_active = params.is_active;
-            }
-            if (params.expires_at !== undefined) {
-                updatePayload.expires_at = params.expires_at ? new Date(params.expires_at).toISOString() : null;
-            }
-
-            let query = supabase.from('registration_links').update(updatePayload);
-            if (linkId) {
-                query = query.eq('id', linkId);
-            } else {
-                // If no specific id is passed, update the most recent link
-                const { data: latest } = await supabase
-                    .from('registration_links')
-                    .select('id')
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-                if (!latest) {
-                    return sendError(404, 'No registration link found to update');
-                }
-                query = query.eq('id', latest.id);
-            }
-
-            const { data: updatedLink, error: updateErr } = await query
-                .select('id, is_active, expires_at, updated_at')
-                .single();
+            const targetActive = typeof params.is_active === 'boolean' ? params.is_active : false;
+            
+            // Toggle caller's own link
+            const { data: updatedLink, error: updateErr } = await supabase
+                .from('registration_links')
+                .update({ 
+                    is_active: targetActive,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('created_by', callerId)
+                .select()
+                .maybeSingle();
 
             if (updateErr) {
                 return sendError(500, updateErr.message);
@@ -206,6 +219,64 @@ module.exports = async (req, res) => {
             return res.status(200).json({
                 success: true,
                 link: updatedLink
+            });
+        }
+
+        // ----------------------------------------------------
+        // 2C. RESET / REGENERATE MY PERMANENT LINK
+        // ----------------------------------------------------
+        if (action === 'generate' || action === 'regenerate' || action === 'reset') {
+            const tokenStr = generatePermanentToken();
+            const tokenHash = hashToken(tokenStr);
+            const now = new Date().toISOString();
+
+            // Check if caller already has a link
+            const { data: existing } = await supabase
+                .from('registration_links')
+                .select('id')
+                .eq('created_by', callerId)
+                .maybeSingle();
+
+            let resultLink = null;
+            if (existing) {
+                const { data: updated, error: uErr } = await supabase
+                    .from('registration_links')
+                    .update({
+                        token: tokenStr,
+                        token_hash: tokenHash,
+                        is_active: true,
+                        creator_name: creatorName,
+                        creator_role: creatorRole,
+                        updated_at: now
+                    })
+                    .eq('id', existing.id)
+                    .select()
+                    .single();
+                if (uErr) return sendError(500, uErr.message);
+                resultLink = updated;
+            } else {
+                const { data: created, error: cErr } = await supabase
+                    .from('registration_links')
+                    .insert({
+                        token: tokenStr,
+                        token_hash: tokenHash,
+                        is_active: true,
+                        created_by: callerId,
+                        creator_name: creatorName,
+                        creator_role: creatorRole,
+                        created_at: now,
+                        updated_at: now
+                    })
+                    .select()
+                    .single();
+                if (cErr) return sendError(500, cErr.message);
+                resultLink = created;
+            }
+
+            return res.status(200).json({
+                success: true,
+                token: tokenStr,
+                link: resultLink
             });
         }
 

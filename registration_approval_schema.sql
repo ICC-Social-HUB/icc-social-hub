@@ -2,9 +2,10 @@
 -- ICC Social Hub: Two-Stage Registration & Approval Schema
 -- ========================================================
 
--- 1. Create registration_links table (stores SHA-256 hash of tokens)
+-- 1. Create registration_links table (stores unique permanent links per admin)
 CREATE TABLE IF NOT EXISTS public.registration_links (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    token TEXT,
     token_hash TEXT NOT NULL UNIQUE,
     is_active BOOLEAN NOT NULL DEFAULT true,
     expires_at TIMESTAMPTZ NULL,
@@ -15,8 +16,13 @@ CREATE TABLE IF NOT EXISTS public.registration_links (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Index for rapid token lookup by hash
+-- Ensure columns exist for existing tables
+ALTER TABLE public.registration_links ADD COLUMN IF NOT EXISTS token TEXT;
+
+-- Index for rapid token lookup by hash and creator
 CREATE INDEX IF NOT EXISTS idx_reg_links_token_hash ON public.registration_links(token_hash);
+CREATE INDEX IF NOT EXISTS idx_reg_links_token ON public.registration_links(token);
+CREATE INDEX IF NOT EXISTS idx_reg_links_created_by ON public.registration_links(created_by);
 CREATE INDEX IF NOT EXISTS idx_reg_links_active ON public.registration_links(is_active);
 
 -- 2. Create registration_requests table
@@ -33,6 +39,10 @@ CREATE TABLE IF NOT EXISTS public.registration_requests (
     other_link TEXT,
     status TEXT NOT NULL DEFAULT 'pending_review' CHECK (status IN ('pending_review', 'awaiting_super_admin', 'approved', 'denied')),
     
+    -- Admin to whom the application is routed
+    assigned_admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    assigned_admin_name TEXT,
+
     -- First stage review (Admin or Mentor)
     first_reviewer_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     first_reviewer_name TEXT,
@@ -60,10 +70,15 @@ CREATE TABLE IF NOT EXISTS public.registration_requests (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Ensure assigned_admin columns exist for existing tables
+ALTER TABLE public.registration_requests ADD COLUMN IF NOT EXISTS assigned_admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE public.registration_requests ADD COLUMN IF NOT EXISTS assigned_admin_name TEXT;
+
 -- Indexes for registration requests
 CREATE INDEX IF NOT EXISTS idx_reg_requests_status ON public.registration_requests(status);
 CREATE INDEX IF NOT EXISTS idx_reg_requests_usn ON public.registration_requests(usn);
 CREATE INDEX IF NOT EXISTS idx_reg_requests_email ON public.registration_requests(email);
+CREATE INDEX IF NOT EXISTS idx_reg_requests_assigned_admin ON public.registration_requests(assigned_admin_id);
 CREATE INDEX IF NOT EXISTS idx_reg_requests_created_at ON public.registration_requests(created_at DESC);
 
 -- 3. Extend profiles table with approval columns

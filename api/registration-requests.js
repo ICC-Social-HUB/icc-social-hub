@@ -140,18 +140,40 @@ module.exports = async (req, res) => {
             }
 
             const tokenHash = hashToken(token);
-            const { data: linkRecord, error: linkErr } = await supabase
+            let { data: linkRecord, error: linkErr } = await supabase
                 .from('registration_links')
-                .select('id, is_active, expires_at')
+                .select('id, is_active, expires_at, created_by, creator_name')
                 .eq('token_hash', tokenHash)
                 .maybeSingle();
 
+            if (!linkRecord) {
+                const { data: rawLink } = await supabase
+                    .from('registration_links')
+                    .select('id, is_active, expires_at, created_by, creator_name')
+                    .eq('token', token)
+                    .maybeSingle();
+                if (rawLink) linkRecord = rawLink;
+            }
+
             if (linkErr || !linkRecord || !linkRecord.is_active) {
-                return sendError(403, 'This registration link is not active. Please contact your admin.');
+                return sendError(403, 'This registration link is currently disabled or inactive. Please contact the admin who gave you this link.');
             }
 
             if (linkRecord.expires_at && new Date(linkRecord.expires_at).getTime() < Date.now()) {
                 return sendError(403, 'This registration link has expired. Please contact your admin.');
+            }
+
+            const assignedAdminId = linkRecord.created_by || null;
+            let assignedAdminName = linkRecord.creator_name || null;
+            if (assignedAdminId && !assignedAdminName) {
+                const { data: adminProf } = await supabase
+                    .from('profiles')
+                    .select('full_name, username')
+                    .eq('id', assignedAdminId)
+                    .maybeSingle();
+                if (adminProf) {
+                    assignedAdminName = adminProf.full_name || adminProf.username || null;
+                }
             }
 
             // Extract & sanitize fields
@@ -246,11 +268,13 @@ module.exports = async (req, res) => {
                     action: 'submitted',
                     actor: 'Applicant',
                     timestamp: now,
-                    details: 'Registration form submitted via private link'
+                    details: assignedAdminName 
+                        ? `Application submitted via personal registration link of ${assignedAdminName}` 
+                        : 'Registration form submitted via personal link'
                 }
             ];
 
-            // Insert Request
+            // Insert Request tagged with assigned admin
             const { data: newRequest, error: insertErr } = await supabase
                 .from('registration_requests')
                 .insert({
@@ -263,6 +287,8 @@ module.exports = async (req, res) => {
                     linkedin: linkedin || null,
                     github: github || null,
                     other_link: otherLink || null,
+                    assigned_admin_id: assignedAdminId,
+                    assigned_admin_name: assignedAdminName,
                     status: 'pending_review',
                     audit_log: initialAudit,
                     created_at: now,
@@ -274,6 +300,21 @@ module.exports = async (req, res) => {
             if (insertErr) {
                 console.error('Error inserting registration request:', insertErr);
                 return sendError(500, 'Unable to submit your registration request at this time. Please try again.');
+            }
+
+            // Notify assigned Admin specifically if applicable
+            if (assignedAdminId) {
+                try {
+                    await supabase.from('notifications').insert({
+                        user_id: assignedAdminId,
+                        actor_id: null,
+                        type: 'system',
+                        body: `📋 New Applicant Assigned: ${fullName} (${usn}) submitted an application through your personal link.`,
+                        created_at: now
+                    });
+                } catch (assignNotifErr) {
+                    console.warn('Could not notify assigned admin:', assignNotifErr.message);
+                }
             }
 
             // Asynchronously notify Super Admins via in-app notification and email
@@ -355,6 +396,11 @@ module.exports = async (req, res) => {
 
             let query = supabase.from('registration_requests').select('*');
 
+            // STRICT ROLE PRIVACY: If not Super Admin, caller only sees applicants assigned to them!
+            if (!isSuperAdmin) {
+                query = query.eq('assigned_admin_id', callerId);
+            }
+
             if (statusFilter && statusFilter !== 'all') {
                 query = query.eq('status', statusFilter);
             }
@@ -375,10 +421,12 @@ module.exports = async (req, res) => {
                 return sendError(500, listErr.message);
             }
 
-            // Fetch aggregate counts for badges
-            const { data: allReqs, error: countErr } = await supabase
-                .from('registration_requests')
-                .select('status');
+            // Fetch aggregate counts for badges (scoped to assigned admin if not super admin)
+            let countQuery = supabase.from('registration_requests').select('status');
+            if (!isSuperAdmin) {
+                countQuery = countQuery.eq('assigned_admin_id', callerId);
+            }
+            const { data: allReqs, error: countErr } = await countQuery;
 
             const counts = {
                 pending_review: 0,
@@ -430,6 +478,11 @@ module.exports = async (req, res) => {
 
             if (getErr || !currentReq) {
                 return sendError(404, 'Registration request not found');
+            }
+
+            // STRICT ROLE PRIVACY: If not Super Admin, caller can only review applicants assigned to them
+            if (!isSuperAdmin && currentReq.assigned_admin_id && currentReq.assigned_admin_id !== callerId) {
+                return sendError(403, 'Forbidden: This application was submitted through another admin’s link.');
             }
 
             // Check if already handled by someone else
@@ -652,6 +705,11 @@ module.exports = async (req, res) => {
                 return sendError(404, 'Registration request not found');
             }
 
+            // STRICT ROLE PRIVACY: If not Super Admin, caller can only deny applicants assigned to them
+            if (!isSuperAdmin && currentReq.assigned_admin_id && currentReq.assigned_admin_id !== callerId) {
+                return sendError(403, 'Forbidden: This application was submitted through another admin’s link.');
+            }
+
             // Concurrency check
             if (currentReq.status === 'denied') {
                 return sendError(409, `This request was already denied by ${currentReq.denied_by_name || 'another reviewer'}.`);
@@ -719,6 +777,11 @@ module.exports = async (req, res) => {
 
             if (getErr || !currentReq) {
                 return sendError(404, 'Registration request not found');
+            }
+
+            // STRICT ROLE PRIVACY: If not Super Admin, caller can only reopen applicants assigned to them
+            if (!isSuperAdmin && currentReq.assigned_admin_id && currentReq.assigned_admin_id !== callerId) {
+                return sendError(403, 'Forbidden: This application was submitted through another admin’s link.');
             }
 
             // If non-super admin tries to reopen directly to approved, reject with 403
