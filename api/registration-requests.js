@@ -54,19 +54,21 @@ async function notifySuperAdmins({ supabase, applicant, stage, reviewerName, rev
         }
     }
 
-    // 2. Email Notifications
-    for (const email of emailsToNotify) {
-        try {
-            await sendSuperAdminReviewAlertEmail({
-                toEmail: email,
-                applicant,
-                stage,
-                reviewerName,
-                reviewerRole,
-                note
-            });
-        } catch (err) {
-            console.error(`Failed to send Super Admin review alert email to ${email}:`, err.message);
+    // 2. Email Notifications: ONLY sent when an admin forwards an application for approval
+    if (stage === 'forwarded') {
+        for (const email of emailsToNotify) {
+            try {
+                await sendSuperAdminReviewAlertEmail({
+                    toEmail: email,
+                    applicant,
+                    stage,
+                    reviewerName,
+                    reviewerRole,
+                    note
+                });
+            } catch (err) {
+                console.error(`Failed to send Super Admin review alert email to ${email}:`, err.message);
+            }
         }
     }
 }
@@ -317,21 +319,8 @@ module.exports = async (req, res) => {
                 }
             }
 
-            // Asynchronously notify Super Admins via in-app notification and email
-            notifySuperAdmins({
-                supabase,
-                applicant: {
-                    full_name: fullName,
-                    usn,
-                    branch,
-                    year,
-                    email,
-                    phone,
-                    linkedin,
-                    github
-                },
-                stage: 'new_submission'
-            }).catch(err => console.error('Error notifying Super Admins of new submission:', err));
+            // NOTE: Super Admin is NOT emailed on initial submission to a standard admin's link.
+            // Super Admin only receives an email when the reviewing admin forwards the application for approval.
 
             return res.status(200).json({
                 success: true,
