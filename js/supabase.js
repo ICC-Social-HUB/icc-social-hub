@@ -3862,13 +3862,13 @@ const ICCSupabase = (() => {
 
     async function canUserAccessProjectMentorChat(projectId) {
         if (!currentUser) return false;
-        if (isMentor() || isAdmin() || isSuperAdmin()) return true;
+        if (isMentor()) return true;
         return await canUserAccessTeamChat(projectId);
     }
 
     function canAccessProjectMentorChat(projectId) {
         if (!currentUser) return false;
-        if (isMentor() || isAdmin() || isSuperAdmin()) return true;
+        if (isMentor()) return true;
         return canAccessTeamChat(projectId);
     }
 

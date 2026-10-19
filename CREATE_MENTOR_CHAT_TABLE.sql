@@ -34,13 +34,16 @@ BEGIN
 END $$;
 
 -- 5. Policies
--- SELECT: Only verified mentors, admins, project leads, and approved team members can view
+-- SELECT: Only verified mentors, the project lead, and approved team members can view
 DROP POLICY IF EXISTS "Team members and mentors can view project mentor messages" ON public.project_mentor_messages;
 CREATE POLICY "Team members and mentors can view project mentor messages"
     ON public.project_mentor_messages FOR SELECT
     TO authenticated
     USING (
-        public.is_mentor_or_admin(auth.uid())
+        EXISTS (
+            SELECT 1 FROM public.profiles p_role
+            WHERE p_role.id = auth.uid() AND p_role.role = 'mentor'
+        )
         OR EXISTS (
             SELECT 1 FROM public.core_leads l
             WHERE l.id = project_mentor_messages.project_id
@@ -58,7 +61,7 @@ CREATE POLICY "Team members and mentors can view project mentor messages"
         )
     );
 
--- INSERT: Mentors, Admins, Project Leaders, and approved Team Members can send messages
+-- INSERT: Mentors, the project lead, and approved team members can send messages
 DROP POLICY IF EXISTS "Team members and mentors can insert project mentor messages" ON public.project_mentor_messages;
 CREATE POLICY "Team members and mentors can insert project mentor messages"
     ON public.project_mentor_messages FOR INSERT
@@ -66,7 +69,10 @@ CREATE POLICY "Team members and mentors can insert project mentor messages"
     WITH CHECK (
         auth.uid() = sender_id
         AND (
-            public.is_mentor_or_admin(auth.uid())
+            EXISTS (
+                SELECT 1 FROM public.profiles p_role
+                WHERE p_role.id = auth.uid() AND p_role.role = 'mentor'
+            )
             OR EXISTS (
                 SELECT 1 FROM public.core_leads l
                 WHERE l.id = project_mentor_messages.project_id
@@ -85,14 +91,17 @@ CREATE POLICY "Team members and mentors can insert project mentor messages"
         )
     );
 
--- DELETE: Author, Mentor/Admin, or Project Lead can delete
+-- DELETE: Author, Mentors, or the project lead can delete
 DROP POLICY IF EXISTS "Author, mentors, or lead can delete project mentor messages" ON public.project_mentor_messages;
 CREATE POLICY "Author, mentors, or lead can delete project mentor messages"
     ON public.project_mentor_messages FOR DELETE
     TO authenticated
     USING (
         auth.uid() = sender_id
-        OR public.is_mentor_or_admin(auth.uid())
+        OR EXISTS (
+            SELECT 1 FROM public.profiles p_role
+            WHERE p_role.id = auth.uid() AND p_role.role = 'mentor'
+        )
         OR EXISTS (
             SELECT 1 FROM public.core_leads l
             WHERE l.id = project_mentor_messages.project_id

@@ -2487,7 +2487,7 @@ const TeamsView = (() => {
     function renderMentorChatPage(lead, isLead, isMember) {
         const isMentorUser = typeof ICCSupabase.isMentor === 'function' && ICCSupabase.isMentor();
         const isAdminUser = typeof ICCSupabase.isAdmin === 'function' && ICCSupabase.isAdmin();
-        const canAccess = isMember || isLead || isMentorUser || isAdminUser;
+        const canAccess = isMember || isLead || isMentorUser;
 
         if (!canAccess) {
             return '';
@@ -2874,8 +2874,8 @@ const TeamsView = (() => {
         const isPending = profile?.pending_teams?.map(Number).includes(Number(lead.id));
         const isLead = isLeadForTeam(lead.id, lead, teamMembers);
         const canSeeCode = Boolean(lead.project_code && (isLead || isMember || ICCSupabase.isMentor() || ICCSupabase.isAdmin()));
-        const isMentorOrAdmin = Boolean(ICCSupabase.isMentor() || ICCSupabase.isAdmin());
-        const canAccessMentorChat = Boolean(isMember || isLead || isMentorOrAdmin);
+        const isMentorUser = typeof ICCSupabase.isMentor === 'function' && ICCSupabase.isMentor();
+        const canAccessMentorChat = Boolean(isMember || isLead || isMentorUser);
         if (!canAccessMentorChat && currentProjectTab === 'mentor_chat') {
             currentProjectTab = 'overview';
         }
@@ -3554,7 +3554,8 @@ const TeamsView = (() => {
         const overviewContent = document.getElementById('project-tab-overview-content');
         const tasksContent = document.getElementById('project-tab-tasks-content');
         const mentorContent = document.getElementById('project-tab-mentor-content');
-        const isMentorOrAdmin = ICCSupabase.isMentor() || ICCSupabase.isAdmin();
+        const isMentorUser = typeof ICCSupabase.isMentor === 'function' && ICCSupabase.isMentor();
+        const canAccessMentorChat = Boolean(isMember || isLead || isMentorUser);
 
         const switchTab = (tab) => {
             if (tab === 'mentor_chat' && !canAccessMentorChat) {
@@ -3612,7 +3613,7 @@ const TeamsView = (() => {
                 tasksIndicator?.classList.add('bg-sky-400');
                 tasksContent?.classList.remove('hidden');
                 initProjectTasks(lead, isLead, isMember, isMentorOrAdmin);
-            } else {
+            } else if (canAccessMentorChat) {
                 mentorTabBtn?.classList.remove('text-zinc-400', 'hover:text-amber-400');
                 mentorTabBtn?.classList.add('text-amber-400', 'font-bold');
                 mentorIcon?.classList.remove('text-zinc-500', 'group-hover:text-amber-400');
@@ -3621,6 +3622,8 @@ const TeamsView = (() => {
                 mentorIndicator?.classList.add('bg-amber-400');
                 mentorContent?.classList.remove('hidden');
                 initMentorChat(lead, isLead, isMember);
+            } else {
+                switchTab('overview');
             }
         };
 
