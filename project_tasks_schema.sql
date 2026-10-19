@@ -49,7 +49,7 @@ CREATE POLICY "Allow mentors create tasks"
         EXISTS (
             SELECT 1 FROM public.profiles 
             WHERE profiles.id = auth.uid() 
-            AND (role = 'mentor' OR email = 'iccsocialhub@gmail.com')
+            AND role IN ('mentor', 'admin', 'super_admin', 'superadmin')
         )
     );
 
@@ -63,7 +63,7 @@ CREATE POLICY "Allow update tasks"
         EXISTS (
             SELECT 1 FROM public.profiles 
             WHERE profiles.id = auth.uid() 
-            AND (role IN ('mentor', 'admin', 'super_admin', 'superadmin') OR email = 'iccsocialhub@gmail.com')
+            AND role IN ('mentor', 'admin', 'super_admin', 'superadmin')
         )
     );
 
@@ -77,7 +77,7 @@ CREATE POLICY "Allow mentors delete tasks"
         EXISTS (
             SELECT 1 FROM public.profiles 
             WHERE profiles.id = auth.uid() 
-            AND (role = 'mentor' OR email = 'iccsocialhub@gmail.com')
+            AND role IN ('mentor', 'admin', 'super_admin', 'superadmin')
         )
     );
 

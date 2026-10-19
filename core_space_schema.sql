@@ -27,7 +27,7 @@ CREATE POLICY "Admins and Mentors can view MoM"
         EXISTS (
             SELECT 1 FROM public.profiles
             WHERE id = auth.uid() 
-            AND (role IN ('admin', 'super_admin', 'superadmin', 'mentor') OR email = 'iccsocialhub@gmail.com')
+            AND role IN ('admin', 'super_admin', 'superadmin', 'mentor')
         )
     );
 
@@ -39,7 +39,7 @@ CREATE POLICY "Admins and Mentors can insert MoM"
         EXISTS (
             SELECT 1 FROM public.profiles
             WHERE id = auth.uid() 
-            AND (role IN ('admin', 'super_admin', 'superadmin', 'mentor') OR email = 'iccsocialhub@gmail.com')
+            AND role IN ('admin', 'super_admin', 'superadmin', 'mentor')
         )
     );
 
@@ -51,7 +51,7 @@ CREATE POLICY "Admins and Mentors can update MoM"
         EXISTS (
             SELECT 1 FROM public.profiles
             WHERE id = auth.uid() 
-            AND (role IN ('admin', 'super_admin', 'superadmin', 'mentor') OR email = 'iccsocialhub@gmail.com')
+            AND role IN ('admin', 'super_admin', 'superadmin', 'mentor')
         )
     );
 
@@ -63,6 +63,6 @@ CREATE POLICY "Admins and Mentors can delete MoM"
         EXISTS (
             SELECT 1 FROM public.profiles
             WHERE id = auth.uid() 
-            AND (role IN ('admin', 'super_admin', 'superadmin', 'mentor') OR email = 'iccsocialhub@gmail.com')
+            AND role IN ('admin', 'super_admin', 'superadmin', 'mentor')
         )
     );

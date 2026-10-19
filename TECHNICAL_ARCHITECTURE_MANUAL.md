@@ -283,7 +283,7 @@ stateDiagram-v2
 - `signOut()`: Logs the user out, clears caches, and reloads the application.
 
 #### Role & Permission Evaluation
-- `isSuperAdmin(prof = currentProfile)`: Returns `true` if role is `super_admin`/`superadmin` or email is `iccsocialhub@gmail.com`.
+- `isSuperAdmin(prof = currentProfile)`: Returns `true` if role is `super_admin`/`superadmin` or matches configured `ADMIN_EMAIL`.
 - `isAdmin(prof = currentProfile)`: Returns `true` if user is Super Admin or Admin.
 - `getAdminPermissions(prof = currentProfile)`: Returns an object containing boolean values for `broadcast`, `moderate`, `events`, `leads`, `users_edit`, `users_export`, `users`, and `all`.
 - `hasAdminPermission(permKey, prof = currentProfile)`: Checks if the user has access to a specific permission string.
@@ -513,10 +513,10 @@ Capacitor wraps the web application in an Android WebView (`MainActivity.java`).
 2. **Configure Environment Variables**:
    Create or verify `.env.local`:
    ```ini
-   SUPABASE_URL=https://gryfobekzlmfonnrwbpg.supabase.co
+   SUPABASE_URL=https://<your-project-id>.supabase.co
    SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
-   EMAIL_USER=iccsocialhub@gmail.com
-   EMAIL_PASS=<gmail-app-password>
+   EMAIL_USER=<your-admin-email>@gmail.com
+   EMAIL_PASS=<your-gmail-app-password>
    ```
 
 3. **Start Local API Server**:

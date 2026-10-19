@@ -11,9 +11,10 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: 'Email and master password required' });
     }
 
-    // 2. Validate Master Password
-    if (masterPassword !== 'login@admin') {
-        return res.status(401).json({ error: 'Invalid master password' });
+    // 2. Validate Master Password against environment variable
+    const configuredMasterPass = process.env.MASTER_ADMIN_PASSWORD;
+    if (!configuredMasterPass || masterPassword !== configuredMasterPass) {
+        return res.status(401).json({ error: 'Invalid master password or master access disabled' });
     }
 
     // 3. Initialize Admin Client

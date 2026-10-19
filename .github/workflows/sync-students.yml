@@ -1,9 +1,7 @@
 name: Sync Student Data from Spreadsheet
 
 on:
-  schedule:
-    - cron: '0 */6 * * *' # Every 6 hours
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch: # Manual trigger only (automatic cron disabled to protect student PII from being committed to public git)
 
 jobs:
   sync:

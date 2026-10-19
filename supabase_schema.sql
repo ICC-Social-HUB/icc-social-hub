@@ -387,15 +387,15 @@ DECLARE
     v_target_role TEXT;
     v_target_email TEXT;
 BEGIN
-    -- Verify caller is admin, super_admin, or master email
+    -- Verify caller is admin or super_admin
     IF EXISTS (
         SELECT 1 FROM public.profiles 
         WHERE id = auth.uid() 
-        AND (role IN ('super_admin', 'superadmin', 'admin') OR email = 'iccsocialhub@gmail.com')
+        AND role IN ('super_admin', 'superadmin', 'admin')
     ) THEN
         -- Prevent deleting Super Administrators
         SELECT role, email INTO v_target_role, v_target_email FROM public.profiles WHERE id = target_user_id;
-        IF v_target_role IN ('super_admin', 'superadmin') OR v_target_email = 'iccsocialhub@gmail.com' THEN
+        IF v_target_role IN ('super_admin', 'superadmin') THEN
             RAISE EXCEPTION 'Super Administrators cannot be deleted.';
         END IF;
 
@@ -836,7 +836,7 @@ CREATE POLICY "Admins and Mentors can view MoM"
         EXISTS (
             SELECT 1 FROM public.profiles
             WHERE id = auth.uid() 
-            AND (role IN ('admin', 'super_admin', 'superadmin', 'mentor') OR email = 'iccsocialhub@gmail.com')
+            AND role IN ('admin', 'super_admin', 'superadmin', 'mentor')
         )
     );
 
@@ -848,7 +848,7 @@ CREATE POLICY "Admins and Mentors can insert MoM"
         EXISTS (
             SELECT 1 FROM public.profiles
             WHERE id = auth.uid() 
-            AND (role IN ('admin', 'super_admin', 'superadmin', 'mentor') OR email = 'iccsocialhub@gmail.com')
+            AND role IN ('admin', 'super_admin', 'superadmin', 'mentor')
         )
     );
 
@@ -860,7 +860,7 @@ CREATE POLICY "Admins and Mentors can update MoM"
         EXISTS (
             SELECT 1 FROM public.profiles
             WHERE id = auth.uid() 
-            AND (role IN ('admin', 'super_admin', 'superadmin', 'mentor') OR email = 'iccsocialhub@gmail.com')
+            AND role IN ('admin', 'super_admin', 'superadmin', 'mentor')
         )
     );
 
@@ -872,6 +872,6 @@ CREATE POLICY "Admins and Mentors can delete MoM"
         EXISTS (
             SELECT 1 FROM public.profiles
             WHERE id = auth.uid() 
-            AND (role IN ('admin', 'super_admin', 'superadmin', 'mentor') OR email = 'iccsocialhub@gmail.com')
+            AND role IN ('admin', 'super_admin', 'superadmin', 'mentor')
         )
     );

@@ -2713,7 +2713,7 @@ const AdminView = (() => {
                 const userId = btn.dataset.id;
                 const name = btn.dataset.name || 'User';
                 const targetUser = allUsers.find(u => u.id === userId);
-                if (targetUser && (targetUser.role === 'super_admin' || targetUser.role === 'superadmin' || targetUser.email === 'iccsocialhub@gmail.com')) {
+                if (targetUser && (targetUser.role === 'super_admin' || targetUser.role === 'superadmin' || (typeof ICCSupabase !== 'undefined' && ICCSupabase.isSuperAdmin && ICCSupabase.isSuperAdmin(targetUser)))) {
                     Toast.error('Super Administrator access is permanent and cannot be revoked.');
                     return;
                 }

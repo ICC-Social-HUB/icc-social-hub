@@ -54,10 +54,9 @@ module.exports = async (req, res) => {
             .eq('id', callerUser.id)
             .maybeSingle();
 
-        const callerRole = (callerProfile?.role || '').toLowerCase().trim();
+        const adminEmail = (process.env.ADMIN_EMAIL || process.env.EMAIL_USER || '').toLowerCase().trim();
         const isSuperAdmin = callerRole === 'super_admin' || callerRole === 'superadmin' || 
-                             callerProfile?.email === 'iccsocialhub@gmail.com' || 
-                             callerUser.email === 'iccsocialhub@gmail.com';
+                             (adminEmail && (callerProfile?.email?.toLowerCase() === adminEmail || callerUser?.email?.toLowerCase() === adminEmail));
         const isAdmin = callerRole === 'admin' || isSuperAdmin;
 
         if (!isAdmin && !isSuperAdmin) {
@@ -83,7 +82,7 @@ module.exports = async (req, res) => {
 
         if (targetProfile) {
             const targetRole = (targetProfile.role || '').toLowerCase().trim();
-            if (targetRole === 'super_admin' || targetRole === 'superadmin' || targetProfile.email === 'iccsocialhub@gmail.com') {
+            if (targetRole === 'super_admin' || targetRole === 'superadmin' || (adminEmail && targetProfile.email?.toLowerCase() === adminEmail)) {
                 return sendError(403, 'Super Administrators are protected and cannot be deleted.');
             }
         }
@@ -91,7 +90,7 @@ module.exports = async (req, res) => {
         // Check auth user as well
         try {
             const { data: authTarget } = await supabase.auth.admin.getUserById(targetUserId);
-            if (authTarget?.user?.email === 'iccsocialhub@gmail.com') {
+            if (adminEmail && authTarget?.user?.email?.toLowerCase() === adminEmail) {
                 return sendError(403, 'Super Administrators are protected and cannot be deleted.');
             }
         } catch (e) {

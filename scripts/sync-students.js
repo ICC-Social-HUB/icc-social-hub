@@ -4,7 +4,7 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
 // Configuration
-const SHEET_ID = '1D96whVKeVHsLdl9J5u6h4OIiwIpmEfsnacitk2RVf_g';
+const SHEET_ID = process.env.GOOGLE_SHEET_ID || '';
 const STUDENT_DATA_PATH = path.join(__dirname, '../js/studentData.js');
 const ALLOWED_EMAILS_PATH = path.join(__dirname, '../js/allowedEmails.js');
 
