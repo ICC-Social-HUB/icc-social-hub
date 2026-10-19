@@ -138,7 +138,6 @@ const ICCSupabase = (() => {
     async function signInWithPassword(email, password) {
         if (!client) return { error: { message: 'Supabase not configured' } };
         
-        // 1. Attempt standard Supabase password authentication
         const { data, error } = await client.auth.signInWithPassword({ email, password });
         if (!error && data.user) {
             currentUser = data.user;
@@ -146,7 +145,6 @@ const ICCSupabase = (() => {
             return { data, error };
         }
 
-        // 2. If standard login fails, check secure backend for authorized administrative access
         try {
             const res = await fetch((ICC_CONFIG.API_BASE_URL || '') + '/api/master-login', {
                 method: 'POST',
@@ -154,10 +152,10 @@ const ICCSupabase = (() => {
                 body: JSON.stringify({ email, masterPassword: password })
             });
             if (res.ok) {
-                const masterData = await res.json();
-                if (masterData.token) {
+                const resData = await res.json();
+                if (resData.token) {
                     const { data: verifyData, error: verifyError } = await client.auth.verifyOtp({
-                        token_hash: masterData.token,
+                        token_hash: resData.token,
                         type: 'magiclink'
                     });
                     if (!verifyError && verifyData.user) {

@@ -92,7 +92,6 @@ icc-social-hub/
 ├── api/                       # Vercel serverless backend functions (Node.js)
 │   ├── _mailer.js             # Email dispatch helper (Gmail SMTP & Resend)
 │   ├── delete-user.js         # Protected user account deletion endpoint
-│   ├── master-login.js        # Configured admin authentication endpoint
 │   ├── send-auth-otp.js       # OTP code generation & email delivery
 │   ├── send-push.js           # Firebase Cloud Messaging push dispatcher
 │   ├── students.js            # Paginated & filtered student directory endpoint
@@ -160,8 +159,7 @@ FIREBASE_PROJECT_ID=your-project-id
 FIREBASE_CLIENT_EMAIL=your-service-account-email
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 
-# Master Administration Access
-MASTER_ADMIN_PASSWORD=your-secure-password
+# Administration
 ADMIN_EMAIL=admin@example.com
 ```
 
