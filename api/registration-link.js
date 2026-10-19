@@ -146,6 +146,21 @@ module.exports = async (req, res) => {
                 console.warn('Error fetching personal registration link:', fetchErr.message);
             }
 
+            // Clean up older duplicate links for this admin if multiple exist
+            const { data: allAdminLinks } = await supabase
+                .from('registration_links')
+                .select('id')
+                .eq('created_by', callerId)
+                .order('created_at', { ascending: false });
+
+            if (allAdminLinks && allAdminLinks.length > 1) {
+                const keepId = myLink ? myLink.id : allAdminLinks[0].id;
+                const extraIds = allAdminLinks.filter(l => l.id !== keepId).map(l => l.id);
+                if (extraIds.length > 0) {
+                    await supabase.from('registration_links').delete().in('id', extraIds);
+                }
+            }
+
             // If no permanent link exists yet for this admin, generate one now!
             if (!myLink) {
                 const tokenStr = generatePermanentToken();
@@ -172,7 +187,7 @@ module.exports = async (req, res) => {
                 }
                 myLink = createdLink;
             } else if (!myLink.token) {
-                // Backward compatibility: if token was not stored, assign permanent token
+                // If token was not stored, assign permanent token
                 const tokenStr = generatePermanentToken();
                 const tokenHash = hashToken(tokenStr);
                 const { data: updatedLink } = await supabase
@@ -201,16 +216,29 @@ module.exports = async (req, res) => {
         if (action === 'toggle' || action === 'update') {
             const targetActive = typeof params.is_active === 'boolean' ? params.is_active : false;
             
-            // Toggle caller's own link
+            // Find caller's link
+            const { data: targetLink } = await supabase
+                .from('registration_links')
+                .select('id')
+                .eq('created_by', callerId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (!targetLink) {
+                return sendError(404, 'No registration link found for this admin');
+            }
+
+            // Toggle by specific ID
             const { data: updatedLink, error: updateErr } = await supabase
                 .from('registration_links')
                 .update({ 
                     is_active: targetActive,
                     updated_at: new Date().toISOString()
                 })
-                .eq('created_by', callerId)
+                .eq('id', targetLink.id)
                 .select()
-                .maybeSingle();
+                .single();
 
             if (updateErr) {
                 return sendError(500, updateErr.message);
@@ -235,6 +263,8 @@ module.exports = async (req, res) => {
                 .from('registration_links')
                 .select('id')
                 .eq('created_by', callerId)
+                .order('created_at', { ascending: false })
+                .limit(1)
                 .maybeSingle();
 
             let resultLink = null;

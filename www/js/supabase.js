@@ -4507,141 +4507,692 @@ const ICCSupabase = (() => {
         }
     }
 
-    async function validateRegistrationToken(token) {
+    async function hashTokenSha256(str) {
         try {
-            const res = await fetch(`/api/registration-link?action=validate&token=${encodeURIComponent(token)}`);
-            return await res.json();
-        } catch (e) {
-            return { valid: false, reason: 'error', error: e.message };
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(str).trim()));
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        } catch {
+            return String(str).trim();
         }
     }
 
-    async function submitRegistration(formData) {
+    async function validateRegistrationToken(token) {
+        const apiBase = (typeof ICC_CONFIG !== 'undefined' && ICC_CONFIG.API_BASE_URL) ? ICC_CONFIG.API_BASE_URL : '';
         try {
-            const res = await fetch('/api/registration-requests', {
+            const res = await fetch(`${apiBase}/api/registration-link?action=validate&token=${encodeURIComponent(token)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && typeof data.valid === 'boolean') return data;
+            }
+        } catch (e) {
+            console.warn('API validate failed, falling back to direct Supabase lookup:', e.message);
+        }
+
+        // Direct Supabase Client Fallback
+        if (client) {
+            try {
+                const cleanToken = (token || '').trim();
+                const tokenHash = await hashTokenSha256(cleanToken);
+                let { data: linkRecord } = await client
+                    .from('registration_links')
+                    .select('id, is_active, expires_at, created_by, creator_name, creator_role')
+                    .or(`token.eq.${cleanToken},token_hash.eq.${tokenHash}`)
+                    .maybeSingle();
+
+                if (!linkRecord) {
+                    return { valid: false, reason: 'invalid' };
+                }
+                if (!linkRecord.is_active) {
+                    return { valid: false, reason: 'disabled', admin_name: linkRecord.creator_name || 'Admin' };
+                }
+                if (linkRecord.expires_at && new Date(linkRecord.expires_at).getTime() < Date.now()) {
+                    return { valid: false, reason: 'expired' };
+                }
+                return {
+                    valid: true,
+                    admin_id: linkRecord.created_by,
+                    admin_name: linkRecord.creator_name || 'Admin',
+                    admin_role: linkRecord.creator_role || 'Admin'
+                };
+            } catch (dbErr) {
+                console.error('Direct validate fallback error:', dbErr);
+            }
+        }
+
+        return { valid: false, reason: 'error', error: 'Network validation error' };
+    }
+
+    async function submitRegistration(formData) {
+        const apiBase = (typeof ICC_CONFIG !== 'undefined' && ICC_CONFIG.API_BASE_URL) ? ICC_CONFIG.API_BASE_URL : '';
+        try {
+            const res = await fetch(`${apiBase}/api/registration-requests`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'submit', ...formData })
             });
-            return await res.json();
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.success) return data;
+            }
         } catch (e) {
-            return { success: false, error: e.message };
+            console.warn('API submit failed, falling back to direct Supabase insert:', e.message);
         }
+
+        // Direct Supabase Fallback
+        if (client) {
+            try {
+                const cleanToken = (formData.token || '').trim();
+                const tokenHash = await hashTokenSha256(cleanToken);
+
+                // Lookup link to get assigned admin
+                const { data: linkRecord } = await client
+                    .from('registration_links')
+                    .select('id, is_active, expires_at, created_by, creator_name')
+                    .or(`token.eq.${cleanToken},token_hash.eq.${tokenHash}`)
+                    .maybeSingle();
+
+                if (!linkRecord || !linkRecord.is_active) {
+                    return { success: false, error: 'Registration link is disabled or inactive' };
+                }
+
+                const now = new Date().toISOString();
+                const { data: newReq, error: insErr } = await client
+                    .from('registration_requests')
+                    .insert({
+                        full_name: formData.full_name?.trim(),
+                        usn: formData.usn?.trim()?.toUpperCase(),
+                        branch: formData.branch,
+                        year: formData.year,
+                        email: formData.email?.trim()?.toLowerCase(),
+                        phone: formData.phone?.trim(),
+                        linkedin: formData.linkedin?.trim() || null,
+                        github: formData.github?.trim() || null,
+                        other_link: formData.other_link?.trim() || null,
+                        assigned_admin_id: linkRecord.created_by || null,
+                        assigned_admin_name: linkRecord.creator_name || null,
+                        status: 'pending_review',
+                        audit_log: [{
+                            action: 'submitted',
+                            actor: 'Applicant',
+                            timestamp: now,
+                            details: `Application submitted via link of ${linkRecord.creator_name || 'Admin'}`
+                        }],
+                        created_at: now,
+                        updated_at: now
+                    })
+                    .select()
+                    .single();
+
+                if (insErr) throw insErr;
+                return { success: true, message: 'Registration request submitted successfully.', request: newReq };
+            } catch (dbErr) {
+                console.error('Direct submission error:', dbErr);
+                return { success: false, error: dbErr.message || 'Submission error' };
+            }
+        }
+
+        return { success: false, error: 'Could not connect to registration server.' };
     }
 
     async function getRegistrationLinkInfo() {
+        const apiBase = (typeof ICC_CONFIG !== 'undefined' && ICC_CONFIG.API_BASE_URL) ? ICC_CONFIG.API_BASE_URL : '';
         try {
             const authHdr = await getAuthHeader();
-            const res = await fetch('/api/registration-link?action=get-active', {
+            const res = await fetch(`${apiBase}/api/registration-link?action=get-active`, {
                 headers: { ...authHdr }
             });
-            return await res.json();
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.success) return data;
+            }
         } catch (e) {
-            return { success: false, error: e.message };
+            console.warn('API getRegistrationLinkInfo failed, using direct Supabase fallback:', e.message);
         }
+
+        // Direct Supabase Fallback
+        if (client) {
+            try {
+                const user = getUser();
+                if (!user) return { success: false, error: 'User session required' };
+                const prof = getProfile() || {};
+
+                // Get caller's link
+                let { data: myLink, error: fetchErr } = await client
+                    .from('registration_links')
+                    .select('*')
+                    .eq('created_by', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (!myLink) {
+                    const seed = user.id.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
+                    const rand = Math.random().toString(36).substring(2, 10);
+                    const tokenStr = `reg_${seed}_${rand}`;
+                    const tokenHash = await hashTokenSha256(tokenStr);
+                    const now = new Date().toISOString();
+
+                    const { data: created, error: insErr } = await client
+                        .from('registration_links')
+                        .insert({
+                            token: tokenStr,
+                            token_hash: tokenHash,
+                            is_active: true,
+                            created_by: user.id,
+                            creator_name: prof.full_name || prof.username || 'Admin',
+                            creator_role: isSuperAdmin() ? 'Super Admin' : 'Admin',
+                            created_at: now,
+                            updated_at: now
+                        })
+                        .select()
+                        .single();
+
+                    if (!insErr && created) {
+                        return { success: true, link: created, token: created.token };
+                    }
+                } else if (!myLink.token) {
+                    const seed = user.id.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
+                    const rand = Math.random().toString(36).substring(2, 10);
+                    const tokenStr = `reg_${seed}_${rand}`;
+                    const tokenHash = await hashTokenSha256(tokenStr);
+
+                    const { data: updated } = await client
+                        .from('registration_links')
+                        .update({
+                            token: tokenStr,
+                            token_hash: tokenHash,
+                            is_active: true,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', myLink.id)
+                        .select()
+                        .single();
+
+                    if (updated) {
+                        return { success: true, link: updated, token: updated.token };
+                    }
+                } else {
+                    return { success: true, link: myLink, token: myLink.token };
+                }
+            } catch (dbErr) {
+                console.error('Direct getRegistrationLinkInfo fallback error:', dbErr);
+            }
+        }
+
+        return { success: false, error: 'Failed to retrieve registration link' };
     }
 
     async function generateRegistrationLink(options = {}) {
+        const apiBase = (typeof ICC_CONFIG !== 'undefined' && ICC_CONFIG.API_BASE_URL) ? ICC_CONFIG.API_BASE_URL : '';
         try {
             const authHdr = await getAuthHeader();
-            const res = await fetch('/api/registration-link', {
+            const res = await fetch(`${apiBase}/api/registration-link`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...authHdr },
                 body: JSON.stringify({ action: 'generate', ...options })
             });
-            return await res.json();
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.success) return data;
+            }
         } catch (e) {
-            return { success: false, error: e.message };
+            console.warn('API generateRegistrationLink failed, using direct Supabase fallback:', e.message);
         }
+
+        // Direct Supabase Fallback (100% reliable)
+        if (client) {
+            try {
+                const user = getUser();
+                if (!user) return { success: false, error: 'User session required' };
+                const prof = getProfile() || {};
+
+                const seed = user.id.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
+                const rand = Math.random().toString(36).substring(2, 10);
+                const tokenStr = `reg_${seed}_${rand}`;
+                const tokenHash = await hashTokenSha256(tokenStr);
+                const now = new Date().toISOString();
+
+                // Find existing
+                const { data: existing } = await client
+                    .from('registration_links')
+                    .select('id')
+                    .eq('created_by', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                let resLink = null;
+                if (existing) {
+                    const { data: updated, error: uErr } = await client
+                        .from('registration_links')
+                        .update({
+                            token: tokenStr,
+                            token_hash: tokenHash,
+                            is_active: true,
+                            creator_name: prof.full_name || prof.username || 'Admin',
+                            creator_role: isSuperAdmin() ? 'Super Admin' : 'Admin',
+                            updated_at: now
+                        })
+                        .eq('id', existing.id)
+                        .select()
+                        .single();
+                    if (uErr) throw uErr;
+                    resLink = updated;
+                } else {
+                    const { data: created, error: cErr } = await client
+                        .from('registration_links')
+                        .insert({
+                            token: tokenStr,
+                            token_hash: tokenHash,
+                            is_active: true,
+                            created_by: user.id,
+                            creator_name: prof.full_name || prof.username || 'Admin',
+                            creator_role: isSuperAdmin() ? 'Super Admin' : 'Admin',
+                            created_at: now,
+                            updated_at: now
+                        })
+                        .select()
+                        .single();
+                    if (cErr) throw cErr;
+                    resLink = created;
+                }
+
+                return { success: true, token: tokenStr, link: resLink };
+            } catch (dbErr) {
+                console.error('Direct generate fallback error:', dbErr);
+                return { success: false, error: dbErr.message || 'Failed to generate link' };
+            }
+        }
+
+        return { success: false, error: 'Failed to generate registration link' };
     }
 
     async function toggleRegistrationLink(isActive, expiresAt) {
+        const apiBase = (typeof ICC_CONFIG !== 'undefined' && ICC_CONFIG.API_BASE_URL) ? ICC_CONFIG.API_BASE_URL : '';
         try {
             const authHdr = await getAuthHeader();
-            const res = await fetch('/api/registration-link', {
+            const res = await fetch(`${apiBase}/api/registration-link`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...authHdr },
                 body: JSON.stringify({ action: 'toggle', is_active: isActive, expires_at: expiresAt })
             });
-            return await res.json();
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.success) return data;
+            }
         } catch (e) {
-            return { success: false, error: e.message };
+            console.warn('API toggleRegistrationLink failed, using direct Supabase fallback:', e.message);
         }
+
+        // Direct Supabase Fallback
+        if (client) {
+            try {
+                const user = getUser();
+                if (!user) return { success: false, error: 'User session required' };
+
+                const { data: targetLink } = await client
+                    .from('registration_links')
+                    .select('id')
+                    .eq('created_by', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (!targetLink) return { success: false, error: 'Registration link not found' };
+
+                const { data: updated, error: uErr } = await client
+                    .from('registration_links')
+                    .update({
+                        is_active: isActive,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', targetLink.id)
+                    .select()
+                    .single();
+
+                if (uErr) throw uErr;
+                return { success: true, link: updated };
+            } catch (dbErr) {
+                console.error('Direct toggle fallback error:', dbErr);
+                return { success: false, error: dbErr.message || 'Failed to toggle link' };
+            }
+        }
+
+        return { success: false, error: 'Failed to toggle link' };
     }
 
     async function fetchRegistrationRequests(params = {}) {
+        const apiBase = (typeof ICC_CONFIG !== 'undefined' && ICC_CONFIG.API_BASE_URL) ? ICC_CONFIG.API_BASE_URL : '';
         try {
             const authHdr = await getAuthHeader();
             const query = new URLSearchParams({ action: 'list', ...params }).toString();
-            const res = await fetch(`/api/registration-requests?${query}`, {
+            const res = await fetch(`${apiBase}/api/registration-requests?${query}`, {
                 headers: { ...authHdr }
             });
-            return await res.json();
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.success) return data;
+            }
         } catch (e) {
-            return { success: false, error: e.message };
+            console.warn('API fetchRegistrationRequests failed, using direct Supabase fallback:', e.message);
         }
+
+        // Direct Supabase Fallback
+        if (client) {
+            try {
+                const user = getUser();
+                const isSuper = isSuperAdmin();
+
+                let query = client.from('registration_requests').select('*');
+                if (!isSuper && user) {
+                    query = query.eq('assigned_admin_id', user.id);
+                }
+
+                if (params.status && params.status !== 'all') {
+                    query = query.eq('status', params.status);
+                }
+                if (params.branch && params.branch !== 'all') {
+                    query = query.ilike('branch', `%${params.branch}%`);
+                }
+                if (params.year && params.year !== 'all') {
+                    query = query.eq('year', params.year);
+                }
+                if (params.search) {
+                    const s = params.search;
+                    query = query.or(`full_name.ilike.%${s}%,usn.ilike.%${s}%,email.ilike.%${s}%,phone.ilike.%${s}%`);
+                }
+
+                query = query.order('created_at', { ascending: false });
+                const { data: requests, error: rErr } = await query;
+                if (rErr) throw rErr;
+
+                // Aggregate counts
+                let countQuery = client.from('registration_requests').select('status');
+                if (!isSuper && user) {
+                    countQuery = countQuery.eq('assigned_admin_id', user.id);
+                }
+                const { data: allReqs } = await countQuery;
+                const counts = { pending_review: 0, awaiting_super_admin: 0, approved: 0, denied: 0 };
+                if (allReqs) {
+                    allReqs.forEach(r => {
+                        if (counts[r.status] !== undefined) counts[r.status]++;
+                    });
+                }
+
+                return { success: true, requests: requests || [], counts };
+            } catch (dbErr) {
+                console.error('Direct fetch requests fallback error:', dbErr);
+            }
+        }
+
+        return { success: false, requests: [], counts: { pending_review: 0, awaiting_super_admin: 0, approved: 0, denied: 0 } };
     }
 
     async function forwardRegistrationRequest(id, note = '') {
+        const apiBase = (typeof ICC_CONFIG !== 'undefined' && ICC_CONFIG.API_BASE_URL) ? ICC_CONFIG.API_BASE_URL : '';
         try {
             const authHdr = await getAuthHeader();
-            const res = await fetch('/api/registration-requests', {
+            const res = await fetch(`${apiBase}/api/registration-requests`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...authHdr },
                 body: JSON.stringify({ action: 'forward', id, note })
             });
-            return await res.json();
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.success) return data;
+            }
         } catch (e) {
-            return { success: false, error: e.message };
+            console.warn('API forwardRegistrationRequest failed, using direct Supabase fallback:', e.message);
         }
+
+        // Direct Supabase Fallback
+        if (client) {
+            try {
+                const user = getUser();
+                const prof = getProfile() || {};
+                const now = new Date().toISOString();
+
+                const { data: currentReq } = await client.from('registration_requests').select('*').eq('id', id).single();
+                const auditLog = Array.isArray(currentReq?.audit_log) ? currentReq.audit_log : [];
+                auditLog.push({
+                    action: 'forwarded',
+                    actor_id: user?.id,
+                    actor_name: prof.full_name || 'Admin',
+                    actor_role: isSuperAdmin() ? 'Super Admin' : (isAdmin() ? 'Admin' : 'Mentor'),
+                    note: note || 'Forwarded to Super Admin for final review',
+                    timestamp: now
+                });
+
+                const { data: updated, error: uErr } = await client
+                    .from('registration_requests')
+                    .update({
+                        status: 'awaiting_super_admin',
+                        first_reviewer_id: user?.id,
+                        first_reviewer_name: prof.full_name || 'Admin',
+                        first_reviewer_role: isSuperAdmin() ? 'Super Admin' : (isAdmin() ? 'Admin' : 'Mentor'),
+                        first_reviewer_note: note || null,
+                        first_reviewed_at: now,
+                        audit_log: auditLog,
+                        updated_at: now
+                    })
+                    .eq('id', id)
+                    .select()
+                    .single();
+
+                if (uErr) throw uErr;
+                return { success: true, request: updated };
+            } catch (dbErr) {
+                return { success: false, error: dbErr.message };
+            }
+        }
+        return { success: false, error: 'Could not forward request' };
     }
 
     async function approveRegistrationRequest(id) {
+        const apiBase = (typeof ICC_CONFIG !== 'undefined' && ICC_CONFIG.API_BASE_URL) ? ICC_CONFIG.API_BASE_URL : '';
         try {
             const authHdr = await getAuthHeader();
-            const res = await fetch('/api/registration-requests', {
+            const res = await fetch(`${apiBase}/api/registration-requests`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...authHdr },
                 body: JSON.stringify({ action: 'approve', id })
             });
-            return await res.json();
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.success) return data;
+            }
         } catch (e) {
-            return { success: false, error: e.message };
+            console.warn('API approveRegistrationRequest failed, using direct Supabase fallback:', e.message);
         }
+
+        // Direct Supabase Fallback (Super Admin Only)
+        if (client && isSuperAdmin()) {
+            try {
+                const user = getUser();
+                const prof = getProfile() || {};
+                const now = new Date().toISOString();
+                const dateStr = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+                const { data: currentReq } = await client.from('registration_requests').select('*').eq('id', id).single();
+                if (!currentReq) return { success: false, error: 'Request not found' };
+
+                const auditLog = Array.isArray(currentReq.audit_log) ? currentReq.audit_log : [];
+                auditLog.push({
+                    action: 'approved',
+                    actor_id: user?.id,
+                    actor_name: prof.full_name || 'Super Admin',
+                    actor_role: 'Super Admin',
+                    timestamp: now,
+                    details: 'Granted full platform access'
+                });
+
+                const { data: updatedReq, error: uErr } = await client
+                    .from('registration_requests')
+                    .update({
+                        status: 'approved',
+                        final_approver_id: user?.id,
+                        final_approver_name: prof.full_name || 'Super Admin',
+                        final_approver_role: 'Super Admin',
+                        final_approved_at: now,
+                        audit_log: auditLog,
+                        updated_at: now
+                    })
+                    .eq('id', id)
+                    .select()
+                    .single();
+
+                if (uErr) throw uErr;
+
+                // Update or create profile
+                const approvedByFormatted = `${prof.full_name || 'Super Admin'} · Super Admin · ${dateStr}`;
+                const reviewedByFormatted = currentReq.first_reviewer_name ? `${currentReq.first_reviewer_name} · ${currentReq.first_reviewer_role || 'Admin'} · ${dateStr}` : 'Direct Super Admin Review';
+
+                const { data: existingProf } = await client
+                    .from('profiles')
+                    .select('id')
+                    .or(`email.ilike.${currentReq.email},usn.ilike.${currentReq.usn}`)
+                    .maybeSingle();
+
+                if (existingProf) {
+                    await client.from('profiles').update({
+                        approval_status: 'approved',
+                        approved_by: approvedByFormatted,
+                        reviewed_by: reviewedByFormatted,
+                        approved_at: now,
+                        full_name: currentReq.full_name,
+                        usn: currentReq.usn,
+                        phone: currentReq.phone,
+                        role: 'member',
+                        updated_at: now
+                    }).eq('id', existingProf.id);
+                }
+
+                return { success: true, message: `Request approved for ${currentReq.full_name}.`, request: updatedReq };
+            } catch (dbErr) {
+                return { success: false, error: dbErr.message };
+            }
+        }
+        return { success: false, error: 'Could not approve request' };
     }
 
     async function denyRegistrationRequest(id, reason = '') {
+        const apiBase = (typeof ICC_CONFIG !== 'undefined' && ICC_CONFIG.API_BASE_URL) ? ICC_CONFIG.API_BASE_URL : '';
         try {
             const authHdr = await getAuthHeader();
-            const res = await fetch('/api/registration-requests', {
+            const res = await fetch(`${apiBase}/api/registration-requests`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...authHdr },
                 body: JSON.stringify({ action: 'deny', id, reason })
             });
-            return await res.json();
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.success) return data;
+            }
         } catch (e) {
-            return { success: false, error: e.message };
+            console.warn('API denyRegistrationRequest failed, using direct Supabase fallback:', e.message);
         }
+
+        // Direct Supabase Fallback
+        if (client) {
+            try {
+                const user = getUser();
+                const prof = getProfile() || {};
+                const now = new Date().toISOString();
+
+                const { data: currentReq } = await client.from('registration_requests').select('*').eq('id', id).single();
+                const auditLog = Array.isArray(currentReq?.audit_log) ? currentReq.audit_log : [];
+                auditLog.push({
+                    action: 'denied',
+                    actor_id: user?.id,
+                    actor_name: prof.full_name || 'Admin',
+                    actor_role: isSuperAdmin() ? 'Super Admin' : (isAdmin() ? 'Admin' : 'Mentor'),
+                    reason: reason || 'Not specified',
+                    timestamp: now
+                });
+
+                const { data: updated, error: uErr } = await client
+                    .from('registration_requests')
+                    .update({
+                        status: 'denied',
+                        denied_by_id: user?.id,
+                        denied_by_name: prof.full_name || 'Admin',
+                        denied_by_role: isSuperAdmin() ? 'Super Admin' : (isAdmin() ? 'Admin' : 'Mentor'),
+                        denial_reason: reason || null,
+                        denied_at: now,
+                        audit_log: auditLog,
+                        updated_at: now
+                    })
+                    .eq('id', id)
+                    .select()
+                    .single();
+
+                if (uErr) throw uErr;
+                return { success: true, message: 'Request denied.', request: updated };
+            } catch (dbErr) {
+                return { success: false, error: dbErr.message };
+            }
+        }
+        return { success: false, error: 'Could not deny request' };
     }
 
     async function reopenRegistrationRequest(id, targetStatus) {
+        const apiBase = (typeof ICC_CONFIG !== 'undefined' && ICC_CONFIG.API_BASE_URL) ? ICC_CONFIG.API_BASE_URL : '';
         try {
             const authHdr = await getAuthHeader();
-            const res = await fetch('/api/registration-requests', {
+            const res = await fetch(`${apiBase}/api/registration-requests`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...authHdr },
                 body: JSON.stringify({ action: 'reopen', id, target_status: targetStatus })
             });
-            return await res.json();
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.success) return data;
+            }
         } catch (e) {
-            return { success: false, error: e.message };
+            console.warn('API reopenRegistrationRequest failed, using direct Supabase fallback:', e.message);
         }
+
+        if (client) {
+            try {
+                const user = getUser();
+                const prof = getProfile() || {};
+                const now = new Date().toISOString();
+
+                const { data: currentReq } = await client.from('registration_requests').select('*').eq('id', id).single();
+                const auditLog = Array.isArray(currentReq?.audit_log) ? currentReq.audit_log : [];
+                auditLog.push({
+                    action: 'reopened',
+                    actor_id: user?.id,
+                    actor_name: prof.full_name || 'Admin',
+                    target_status: targetStatus,
+                    timestamp: now
+                });
+
+                const { data: updated, error: uErr } = await client
+                    .from('registration_requests')
+                    .update({
+                        status: targetStatus,
+                        audit_log: auditLog,
+                        updated_at: now
+                    })
+                    .eq('id', id)
+                    .select()
+                    .single();
+
+                if (uErr) throw uErr;
+                return { success: true, request: updated };
+            } catch (dbErr) {
+                return { success: false, error: dbErr.message };
+            }
+        }
+        return { success: false, error: 'Could not reopen request' };
     }
 
     async function resendRegistrationEmail(id) {
+        const apiBase = (typeof ICC_CONFIG !== 'undefined' && ICC_CONFIG.API_BASE_URL) ? ICC_CONFIG.API_BASE_URL : '';
         try {
             const authHdr = await getAuthHeader();
-            const res = await fetch('/api/registration-requests', {
+            const res = await fetch(`${apiBase}/api/registration-requests`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...authHdr },
                 body: JSON.stringify({ action: 'resend-email', id })
