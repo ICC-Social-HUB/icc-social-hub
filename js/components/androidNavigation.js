@@ -29,6 +29,10 @@ const AndroidNavigation = (() => {
         const progressModal = document.getElementById('progress-modal');
         if (progressModal && !progressModal.classList.contains('hidden')) return true;
 
+        // 5. Students / Hustlers Filter Drawer
+        const studentsFilter = document.getElementById('students-filter-drawer');
+        if (studentsFilter && !studentsFilter.classList.contains('hidden')) return true;
+
         return false;
     }
 
@@ -62,7 +66,18 @@ const AndroidNavigation = (() => {
             return true;
         }
 
-        // 3. Components in modal-root
+        // 3. Students / Hustlers Filter Drawer
+        const studentsFilter = document.getElementById('students-filter-drawer');
+        if (studentsFilter && !studentsFilter.classList.contains('hidden')) {
+            if (typeof StudentsView !== 'undefined' && StudentsView.toggleFilterDrawer) {
+                StudentsView.toggleFilterDrawer();
+            } else {
+                studentsFilter.classList.add('hidden');
+            }
+            return true;
+        }
+
+        // 4. Components in modal-root
         const modalRoot = document.getElementById('modal-root');
         if (modalRoot && modalRoot.children.length > 0 && modalRoot.innerHTML.trim() !== '') {
             if (typeof AuthModal !== 'undefined' && AuthModal.close) AuthModal.close();
@@ -83,42 +98,41 @@ const AndroidNavigation = (() => {
         // Step 1: If any modal/drawer is open, close it!
         if (hasOpenModal()) {
             closeActiveModal();
-            return;
+            return true;
         }
 
-        // Step 2: Specific team and sub-page hierarchy
+        // Step 2: Specific team sub-page hierarchy
         const currentHash = window.location.hash || '#dashboard';
-        if (currentHash.startsWith('#teams/')) {
+        if (currentHash.startsWith('#teams/') && currentHash !== '#teams') {
             window.location.hash = '#teams';
-            return;
-        }
-        if (currentHash === '#teams') {
-            window.location.hash = '#dashboard';
-            return;
+            return true;
         }
 
+        // Step 3: Ask Router to go back in history
+        if (typeof Router !== 'undefined' && Router.goBack && Router.goBack()) {
+            return true;
+        }
+
+        // Step 4: If not on home/dashboard, go to dashboard
         const isHome = currentHash === '#dashboard' || currentHash === '' || currentHash === '#';
-
         if (!isHome) {
-            if (window.history.length > 1) {
-                window.history.back();
-            } else {
-                window.location.hash = '#dashboard';
-            }
-            return;
+            window.location.hash = '#dashboard';
+            return true;
         }
 
-        // Step 3: On Home screen, require double back press to exit app
+        // Step 5: On Home screen, require double back press to exit app
         const now = Date.now();
         if (now - lastBackPressTime < 2000) {
             if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
                 window.Capacitor.Plugins.App.exitApp();
             }
+            return false; // Exit app
         } else {
             lastBackPressTime = now;
             if (typeof Toast !== 'undefined' && Toast.info) {
                 Toast.info('Press back again to exit app');
             }
+            return true; // Warned user, do not exit yet
         }
     }
 
@@ -126,13 +140,39 @@ const AndroidNavigation = (() => {
         console.log('📱 Initializing Android & Web Navigation Controller...');
 
         // 1. Capacitor Native Hardware Back Button (Android)
-        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
-            window.Capacitor.Plugins.App.addListener('backButton', () => {
-                handleBackAction();
-            });
+        function bindCapacitorBack() {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+                try {
+                    window.Capacitor.Plugins.App.removeAllListeners?.('backButton');
+                    window.Capacitor.Plugins.App.addListener('backButton', () => {
+                        handleBackAction();
+                    });
+                    console.log('✅ Capacitor backButton listener bound');
+                    return true;
+                } catch (e) {
+                    console.warn('⚠️ Error binding Capacitor backButton:', e);
+                }
+            }
+            return false;
         }
 
-        // 2. Web Popstate Listener (Mobile & Desktop Browsers)
+        if (!bindCapacitorBack()) {
+            let tries = 0;
+            const timer = setInterval(() => {
+                tries++;
+                if (bindCapacitorBack() || tries > 25) {
+                    clearInterval(timer);
+                }
+            }, 200);
+        }
+
+        // 2. Standard document backbutton event (Cordova / WebViews)
+        document.addEventListener('backbutton', (e) => {
+            e.preventDefault();
+            handleBackAction();
+        }, false);
+
+        // 3. Web Popstate Listener (Mobile & Desktop Browsers)
         window.addEventListener('popstate', (e) => {
             if (hasOpenModal()) {
                 closeActiveModal();

@@ -5,11 +5,24 @@ const Router = (() => {
     let previousView = null;
     let previousHash = null;
     let currentHash = window.location.hash || '#dashboard';
+    let historyStack = [];
+    let isNavigatingBack = false;
 
     function init() {
+        const initial = window.location.hash || '#dashboard';
+        historyStack = [initial];
+
         window.addEventListener('hashchange', () => {
             previousHash = currentHash;
             currentHash = window.location.hash || '#dashboard';
+            
+            if (!isNavigatingBack) {
+                const last = historyStack[historyStack.length - 1];
+                if (last !== currentHash) {
+                    historyStack.push(currentHash);
+                }
+            }
+            isNavigatingBack = false;
             handleRoute();
         });
         handleRoute();
@@ -17,6 +30,30 @@ const Router = (() => {
 
     function getPreviousHash() {
         return previousHash;
+    }
+
+    function getHistoryStack() {
+        return historyStack;
+    }
+
+    function goBack() {
+        if (historyStack.length > 1) {
+            historyStack.pop(); // Remove current
+            const prev = historyStack[historyStack.length - 1] || '#dashboard';
+            isNavigatingBack = true;
+            window.location.hash = prev;
+            return true;
+        }
+
+        const current = window.location.hash || '#dashboard';
+        if (current !== '#dashboard' && current !== '' && current !== '#') {
+            isNavigatingBack = true;
+            historyStack = ['#dashboard'];
+            window.location.hash = '#dashboard';
+            return true;
+        }
+
+        return false;
     }
 
     function handleRoute() {
@@ -175,6 +212,6 @@ const Router = (() => {
         window.scrollTo(0, 0);
     }
 
-    return { init, getPreviousHash };
+    return { init, getPreviousHash, getHistoryStack, goBack };
 })();
 
