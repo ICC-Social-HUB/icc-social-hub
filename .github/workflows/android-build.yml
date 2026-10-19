@@ -9,8 +9,12 @@ on:
       - main
     paths:
       - 'package.json'
-      - 'android/app/build.gradle'
+      - 'android/**'
       - 'capacitor.config.json'
+      - 'js/**'
+      - 'css/**'
+      - 'index.html'
+      - '.github/workflows/android-build.yml'
 
 permissions:
   contents: write
