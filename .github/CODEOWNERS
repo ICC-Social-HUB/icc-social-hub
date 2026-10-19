@@ -1,0 +1,11 @@
+# ========================================================
+# GitHub CODEOWNERS
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# These owners are automatically requested for review when a PR touches matching files.
+# When combined with "Require review from Code Owners" in Branch Protection,
+# pull requests CANNOT be merged without explicit approval from a code owner.
+# ========================================================
+
+# The repository owner is required to review and approve ALL changes
+* @Saravanan-space
