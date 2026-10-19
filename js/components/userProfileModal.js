@@ -82,10 +82,7 @@ const UserProfileModal = (() => {
             ? ICC_CONFIG.getRoleTick(profile) 
             : '';
 
-        const defaultBio = profile.role === 'mentor' 
-            ? 'Official Project Mentor and Technical Reviewer for student innovation teams at ICC Social Hub.' 
-            : 'Innovator, builder, and creative developer at ICC Social Hub.';
-        const bioText = profile.bio ? String(profile.bio).trim() : defaultBio;
+        const bioText = profile.bio ? String(profile.bio).trim() : '';
 
         const skills = Array.isArray(profile.skills) 
             ? profile.skills 
@@ -149,9 +146,11 @@ const UserProfileModal = (() => {
                 </div>
 
                 <!-- 3. Bio Description Paragraph -->
+                ${bioText ? `
                 <p class="text-sm sm:text-base text-zinc-300 leading-relaxed font-normal">
                     ${escapeHtml(bioText)}
                 </p>
+                ` : ''}
 
                 <!-- 4. Key Metrics / Stats Row (Reference: 600 Followers 100 Post) -->
                 <div class="flex items-center gap-8 py-1">
@@ -169,17 +168,6 @@ const UserProfileModal = (() => {
                         <span class="text-xs sm:text-sm font-medium text-[#708499]">${escapeHtml(profile.year || '')}</span>
                     </div>
                     ` : ''}
-                </div>
-
-                <!-- Membership Approval Authority Info -->
-                <div class="p-3 bg-[#17212b]/80 border border-[#242f3d] rounded-xl flex items-center justify-between flex-wrap gap-2 text-xs">
-                    <div class="flex items-center gap-2">
-                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${profile.approval_status === 'approved' || !profile.approval_status ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/15 text-amber-300'}">
-                            ${escapeHtml(profile.approval_status || 'Approved')}
-                        </span>
-                        <span class="text-zinc-300">Approved by: <strong class="text-white">${escapeHtml(profile.approved_by || 'Legacy import')}</strong></span>
-                    </div>
-                    <span class="text-[11px] text-[#708499]">Reviewed by: ${escapeHtml(profile.reviewed_by || 'Legacy import')}</span>
                 </div>
 
                 <!-- 5. Full-Width Primary Action Button (Reference: + Follow) -->

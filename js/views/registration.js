@@ -371,7 +371,6 @@ const RegistrationView = (() => {
                     <div class="bg-[#0a111c]/90 border border-cyan-500/20 rounded-2xl p-5 sm:p-6 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
                         <div class="font-mono text-xs font-semibold tracking-wider text-cyan-400 uppercase pb-3 mb-4 border-b border-white/5 flex items-center justify-between">
                             <span>// 02 · ACADEMIC CREDENTIALS</span>
-                            <span class="text-[10px] text-zinc-500">VTU / INSTITUTION</span>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -23,10 +23,7 @@ const ProfileView = (() => {
             ? ICC_CONFIG.getRoleTick(profile) 
             : '';
 
-        const defaultBio = profile.role === 'mentor' 
-            ? 'Official Project Mentor and Technical Reviewer for student innovation teams at ICC Social Hub.' 
-            : 'Innovator, builder, and creative developer at ICC Social Hub.';
-        const bioText = profile.bio ? String(profile.bio).trim() : defaultBio;
+        const bioText = profile.bio ? String(profile.bio).trim() : '';
 
         const skills = Array.isArray(profile.skills) 
             ? profile.skills 
@@ -76,9 +73,11 @@ const ProfileView = (() => {
                 </div>
 
                 <!-- 3. Bio Description Paragraph -->
+                ${bioText ? `
                 <p class="text-sm sm:text-base text-zinc-300 leading-relaxed font-normal">
                     ${escapeHtml(bioText)}
                 </p>
+                ` : ''}
 
                 <!-- 4. Key Metrics / Stats Row (Reference: 600 Followers 100 Post) -->
                 <div class="flex items-center gap-8 py-1">
