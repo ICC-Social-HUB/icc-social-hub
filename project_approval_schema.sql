@@ -262,15 +262,17 @@ CREATE POLICY "Mentors, admins, and leads can update core leads"
         )
     );
 
--- DELETE: Mentors, Super Admins, Admins can delete
-CREATE POLICY "Mentors and admins can delete core leads"
+-- DELETE: Only Mentors and Super Admins can delete
+DROP POLICY IF EXISTS "Mentors and admins can delete core leads" ON public.core_leads;
+DROP POLICY IF EXISTS "Mentors and super admins can delete core leads" ON public.core_leads;
+CREATE POLICY "Mentors and super admins can delete core leads"
     ON public.core_leads FOR DELETE
     TO authenticated
     USING (
         EXISTS (
             SELECT 1 FROM public.profiles
             WHERE profiles.id = auth.uid()
-              AND profiles.role IN ('mentor', 'admin', 'super_admin', 'superadmin')
+              AND profiles.role IN ('mentor', 'super_admin', 'superadmin')
         )
     );
 

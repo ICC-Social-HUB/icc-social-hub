@@ -2902,7 +2902,7 @@ const TeamsView = (() => {
                         <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                         <span>Back</span>
                     </button>
-                    ${(ICCSupabase.isMentor() || ICCSupabase.isAdmin()) ? `
+                    ${(ICCSupabase.isMentor() || ICCSupabase.isSuperAdmin()) ? `
                         <button onclick="TeamsView.deleteCurrentProject(${lead.id}, '${escapeHtml(lead.project_name || lead.team).replace(/'/g, "\\'")}')" class="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-md active:scale-95" title="Permanently delete this project">
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                             <span>Delete Project</span>
@@ -4005,8 +4005,8 @@ const TeamsView = (() => {
 
     
     async function deleteCurrentProject(leadId, leadTitle) {
-        if (!ICCSupabase.isMentor() && !ICCSupabase.isAdmin()) {
-            Toast.error('Unauthorized: Only Mentors and Admins can delete projects.');
+        if (!ICCSupabase.isMentor() && !ICCSupabase.isSuperAdmin()) {
+            Toast.error('Unauthorized: Only Mentors and Super Admins can delete projects.');
             return;
         }
 

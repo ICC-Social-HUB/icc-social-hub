@@ -1184,7 +1184,7 @@ const ICCSupabase = (() => {
     }
 
     async function deleteLead(id) {
-        if (!client || (!isAdmin() && !isMentor())) return { error: { message: 'Unauthorized: Only Mentors and Admins can delete projects.' } };
+        if (!client || (!isSuperAdmin() && !isMentor())) return { error: { message: 'Unauthorized: Only Mentors and Super Admins can delete projects.' } };
         
         try {
             // 1. Revert any leads assigned to this team in profiles
