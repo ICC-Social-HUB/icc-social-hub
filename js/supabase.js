@@ -4493,6 +4493,182 @@ const ICCSupabase = (() => {
         }
     }
 
+    // ============================================
+    // Registration Links & Two-Stage Approval API
+    // ============================================
+    async function getAuthHeader() {
+        if (!client) return {};
+        try {
+            const { data } = await client.auth.getSession();
+            const token = data?.session?.access_token;
+            return token ? { 'Authorization': `Bearer ${token}` } : {};
+        } catch {
+            return {};
+        }
+    }
+
+    async function validateRegistrationToken(token) {
+        try {
+            const res = await fetch(`/api/registration-link?action=validate&token=${encodeURIComponent(token)}`);
+            return await res.json();
+        } catch (e) {
+            return { valid: false, reason: 'error', error: e.message };
+        }
+    }
+
+    async function submitRegistration(formData) {
+        try {
+            const res = await fetch('/api/registration-requests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'submit', ...formData })
+            });
+            return await res.json();
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    async function getRegistrationLinkInfo() {
+        try {
+            const authHdr = await getAuthHeader();
+            const res = await fetch('/api/registration-link?action=get-active', {
+                headers: { ...authHdr }
+            });
+            return await res.json();
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    async function generateRegistrationLink(options = {}) {
+        try {
+            const authHdr = await getAuthHeader();
+            const res = await fetch('/api/registration-link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHdr },
+                body: JSON.stringify({ action: 'generate', ...options })
+            });
+            return await res.json();
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    async function toggleRegistrationLink(isActive, expiresAt) {
+        try {
+            const authHdr = await getAuthHeader();
+            const res = await fetch('/api/registration-link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHdr },
+                body: JSON.stringify({ action: 'toggle', is_active: isActive, expires_at: expiresAt })
+            });
+            return await res.json();
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    async function fetchRegistrationRequests(params = {}) {
+        try {
+            const authHdr = await getAuthHeader();
+            const query = new URLSearchParams({ action: 'list', ...params }).toString();
+            const res = await fetch(`/api/registration-requests?${query}`, {
+                headers: { ...authHdr }
+            });
+            return await res.json();
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    async function forwardRegistrationRequest(id, note = '') {
+        try {
+            const authHdr = await getAuthHeader();
+            const res = await fetch('/api/registration-requests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHdr },
+                body: JSON.stringify({ action: 'forward', id, note })
+            });
+            return await res.json();
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    async function approveRegistrationRequest(id) {
+        try {
+            const authHdr = await getAuthHeader();
+            const res = await fetch('/api/registration-requests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHdr },
+                body: JSON.stringify({ action: 'approve', id })
+            });
+            return await res.json();
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    async function denyRegistrationRequest(id, reason = '') {
+        try {
+            const authHdr = await getAuthHeader();
+            const res = await fetch('/api/registration-requests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHdr },
+                body: JSON.stringify({ action: 'deny', id, reason })
+            });
+            return await res.json();
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    async function reopenRegistrationRequest(id, targetStatus) {
+        try {
+            const authHdr = await getAuthHeader();
+            const res = await fetch('/api/registration-requests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHdr },
+                body: JSON.stringify({ action: 'reopen', id, target_status: targetStatus })
+            });
+            return await res.json();
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    async function resendRegistrationEmail(id) {
+        try {
+            const authHdr = await getAuthHeader();
+            const res = await fetch('/api/registration-requests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHdr },
+                body: JSON.stringify({ action: 'resend-email', id })
+            });
+            return await res.json();
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    async function checkRegistrationStatus(email) {
+        if (!client || !email) return null;
+        try {
+            const clean = email.toLowerCase().trim();
+            const { data } = await client
+                .from('registration_requests')
+                .select('status')
+                .ilike('email', clean)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            return data?.status || null;
+        } catch {
+            return null;
+        }
+    }
+
     return {
         init, signInWithGoogle, sendOTP, verifyOTP, verifyOTPOnly, signOut, getSession, onAuthStateChange,
         fetchProfile, updateProfile, fetchUserById, fetchProfileByEmail, searchUsers, checkUsernameAvailable,
@@ -4536,7 +4712,12 @@ const ICCSupabase = (() => {
         // Core Space & Minutes of Meeting (MoM) API
         fetchCoreProfiles, fetchMinutesOfMeeting, createMinutesOfMeeting, updateMinutesOfMeeting, deleteMinutesOfMeeting, canManageMom, canManageInventory,
         // Project Tasks API
-        fetchProjectTasks, fetchAllProjectTasks, createProjectTask, completeProjectTask, deleteProjectTask
+        fetchProjectTasks, fetchAllProjectTasks, createProjectTask, completeProjectTask, deleteProjectTask,
+        // Registration & Approval API
+        validateRegistrationToken, submitRegistration, getRegistrationLinkInfo,
+        generateRegistrationLink, toggleRegistrationLink, fetchRegistrationRequests,
+        forwardRegistrationRequest, approveRegistrationRequest, denyRegistrationRequest,
+        reopenRegistrationRequest, resendRegistrationEmail, checkRegistrationStatus
     };
 })();
 

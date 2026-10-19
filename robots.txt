@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /join/
+Disallow: /join
+Disallow: /api/

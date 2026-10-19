@@ -273,15 +273,54 @@ const AuthModal = (() => {
                 }
 
                 loading = true; errorMsg = ''; mount();
+
+                // Check registration request status first
+                const reqStatus = await ICCSupabase.checkRegistrationStatus(email);
+                if (reqStatus === 'pending_review' || reqStatus === 'awaiting_super_admin') {
+                    loading = false;
+                    errorMsg = 'Your request is under review.';
+                    mount();
+                    return;
+                }
+                if (reqStatus === 'denied') {
+                    loading = false;
+                    errorMsg = 'Your request was not approved. Contact your admin.';
+                    mount();
+                    return;
+                }
+
                 const { error } = await ICCSupabase.signInWithPassword(email, password);
-                loading = false;
                 if (error) {
+                    loading = false;
                     errorMsg = error.message;
                     if (error.message.includes('Invalid login credentials')) {
                         errorMsg = 'Invalid email or password. If you haven\'t signed up yet, use the Sign Up tab.';
                     }
                     mount();
-                } else { close(); handleAuthSuccess(); }
+                } else {
+                    // Check user profile approval status
+                    const loggedInUser = ICCSupabase.getUser();
+                    const profile = loggedInUser ? await ICCSupabase.fetchProfile(loggedInUser.id) : null;
+                    const status = profile?.approval_status || 'approved';
+                    if (status === 'pending_review' || status === 'awaiting_super_admin') {
+                        await ICCSupabase.signOut();
+                        loading = false;
+                        errorMsg = 'Your request is under review.';
+                        mount();
+                        return;
+                    }
+                    if (status === 'denied') {
+                        await ICCSupabase.signOut();
+                        loading = false;
+                        errorMsg = 'Your request was not approved. Contact your admin.';
+                        mount();
+                        return;
+                    }
+
+                    loading = false;
+                    close();
+                    handleAuthSuccess();
+                }
 
             } else {
                 // Signup: validate all fields before sending OTP
@@ -305,6 +344,22 @@ const AuthModal = (() => {
                 }
 
                 email = emailVal;
+
+                // Check registration status before proceeding with signup
+                loading = true; errorMsg = ''; mount();
+                const signupReqStatus = await ICCSupabase.checkRegistrationStatus(email);
+                if (signupReqStatus === 'pending_review' || signupReqStatus === 'awaiting_super_admin') {
+                    loading = false;
+                    errorMsg = 'Your request is under review.';
+                    mount();
+                    return;
+                }
+                if (signupReqStatus === 'denied') {
+                    loading = false;
+                    errorMsg = 'Your request was not approved. Contact your admin.';
+                    mount();
+                    return;
+                }
 
                 // Allowlist check
                 if (!isEmailAllowed(email)) {

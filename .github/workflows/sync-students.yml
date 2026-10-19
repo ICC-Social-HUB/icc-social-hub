@@ -1,39 +1,18 @@
-name: Sync Student Data from Spreadsheet
+# ========================================================
+# Student Data Sync from Spreadsheet (DEACTIVATED)
+# ========================================================
+# Automatic and manual user creation from Excel has been deactivated.
+# New students register via private invite links with two-stage review & Super Admin approval.
+# All existing student accounts and records remain untouched.
+
+name: Sync Student Data from Spreadsheet (Deactivated)
 
 on:
-  workflow_dispatch: # Manual trigger only (automatic cron disabled to protect student PII from being committed to public git)
+  workflow_dispatch: # Disabled
 
 jobs:
-  sync:
+  deactivated:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run Sync Script
-        env:
-          GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
-          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
-        run: node scripts/sync-students.js
-
-      - name: Commit and Push Changes
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add js/studentData.js js/allowedEmails.js
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: sync student data from spreadsheet [skip ci]"
-            git push
-          fi
+      - name: Inform Deactivation
+        run: echo "Excel sync is permanently deactivated in favor of two-stage registration approval."

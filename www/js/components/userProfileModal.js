@@ -171,6 +171,17 @@ const UserProfileModal = (() => {
                     ` : ''}
                 </div>
 
+                <!-- Membership Approval Authority Info -->
+                <div class="p-3 bg-[#17212b]/80 border border-[#242f3d] rounded-xl flex items-center justify-between flex-wrap gap-2 text-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${profile.approval_status === 'approved' || !profile.approval_status ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/15 text-amber-300'}">
+                            ${escapeHtml(profile.approval_status || 'Approved')}
+                        </span>
+                        <span class="text-zinc-300">Approved by: <strong class="text-white">${escapeHtml(profile.approved_by || 'Legacy import')}</strong></span>
+                    </div>
+                    <span class="text-[11px] text-[#708499]">Reviewed by: ${escapeHtml(profile.reviewed_by || 'Legacy import')}</span>
+                </div>
+
                 <!-- 5. Full-Width Primary Action Button (Reference: + Follow) -->
                 <div>
                     ${!isMe ? `

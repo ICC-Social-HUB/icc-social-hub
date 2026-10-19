@@ -49,6 +49,8 @@ const sendAuthOtpHandler = require('./api/send-auth-otp');
 const verifyAuthOtpHandler = require('./api/verify-auth-otp');
 const verifyOtpHandler = require('./api/verify-otp');
 const studentsHandler = require('./api/students');
+const registrationLinkHandler = require('./api/registration-link');
+const registrationRequestsHandler = require('./api/registration-requests');
 
 const corsMiddleware = cors({ origin: true, credentials: true });
 
@@ -68,6 +70,10 @@ const server = http.createServer((req, res) => {
                 req.body = {};
             }
 
+            // Parse URL and query params
+            const fullUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+            req.query = Object.fromEntries(fullUrl.searchParams.entries());
+
             res.status = function (code) {
                 res.statusCode = code;
                 return res;
@@ -79,7 +85,7 @@ const server = http.createServer((req, res) => {
                 res.end(JSON.stringify(obj));
             };
 
-            const url = req.url.split('?')[0];
+            const url = fullUrl.pathname;
             console.log(`[API Request] ${req.method} ${url}`);
 
             try {
@@ -93,6 +99,10 @@ const server = http.createServer((req, res) => {
                     return await verifyOtpHandler(req, res);
                 } else if (url === '/api/students') {
                     return await studentsHandler(req, res);
+                } else if (url === '/api/registration-link') {
+                    return await registrationLinkHandler(req, res);
+                } else if (url === '/api/registration-requests') {
+                    return await registrationRequestsHandler(req, res);
                 } else {
                     res.status(404).json({ error: 'Endpoint not found' });
                 }

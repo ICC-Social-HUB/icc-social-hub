@@ -387,7 +387,8 @@ const ExampleView = (() => {
 - **`chat.js`**: Left-side user search and conversation list; right-side realtime messaging thread.
 - **`teams.js`**: Displays cards for club divisions (Web Dev, AI/ML, Robotics, Design, Media). Supports applying to join a team and launching team discussion channels.
 - **`inventory.js`**: Hardware catalog showing available stock, specs, and status. Contains requisition modals for members and review panels for admins.
-- **`attendance.js`**: Realtime check-in table with student roster verification, search by USN, and Excel report export.
+- **`registration.js`**: Public member registration view accessible strictly via private tokenized invite link (`#join/:token` or `/join/:token`). Features inline regex validation, honeypot anti-spam protection, rate limiting, duplicate rejection, and simple 3-step timeline.
+- **`registrationQueue.js`**: Reusable component for Super Admins, Admins, and Mentors across the Admin Command Center and Mentor Dashboard. Provides SHA-256 token link management (generate, regenerate, disable, expiry) and multi-stage approval queue tabs (`pending_review`, `awaiting_super_admin`, `approved`, `denied`).
 - **`events.js` & `eventDetail.js`**: Card grid of upcoming/past events with RSVP counter, venue, timing, and banner images.
 
 ---

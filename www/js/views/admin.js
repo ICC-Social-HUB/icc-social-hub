@@ -20,6 +20,7 @@ const AdminView = (() => {
     let accessRoleFilter = 'all'; // 'all', 'super_admin', 'admin'
     let appointingUserId = null;
     let appointingUserDraft = null; // { broadcast, moderate, events, leads, users, all, isSuperAdmin }
+    let usersSubSection = null; // 'roster' | 'requests'
 
     function escapeHtml(str) {
         if (!str && str !== 0) return '';
@@ -100,6 +101,9 @@ const AdminView = (() => {
             milestoneProgress: `${milestoneProgress}%`,
             role: u.role || 'member',
             status,
+            approvalStatus: u.approval_status || 'approved',
+            approvedBy: u.approved_by || 'Legacy import',
+            reviewedBy: u.reviewed_by || 'Legacy import',
             discTag: u.disc_tag || '',
             discSummary: u.summary || '',
             createdAt: u.created_at ? new Date(u.created_at).toLocaleString('en-IN') : ''
@@ -356,6 +360,9 @@ const AdminView = (() => {
                     'Email Address': d.email,
                     'Phone Number': d.phone,
                     'Role': d.role,
+                    'Approval Status': d.approvalStatus,
+                    'Approved By': d.approvedBy,
+                    'Reviewed By': d.reviewedBy,
                     'Verification Status': d.status,
                     'Username': d.username,
                     'Team Project': d.projectName,
@@ -1457,8 +1464,28 @@ const AdminView = (() => {
         const canRequestEdit = isSuper || perms.users_edit || perms.all;
         const canExportExcel = isSuper || perms.users_export || perms.all;
 
+        if (!usersSubSection) {
+            usersSubSection = isSuper ? 'requests' : 'roster';
+        }
+
         return `
         <div class="space-y-4">
+            <!-- Registration Link Management Card (Super Admin & Admin only) -->
+            ${typeof RegistrationQueue !== 'undefined' ? RegistrationQueue.renderRegistrationLinkCard() : ''}
+
+            <!-- Sub Section Navigation (Requests vs Roster) -->
+            <div class="flex items-center gap-2 mb-2 bg-zinc-950/90 p-1.5 rounded-xl border border-zinc-800 w-fit shadow-sm">
+                <button id="admin-user-subnav-requests" class="px-4 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${usersSubSection === 'requests' ? 'bg-[#3390ec] text-white shadow-md' : 'text-zinc-400 hover:text-white'}">
+                    <span>📋 Registration Requests</span>
+                </button>
+                <button id="admin-user-subnav-roster" class="px-4 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${usersSubSection === 'roster' ? 'bg-[#3390ec] text-white shadow-md' : 'text-zinc-400 hover:text-white'}">
+                    <span>👥 Member Directory (${displayUsers.length})</span>
+                </button>
+            </div>
+
+            ${usersSubSection === 'requests' ? `
+                ${typeof RegistrationQueue !== 'undefined' ? RegistrationQueue.renderRequestsArea() : ''}
+            ` : `
             <!-- Approval Hub / Permission Status Banner -->
             ${isSuper ? `
                 <div class="glass-card rounded-2xl p-5 border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-zinc-900 to-zinc-900 shadow-xl">
@@ -1618,6 +1645,9 @@ const AdminView = (() => {
                                             <h4 class="text-sm font-semibold text-white break-words">${escapeHtml(fullName || 'Anonymous')}</h4>
                                             ${u.role === 'mentor' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 inline-flex items-center gap-1">${ICC_CONFIG.MENTOR_TICK} Mentor</span>` : (u.role === 'super_admin' || u.role === 'superadmin' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-300">🛡️ Super Admin</span>` : (u.role === 'admin' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/15 text-blue-300">👑 Admin</span>` : (u.role === 'lead' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-400">Lead</span>` : '')))}
                                             ${isVerified ? `<span class="text-[9px] font-bold uppercase tracking-wider text-emerald-400">Excel Verified</span>` : `<span class="text-[9px] font-bold uppercase tracking-wider text-red-400">Unverified</span>`}
+                                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${u.approval_status === 'approved' || !u.approval_status ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : (u.approval_status === 'denied' ? 'bg-red-500/15 text-red-400 border border-red-500/30' : 'bg-amber-500/15 text-amber-300 border border-amber-500/30')}">
+                                                ${escapeHtml(u.approval_status || 'Approved')}
+                                            </span>
                                             ${isManuallyUpdated ? `<span class="text-[9px] font-bold uppercase tracking-wider text-blue-400">Manually Updated</span>` : ''}
                                             ${(() => {
                                                 const att = attendanceMap[u.id];
@@ -1687,6 +1717,15 @@ const AdminView = (() => {
                                     })()}
                                 </div>
                             </div>
+                            <div class="space-y-1">
+                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Approval Authority</span>
+                                <p class="text-[11px] text-zinc-300 font-medium truncate" title="Approved by: ${escapeHtml(u.approved_by || 'Legacy import')}">
+                                    <span class="text-zinc-500 text-[10px]">Approved:</span> ${escapeHtml(u.approved_by || 'Legacy import')}
+                                </p>
+                                <p class="text-[10px] text-zinc-400 truncate" title="Reviewed by: ${escapeHtml(u.reviewed_by || 'Legacy import')}">
+                                    <span class="text-zinc-500">Reviewed:</span> ${escapeHtml(u.reviewed_by || 'Legacy import')}
+                                </p>
+                            </div>
                         </div>
 
                         ${isEditing ? `
@@ -1714,6 +1753,7 @@ const AdminView = (() => {
                     </div>`;
                 }).join('')}
             </div>
+            `}
         </div>`;
     }
 
@@ -1738,6 +1778,11 @@ const AdminView = (() => {
         } catch (attErr) {
             console.warn('Admin mount fetchAllAttendanceData error:', attErr);
         }
+
+        if (typeof RegistrationQueue !== 'undefined') {
+            await RegistrationQueue.initData();
+        }
+
         container.innerHTML = render();
         bindEvents(container);
 
@@ -2190,6 +2235,42 @@ const AdminView = (() => {
                 }
             });
         });
+
+        // Registration Requests & Subnav Switching
+        const subnavRequests = document.getElementById('admin-user-subnav-requests');
+        if (subnavRequests) {
+            subnavRequests.addEventListener('click', () => {
+                usersSubSection = 'requests';
+                const content = document.getElementById('admin-content');
+                if (content) {
+                    content.innerHTML = renderTab();
+                    bindEvents(document.getElementById('admin-section') || container);
+                }
+            });
+        }
+
+        const subnavRoster = document.getElementById('admin-user-subnav-roster');
+        if (subnavRoster) {
+            subnavRoster.addEventListener('click', () => {
+                usersSubSection = 'roster';
+                const content = document.getElementById('admin-content');
+                if (content) {
+                    content.innerHTML = renderTab();
+                    bindEvents(document.getElementById('admin-section') || container);
+                }
+            });
+        }
+
+        if (typeof RegistrationQueue !== 'undefined') {
+            RegistrationQueue.bindEvents(container, () => {
+                const content = document.getElementById('admin-content');
+                if (content) {
+                    content.innerHTML = renderTab();
+                    bindEvents(document.getElementById('admin-section') || container);
+                }
+            });
+        }
+
         // Core Leads CRUD
         document.getElementById('add-lead-btn')?.addEventListener('click', () => {
             editingLead = {}; container.innerHTML = render(); bindEvents(container);

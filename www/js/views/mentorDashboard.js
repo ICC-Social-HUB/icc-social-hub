@@ -128,6 +128,10 @@ const MentorDashboardView = (() => {
                 const chatRes = await ICCSupabase.fetchProjectMentorMessages(activeChatProjectId);
                 if (chatRes?.data) activeChatMessages = chatRes.data;
             }
+
+            if (typeof RegistrationQueue !== 'undefined') {
+                await RegistrationQueue.initData();
+            }
         } catch (e) {
             console.error('MentorDashboardView loadData error:', e);
             Toast.error('Could not load mentor dashboard data');
@@ -358,6 +362,10 @@ const MentorDashboardView = (() => {
                                 <span>Track Tasks</span>
                                 ${allTasks.length > 0 ? `<span class="px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'tasks' ? 'bg-white/20 text-white' : 'bg-sky-500/20 text-sky-400'} font-bold">${allTasks.length}</span>` : ''}
                             </button>
+                            <button onclick="MentorDashboardView.setActiveTab('registration_requests')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${activeTab === 'registration_requests' ? 'bg-[#3390ec] text-white shadow-md shadow-sky-600/25' : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'}">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                                <span>Registration Requests</span>
+                            </button>
                         </div>
 
                         <!-- Search Bar -->
@@ -407,7 +415,7 @@ const MentorDashboardView = (() => {
                     </div>
                     ` : `
                     <!-- Tab Content Switcher -->
-                    ${activeTab === 'mentor_chat' ? renderMentorChatHub() : renderTasksTrackerView()}
+                    ${activeTab === 'mentor_chat' ? renderMentorChatHub() : (activeTab === 'registration_requests' ? (typeof RegistrationQueue !== 'undefined' ? `<div class="pt-2">${RegistrationQueue.renderRequestsArea()}</div>` : '') : renderTasksTrackerView())}
                     `)}
                 </div>
             </div>
@@ -1086,6 +1094,13 @@ const MentorDashboardView = (() => {
     }
 
     function bindEvents(container) {
+        if (typeof RegistrationQueue !== 'undefined') {
+            RegistrationQueue.bindEvents(container, () => {
+                container.innerHTML = render();
+                bindEvents(container);
+            });
+        }
+
         const searchInput = container.querySelector('#mentor-search-input');
         if (searchInput) {
             searchInput.addEventListener('input', e => {

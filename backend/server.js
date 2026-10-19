@@ -18,12 +18,16 @@ const sendAuthOtp = require('../api/send-auth-otp');
 const verifyAuthOtp = require('../api/verify-auth-otp');
 const verifyOtp = require('../api/verify-otp');
 const teamStatusEmail = require('../api/team-status-email');
+const registrationLink = require('../api/registration-link');
+const registrationRequests = require('../api/registration-requests');
 
 app.post('/api/master-login', masterLogin);
 app.post('/api/send-auth-otp', sendAuthOtp);
 app.post('/api/verify-auth-otp', verifyAuthOtp);
 app.post('/api/verify-otp', verifyOtp);
 app.post('/api/team-status-email', teamStatusEmail);
+app.all('/api/registration-link', (req, res) => registrationLink(req, res));
+app.all('/api/registration-requests', (req, res) => registrationRequests(req, res));
 
 app.get('/', (req, res) => {
     res.send('ICC InnovoApp Backend is running with Vercel compatibility');

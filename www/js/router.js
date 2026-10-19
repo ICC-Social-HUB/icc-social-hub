@@ -9,6 +9,13 @@ const Router = (() => {
     let isNavigatingBack = false;
 
     function init() {
+        if (window.location.pathname.startsWith('/join/')) {
+            const pathToken = window.location.pathname.replace(/^\/join\/?/, '').split('?')[0];
+            if (pathToken) {
+                window.location.hash = `#join/${pathToken}`;
+            }
+        }
+
         const initial = window.location.hash || '#dashboard';
         historyStack = [initial];
 
@@ -78,6 +85,7 @@ const Router = (() => {
         if (previousView === 'eventDetail') EventDetailView.unmount?.();
         if (previousView === 'mentorDashboard') MentorDashboardView.unmount?.();
         if (previousView === 'students') StudentsView.unmount?.();
+        if (previousView === 'registration') RegistrationView.unmount?.();
 
         // Clean up any open modals or overlays when route changes
         const modalRoot = document.getElementById('modal-root');
@@ -93,7 +101,7 @@ const Router = (() => {
 
         container.classList.remove('view-exit');
         const isAuthenticated = !!ICCSupabase.getUser();
-        const isPublicRoute = hash === '#feed' || hash.startsWith('#post/') || hash === '#events' || hash.startsWith('#event/');
+        const isPublicRoute = hash === '#feed' || hash.startsWith('#post/') || hash === '#events' || hash.startsWith('#event/') || hash.startsWith('#join/') || hash === '#join';
 
         if (!isAuthenticated && !isPublicRoute) {
             previousView = 'auth-required';
@@ -188,6 +196,10 @@ const Router = (() => {
                 previousView = 'eventDetail';
                 const eventId = hash.split('/')[1];
                 EventDetailView.mount(container, eventId);
+            } else if (hash.startsWith('#join/') || hash === '#join') {
+                previousView = 'registration';
+                const token = hash.replace(/^#join\/?/, '').split('?')[0];
+                RegistrationView.mount(container, token);
             } else {
                 previousView = 'dashboard';
                 DashboardView.mount(container);
