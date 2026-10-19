@@ -3874,6 +3874,9 @@ const ICCSupabase = (() => {
 
     async function fetchProjectMentorMessages(projectId) {
         if (!client) return { data: [], error: null };
+        if (!canAccessProjectMentorChat(projectId)) {
+            return { data: [], error: { message: 'Unauthorized: Only team members and mentors can view this chat.' } };
+        }
         try {
             const { data, error } = await client
                 .from('project_mentor_messages')
@@ -3945,6 +3948,9 @@ const ICCSupabase = (() => {
 
     async function sendProjectMentorMessage(projectId, message, replyToId = null) {
         if (!client || !currentUser) return { error: { message: 'Not authenticated' } };
+        if (!canAccessProjectMentorChat(projectId)) {
+            return { error: { message: 'Unauthorized: Only team members and mentors can send messages in this chat.' } };
+        }
         try {
             const payload = {
                 project_id: projectId,
@@ -4091,6 +4097,9 @@ const ICCSupabase = (() => {
 
     function subscribeToProjectMentorChat(projectId, onEvent) {
         if (!client) return null;
+        if (!canAccessProjectMentorChat(projectId)) {
+            return () => {};
+        }
         const channelName = `project-mentor-chat-${projectId}`;
         const channel = client.channel(channelName)
             .on('postgres_changes', {

@@ -34,12 +34,29 @@ BEGIN
 END $$;
 
 -- 5. Policies
--- SELECT: All authenticated team members, leads, and mentors can read messages & receive realtime updates
+-- SELECT: Only verified mentors, admins, project leads, and approved team members can view
 DROP POLICY IF EXISTS "Team members and mentors can view project mentor messages" ON public.project_mentor_messages;
 CREATE POLICY "Team members and mentors can view project mentor messages"
     ON public.project_mentor_messages FOR SELECT
     TO authenticated
-    USING (true);
+    USING (
+        public.is_mentor_or_admin(auth.uid())
+        OR EXISTS (
+            SELECT 1 FROM public.core_leads l
+            WHERE l.id = project_mentor_messages.project_id
+              AND (
+                  l.lead_user_id = auth.uid()
+                  OR EXISTS (
+                      SELECT 1 FROM public.team_memberships tm
+                      WHERE tm.team_id = l.id AND tm.user_id = auth.uid()
+                  )
+                  OR EXISTS (
+                      SELECT 1 FROM public.profiles p
+                      WHERE p.id = auth.uid() AND p.team_id = l.id
+                  )
+              )
+        )
+    );
 
 -- INSERT: Mentors, Admins, Project Leaders, and approved Team Members can send messages
 DROP POLICY IF EXISTS "Team members and mentors can insert project mentor messages" ON public.project_mentor_messages;

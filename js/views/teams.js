@@ -2490,31 +2490,7 @@ const TeamsView = (() => {
         const canAccess = isMember || isLead || isMentorUser || isAdminUser;
 
         if (!canAccess) {
-            return `
-            <div class="glass-card rounded-2xl p-8 sm:p-12 border border-zinc-800/80 bg-zinc-950/70 text-center max-w-2xl mx-auto space-y-4 my-8">
-                <div class="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/10">
-                    <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                    </svg>
-                </div>
-                <h3 class="font-heading font-bold text-lg sm:text-xl text-white">Mentor Chat is Restricted</h3>
-                <p class="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto leading-relaxed">
-                    This dedicated discussion channel is reserved exclusively for approved team members of <span class="text-white font-semibold">${escapeHtml(lead.project_name || lead.team)}</span> and verified ICC Mentors.
-                </p>
-                ${!ICCSupabase.getUser() ? `
-                    <div class="pt-2">
-                        <a href="#login" class="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-600/20">
-                            Sign in to Access
-                        </a>
-                    </div>
-                ` : (!isMember && !isLead ? `
-                    <div class="pt-2">
-                        <button type="button" onclick="document.getElementById('team-join-btn')?.click()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-red-600/20 cursor-pointer">
-                            Apply to Join Team
-                        </button>
-                    </div>
-                ` : '')}
-            </div>`;
+            return '';
         }
 
         return `
@@ -2898,6 +2874,11 @@ const TeamsView = (() => {
         const isPending = profile?.pending_teams?.map(Number).includes(Number(lead.id));
         const isLead = isLeadForTeam(lead.id, lead, teamMembers);
         const canSeeCode = Boolean(lead.project_code && (isLead || isMember || ICCSupabase.isMentor() || ICCSupabase.isAdmin()));
+        const isMentorOrAdmin = Boolean(ICCSupabase.isMentor() || ICCSupabase.isAdmin());
+        const canAccessMentorChat = Boolean(isMember || isLead || isMentorOrAdmin);
+        if (!canAccessMentorChat && currentProjectTab === 'mentor_chat') {
+            currentProjectTab = 'overview';
+        }
         const memberTags = getMemberTags(lead.id);
 
         const validLinks = getProjectLinks(lead);
@@ -3005,6 +2986,7 @@ const TeamsView = (() => {
                                 <span class="tab-indicator absolute bottom-0 left-0 right-0 h-0.5 rounded-full transition-all ${currentProjectTab === 'tasks' ? 'bg-sky-400' : 'bg-transparent'}"></span>
                             </button>
 
+                            ${canAccessMentorChat ? `
                             <button id="project-tab-mentor-btn" type="button" class="project-tab-btn group relative inline-flex items-center gap-2 pb-2.5 pt-1 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${currentProjectTab === 'mentor_chat' ? 'text-amber-400 font-bold' : 'text-zinc-400 hover:text-amber-400'}">
                                 <svg class="w-4 h-4 transition-colors ${currentProjectTab === 'mentor_chat' ? 'text-amber-400' : 'text-zinc-500 group-hover:text-amber-400'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
@@ -3013,6 +2995,7 @@ const TeamsView = (() => {
                                 <span class="w-1.5 h-1.5 rounded-full ${currentProjectTab === 'mentor_chat' ? 'bg-amber-400' : 'bg-amber-500/70'}"></span>
                                 <span class="tab-indicator absolute bottom-0 left-0 right-0 h-0.5 rounded-full transition-all ${currentProjectTab === 'mentor_chat' ? 'bg-amber-400' : 'bg-transparent'}"></span>
                             </button>
+                            ` : ''}
                         </nav>
                     </div>
                 </div>
@@ -3242,9 +3225,11 @@ const TeamsView = (() => {
                     ${renderTasksPage(lead, isLead, isMember, ICCSupabase.isMentor() || ICCSupabase.isAdmin())}
                 </div>
 
+                ${canAccessMentorChat ? `
                 <div id="project-tab-mentor-content" class="${currentProjectTab === 'mentor_chat' ? '' : 'hidden'}">
                     ${renderMentorChatPage(lead, isLead, isMember)}
                 </div>
+                ` : ''}
             </div>
 
             ${isLead ? `
@@ -3570,8 +3555,12 @@ const TeamsView = (() => {
         const tasksContent = document.getElementById('project-tab-tasks-content');
         const mentorContent = document.getElementById('project-tab-mentor-content');
         const isMentorOrAdmin = ICCSupabase.isMentor() || ICCSupabase.isAdmin();
+        const canAccessMentorChat = Boolean(isMember || isLead || isMentorOrAdmin);
 
         const switchTab = (tab) => {
+            if (tab === 'mentor_chat' && !canAccessMentorChat) {
+                tab = 'overview';
+            }
             currentProjectTab = tab;
             const overviewIcon = overviewTabBtn?.querySelector('svg');
             const overviewIndicator = overviewTabBtn?.querySelector('.tab-indicator');
@@ -3624,7 +3613,7 @@ const TeamsView = (() => {
                 tasksIndicator?.classList.add('bg-sky-400');
                 tasksContent?.classList.remove('hidden');
                 initProjectTasks(lead, isLead, isMember, isMentorOrAdmin);
-            } else {
+            } else if (canAccessMentorChat) {
                 mentorTabBtn?.classList.remove('text-zinc-400', 'hover:text-amber-400');
                 mentorTabBtn?.classList.add('text-amber-400', 'font-bold');
                 mentorIcon?.classList.remove('text-zinc-500', 'group-hover:text-amber-400');
@@ -3633,18 +3622,30 @@ const TeamsView = (() => {
                 mentorIndicator?.classList.add('bg-amber-400');
                 mentorContent?.classList.remove('hidden');
                 initMentorChat(lead, isLead, isMember);
+            } else {
+                switchTab('overview');
             }
         };
 
         if (overviewTabBtn) overviewTabBtn.onclick = () => switchTab('overview');
         if (tasksTabBtn) tasksTabBtn.onclick = () => switchTab('tasks');
-        if (mentorTabBtn) mentorTabBtn.onclick = () => switchTab('mentor_chat');
+        if (mentorTabBtn) {
+            if (canAccessMentorChat) {
+                mentorTabBtn.onclick = () => switchTab('mentor_chat');
+            } else {
+                mentorTabBtn.style.display = 'none';
+            }
+        }
 
         // Initial setup for tasks badge & tasks data
         initProjectTasks(lead, isLead, isMember, isMentorOrAdmin);
 
         if (currentProjectTab === 'mentor_chat') {
-            initMentorChat(lead, isLead, isMember);
+            if (canAccessMentorChat) {
+                initMentorChat(lead, isLead, isMember);
+            } else {
+                switchTab('overview');
+            }
         } else if (currentProjectTab === 'tasks') {
             switchTab('tasks');
         }
