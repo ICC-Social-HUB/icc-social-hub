@@ -1729,7 +1729,7 @@ const TeamsView = (() => {
         if (typeof links === 'string') {
             try { links = JSON.parse(links); } catch (e) { links = null; }
         }
-        if (Array.isArray(links) && links.length > 0) {
+        if (Array.isArray(links)) {
             return links.filter(l => l && l.url && String(l.url).trim().length > 0);
         }
 
@@ -1741,7 +1741,7 @@ const TeamsView = (() => {
         if (typeof projectLinks === 'string') {
             try { projectLinks = JSON.parse(projectLinks); } catch (e) { projectLinks = null; }
         }
-        if (Array.isArray(projectLinks) && projectLinks.length > 0) {
+        if (Array.isArray(projectLinks)) {
             return projectLinks.filter(l => l && l.url && String(l.url).trim().length > 0);
         }
 
@@ -3253,10 +3253,17 @@ const TeamsView = (() => {
 
                     <form id="manage-links-form" class="p-4 sm:p-5 max-h-[70vh] overflow-y-auto space-y-4">
                         <!-- GitHub Field -->
+                        <!-- GitHub Field -->
                         <div class="p-3 bg-zinc-950/60 border border-zinc-800 rounded-xl space-y-2">
-                            <div class="flex items-center gap-2">
-                                <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
-                                <label class="text-xs font-bold text-zinc-200">GitHub Repository</label>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                                    <label class="text-xs font-bold text-zinc-200">GitHub Repository</label>
+                                </div>
+                                <button type="button" id="clear-github-link-btn" class="text-[11px] text-zinc-500 hover:text-red-400 transition-colors flex items-center gap-1 cursor-pointer" title="Remove GitHub link">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    <span>Remove</span>
+                                </button>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                 <input type="text" id="link-github-name" placeholder="Name (e.g. GitHub Repo)" class="form-input text-xs px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white" value="${escapeHtml(githubLink?.name || 'GitHub Repository')}">
@@ -3266,9 +3273,15 @@ const TeamsView = (() => {
 
                         <!-- YouTube Field -->
                         <div class="p-3 bg-zinc-950/60 border border-zinc-800 rounded-xl space-y-2">
-                            <div class="flex items-center gap-2">
-                                <svg class="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                                <label class="text-xs font-bold text-zinc-200">YouTube Video / Demo</label>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                    <label class="text-xs font-bold text-zinc-200">YouTube Video / Demo</label>
+                                </div>
+                                <button type="button" id="clear-youtube-link-btn" class="text-[11px] text-zinc-500 hover:text-red-400 transition-colors flex items-center gap-1 cursor-pointer" title="Remove YouTube link">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    <span>Remove</span>
+                                </button>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                 <input type="text" id="link-youtube-name" placeholder="Name (e.g. Project Demo)" class="form-input text-xs px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white" value="${escapeHtml(youtubeLink?.name || 'Demo Video')}">
@@ -3287,6 +3300,9 @@ const TeamsView = (() => {
                             </div>
 
                             <div id="custom-links-container" class="space-y-2">
+                                ${customLinks.length === 0 ? `
+                                    <p id="no-custom-links-hint" class="text-[11px] text-zinc-500 italic py-1">No custom links added yet. Click "+ Add Link" to add more resources.</p>
+                                ` : ''}
                                 ${customLinks.map(c => `
                                 <div class="custom-link-row flex items-center gap-2 p-2 bg-zinc-950/60 border border-zinc-800 rounded-xl">
                                     <input type="text" class="custom-link-name form-input text-xs w-1/3 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white" placeholder="Link Name (e.g. Docs)" value="${escapeHtml(c.name || '')}">
@@ -3925,10 +3941,28 @@ const TeamsView = (() => {
         document.getElementById('close-links-modal')?.addEventListener('click', closeLinksModal);
         document.getElementById('cancel-links-modal')?.addEventListener('click', closeLinksModal);
 
+        // Clear/Remove GitHub & YouTube links in modal
+        document.getElementById('clear-github-link-btn')?.addEventListener('click', () => {
+            const urlInput = document.getElementById('link-github-url');
+            if (urlInput) urlInput.value = '';
+            const nameInput = document.getElementById('link-github-name');
+            if (nameInput) nameInput.value = '';
+            Toast.info('GitHub link removed from form. Click "Save Links" to persist changes.');
+        });
+
+        document.getElementById('clear-youtube-link-btn')?.addEventListener('click', () => {
+            const urlInput = document.getElementById('link-youtube-url');
+            if (urlInput) urlInput.value = '';
+            const nameInput = document.getElementById('link-youtube-name');
+            if (nameInput) nameInput.value = '';
+            Toast.info('YouTube link removed from form. Click "Save Links" to persist changes.');
+        });
+
         // Add custom link row
         document.getElementById('add-custom-link-row-btn')?.addEventListener('click', () => {
             const container = document.getElementById('custom-links-container');
             if (container) {
+                document.getElementById('no-custom-links-hint')?.remove();
                 const wrapper = document.createElement('div');
                 wrapper.innerHTML = `
                 <div class="custom-link-row flex items-center gap-2 p-2 bg-zinc-950/60 border border-zinc-800 rounded-xl">
@@ -3948,7 +3982,16 @@ const TeamsView = (() => {
         document.getElementById('custom-links-container')?.addEventListener('click', (e) => {
             const removeBtn = e.target.closest('.remove-link-row-btn');
             if (removeBtn) {
-                removeBtn.closest('.custom-link-row')?.remove();
+                const row = removeBtn.closest('.custom-link-row');
+                row?.remove();
+                const container = document.getElementById('custom-links-container');
+                if (container && container.querySelectorAll('.custom-link-row').length === 0 && !document.getElementById('no-custom-links-hint')) {
+                    const hint = document.createElement('p');
+                    hint.id = 'no-custom-links-hint';
+                    hint.className = 'text-[11px] text-zinc-500 italic py-1';
+                    hint.textContent = 'No custom links added yet. Click "+ Add Link" to add more resources.';
+                    container.appendChild(hint);
+                }
             }
         });
 
@@ -3975,7 +4018,7 @@ const TeamsView = (() => {
             }
 
             // 3. Custom links
-            document.querySelectorAll('.custom-link-row').forEach(row => {
+            document.querySelectorAll('#custom-links-container .custom-link-row').forEach(row => {
                 const nameInput = row.querySelector('.custom-link-name');
                 const urlInput = row.querySelector('.custom-link-url');
                 const url = urlInput ? urlInput.value.trim() : '';
@@ -3989,10 +4032,21 @@ const TeamsView = (() => {
                 }
             });
 
-            const { error } = await ICCSupabase.updateLead(lead.id, { links: allLinks });
+            // Keep milestones.project_links synchronized with links array
+            let currentMilestones = lead.milestones || {};
+            if (typeof currentMilestones === 'string') {
+                try { currentMilestones = JSON.parse(currentMilestones); } catch (err) { currentMilestones = {}; }
+            }
+            const updatedMilestones = { ...currentMilestones, project_links: allLinks };
+
+            // Optimistically update in-memory lead object
+            lead.links = allLinks;
+            lead.milestones = updatedMilestones;
+
+            const { error } = await ICCSupabase.updateLead(lead.id, { links: allLinks, milestones: updatedMilestones });
 
             if (error) {
-                Toast.error('Failed to save links: ' + error.message);
+                Toast.error('Failed to save links: ' + (error.message || 'Unknown error'));
                 if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save Links'; }
             } else {
                 Toast.success('Project links updated!');
