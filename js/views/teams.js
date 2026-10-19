@@ -3555,6 +3555,7 @@ const TeamsView = (() => {
         const tasksContent = document.getElementById('project-tab-tasks-content');
         const mentorContent = document.getElementById('project-tab-mentor-content');
         const isMentorUser = typeof ICCSupabase.isMentor === 'function' && ICCSupabase.isMentor();
+        const isMentorOrAdmin = Boolean(isMentorUser || (typeof ICCSupabase.isAdmin === 'function' && ICCSupabase.isAdmin()));
         const canAccessMentorChat = Boolean(isMember || isLead || isMentorUser);
 
         const switchTab = (tab) => {
