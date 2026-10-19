@@ -15,6 +15,17 @@
     --tg-bubble-received: #182533;
     --tg-text: #ffffff;
     --tg-text-muted: #708499;
+
+    /* Safe Area & Header Configuration */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --header-base-height: 4rem;
+}
+
+/* In Android Capacitor / Native App / Standalone mode, guarantee status bar clearance */
+.is-native-app,
+.is-capacitor-android {
+    --safe-top: max(env(safe-area-inset-top, 0px), 32px);
 }
 
 /* ---------- Base & Scrollbar ---------- */
@@ -64,6 +75,8 @@ html {
     -ms-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
+    overflow-x: clip;
+    max-width: 100vw;
 }
 
 body {
@@ -75,9 +88,10 @@ body {
     overscroll-behavior-y: contain;
     touch-action: pan-x pan-y;
     min-height: 100dvh;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    overflow-x: hidden;
+    padding-top: 0 !important;
+    padding-bottom: var(--safe-bottom, 0px);
+    overflow-x: clip;
+    max-width: 100vw;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
@@ -103,9 +117,24 @@ img {
     -webkit-touch-callout: none;
 }
 
-/* Fix sticky/fixed headers overlapping with status bar */
+/* Global Header & Sticky Bars — Safe Area Status Bar Integration */
+header.sticky,
+header[class*="sticky"] {
+    top: 0 !important;
+    padding-top: var(--safe-top, 0px) !important;
+    height: calc(var(--header-base-height) + var(--safe-top, 0px)) !important;
+    box-sizing: border-box !important;
+}
+
+/* Sidebar Drawer Header Safe Area */
+#sidebar-drawer > div:first-child {
+    padding-top: var(--safe-top, 0px) !important;
+    height: calc(var(--header-base-height) + var(--safe-top, 0px)) !important;
+    box-sizing: border-box !important;
+}
+
 .sticky.top-0, .fixed.top-0 {
-    top: env(safe-area-inset-top, 0px) !important;
+    top: 0 !important;
 }
 
 #toast-root {

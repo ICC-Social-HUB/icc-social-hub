@@ -150,7 +150,7 @@ const StudentsView = (() => {
         const isMentorsTab = state.activeTab === 'mentors';
 
         container.innerHTML = `
-        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 min-h-[calc(100vh-4rem)] flex flex-col gap-6">
+        <section class="w-full max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-6 min-h-[calc(100vh-4rem)] flex flex-col gap-4 sm:gap-6 overflow-x-hidden">
             <!-- Header Bar with Integrated Tab Switcher -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-[#1c2a38]">
                 <div>
@@ -170,9 +170,9 @@ const StudentsView = (() => {
                 </div>
 
                 <!-- Top Segmented Tabs: Students vs Mentors -->
-                <div class="flex items-center p-1 bg-[#17212b] rounded-2xl self-start md:self-auto shadow-sm" role="tablist">
+                <div class="flex items-center p-1 bg-[#17212b] rounded-2xl w-full sm:w-auto shadow-sm" role="tablist">
                     <button id="tab-students-btn" onclick="StudentsView.setActiveTab('students')" role="tab" aria-selected="${!isMentorsTab}"
-                        class="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${!isMentorsTab ? 'bg-[#3390ec] text-white shadow-md shadow-[#3390ec]/20' : 'text-[#708499] hover:text-white'}">
+                        class="flex-1 sm:flex-initial justify-center flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${!isMentorsTab ? 'bg-[#3390ec] text-white shadow-md shadow-[#3390ec]/20' : 'text-[#708499] hover:text-white'}">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
                         </svg>
@@ -180,7 +180,7 @@ const StudentsView = (() => {
                         <span id="students-tab-badge" class="px-1.5 py-0.2 rounded-full text-[10px] ${!isMentorsTab ? 'bg-white/20 text-white' : 'bg-[#0e1621] text-[#708499]'} font-semibold">${totalCount}</span>
                     </button>
                     <button id="tab-mentors-btn" onclick="StudentsView.setActiveTab('mentors')" role="tab" aria-selected="${isMentorsTab}"
-                        class="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${isMentorsTab ? 'bg-amber-500 text-zinc-950 font-extrabold shadow-md shadow-amber-500/20' : 'text-[#708499] hover:text-amber-400'}">
+                        class="flex-1 sm:flex-initial justify-center flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${isMentorsTab ? 'bg-amber-500 text-zinc-950 font-extrabold shadow-md shadow-amber-500/20' : 'text-[#708499] hover:text-amber-400'}">
                         <span>🎓</span>
                         <span>Mentors</span>
                         <span id="mentors-tab-badge" class="px-1.5 py-0.2 rounded-full text-[10px] ${isMentorsTab ? 'bg-zinc-950/20 text-zinc-950 font-extrabold' : 'bg-amber-500/15 text-amber-400'} font-semibold">${mentors.length}</span>
@@ -213,27 +213,27 @@ const StudentsView = (() => {
                 </div>
 
                 <!-- Sort & View Controls -->
-                <div class="flex items-center gap-2.5 justify-between sm:justify-end">
-                    <div class="flex items-center gap-2">
-                        <label for="students-sort-select" class="text-xs text-[#708499] font-medium hidden md:inline">Sort by:</label>
-                        <div class="relative">
+                <div class="flex items-center gap-2 justify-between sm:justify-end w-full sm:w-auto flex-nowrap">
+                    <div class="flex items-center gap-2 min-w-0 flex-1 sm:flex-initial">
+                        <label for="students-sort-select" class="text-xs text-[#708499] font-medium hidden md:inline shrink-0">Sort by:</label>
+                        <div class="relative w-full sm:w-auto min-w-0 max-w-[130px] sm:max-w-none">
                             <select id="students-sort-select" onchange="StudentsView.setSort(this.value)" 
-                                class="appearance-none pl-3 pr-8 py-2 bg-[#17212b] border border-[#1c2a38] hover:border-[#2b394a] rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-[#3390ec] transition-all cursor-pointer">
+                                class="w-full appearance-none pl-2.5 pr-7 py-2 bg-[#17212b] border border-[#1c2a38] hover:border-[#2b394a] rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-[#3390ec] transition-all cursor-pointer truncate">
                                 <option value="name_asc" ${state.sort === 'name_asc' ? 'selected' : ''}>Name A–Z</option>
                                 <option value="name_desc" ${state.sort === 'name_desc' ? 'selected' : ''}>Name Z–A</option>
                                 <option value="most_projects" ${state.sort === 'most_projects' ? 'selected' : ''}>Most Projects</option>
                                 <option value="recent" ${state.sort === 'recent' || state.sort === 'recently_joined' ? 'selected' : ''}>Recently Joined</option>
                             </select>
-                            <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-[#708499]">
+                            <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none text-[#708499]">
                                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
                             </div>
                         </div>
                     </div>
 
                     <!-- View Mode Toggle (List / Grid) -->
-                    <div class="flex items-center p-1 bg-[#17212b] rounded-xl border border-[#1c2a38]" role="group" aria-label="View Mode">
+                    <div class="flex items-center p-1 bg-[#17212b] rounded-xl border border-[#1c2a38] shrink-0" role="group" aria-label="View Mode">
                         <button id="view-mode-list-btn" onclick="StudentsView.setViewMode('list')" 
-                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${state.viewMode === 'list' ? 'bg-[#3390ec] text-white shadow-sm' : 'text-[#708499] hover:text-white'}" 
+                            class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${state.viewMode === 'list' ? 'bg-[#3390ec] text-white shadow-sm' : 'text-[#708499] hover:text-white'}" 
                             title="List View" aria-label="Switch to List View" aria-pressed="${state.viewMode === 'list'}">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
@@ -241,7 +241,7 @@ const StudentsView = (() => {
                             <span class="hidden sm:inline">List</span>
                         </button>
                         <button id="view-mode-grid-btn" onclick="StudentsView.setViewMode('grid')" 
-                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${state.viewMode === 'grid' ? 'bg-[#3390ec] text-white shadow-sm' : 'text-[#708499] hover:text-white'}" 
+                            class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${state.viewMode === 'grid' ? 'bg-[#3390ec] text-white shadow-sm' : 'text-[#708499] hover:text-white'}" 
                             title="Grid View" aria-label="Switch to Grid View" aria-pressed="${state.viewMode === 'grid'}">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25a2.25 2.25 0 01-2.25-2.25V6z" />
@@ -252,7 +252,7 @@ const StudentsView = (() => {
 
                     <!-- Filter Toggle Button -->
                     <button id="filter-toggle-btn" onclick="StudentsView.toggleFilterDrawer()" 
-                        class="flex items-center gap-2 px-3.5 py-2 bg-[#242f3d] hover:bg-[#2b394a] text-white rounded-xl border border-[#1c2a38] text-xs font-semibold transition-all cursor-pointer shadow-sm relative active:scale-95" 
+                        class="flex items-center gap-1.5 px-3 py-2 bg-[#242f3d] hover:bg-[#2b394a] text-white rounded-xl border border-[#1c2a38] text-xs font-semibold transition-all cursor-pointer shadow-sm relative active:scale-95 shrink-0" 
                         aria-label="Toggle Filters">
                         <svg class="w-4 h-4 text-[#3390ec]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.539.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.378-1.007.917-1.096A48.32 48.32 0 0112 3z" />
@@ -264,10 +264,10 @@ const StudentsView = (() => {
             </div>
 
             <!-- Active Filter Chips Bar -->
-            <div id="students-active-chips" class="flex flex-wrap items-center gap-2 min-h-[1.5rem]"></div>
+            <div id="students-active-chips" class="flex flex-wrap items-center gap-1.5 min-h-[1.5rem] w-full max-w-full overflow-hidden"></div>
 
             <!-- Filter Drawer / Modal Panel -->
-            <div id="students-filter-drawer" class="hidden p-5 bg-[#17212b] rounded-2xl border border-[#1c2a38] shadow-xl flex-col gap-5 animate-fade-in">
+            <div id="students-filter-drawer" class="hidden p-4 sm:p-5 bg-[#17212b] rounded-2xl border border-[#1c2a38] shadow-xl flex-col gap-4 sm:gap-5 animate-fade-in w-full max-w-full overflow-hidden">
                 <div class="flex items-center justify-between border-b border-[#1c2a38] pb-3">
                     <div class="flex items-center gap-2">
                         <svg class="w-4 h-4 text-[#3390ec]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"/></svg>
@@ -663,7 +663,7 @@ const StudentsView = (() => {
         <div tabindex="0" role="button" aria-label="View profile of ${escapeHtml(s.full_name)}" 
             onclick="StudentsView.navigateToProfile('${s.id}')" 
             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();StudentsView.navigateToProfile('${s.id}');}" 
-            class="bg-[#17212b] rounded-xl p-4 border border-[#1c2a38] hover:border-[#3390ec]/40 focus:outline-none focus:ring-2 focus:ring-[#3390ec] transition-all cursor-pointer flex flex-col gap-3">
+            class="w-full max-w-full overflow-hidden bg-[#17212b] rounded-xl p-3.5 sm:p-4 border border-[#1c2a38] hover:border-[#3390ec]/40 focus:outline-none focus:ring-2 focus:ring-[#3390ec] transition-all cursor-pointer flex flex-col gap-2.5 sm:gap-3">
             <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3 min-w-0">
                     <div class="w-11 h-11 rounded-full overflow-hidden bg-[#242f3d] border border-[#2b394a] flex-shrink-0 flex items-center justify-center shadow-inner">
@@ -687,8 +687,8 @@ const StudentsView = (() => {
                 ` : ''}
             </div>
 
-            <div class="flex items-center justify-between gap-2 pt-2 border-t border-[#1c2a38]/80 text-xs">
-                <div class="truncate max-w-[55%]">
+            <div class="flex items-center justify-between gap-2 pt-2 border-t border-[#1c2a38]/80 text-xs min-w-0">
+                <div class="truncate min-w-0 flex-1">
                     ${email ? `
                         <a href="mailto:${escapeHtml(email)}" onclick="event.stopPropagation()" class="text-[#708499] hover:text-white truncate flex items-center gap-1">
                             <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
@@ -697,7 +697,7 @@ const StudentsView = (() => {
                     ` : '<span class="text-[#708499]">—</span>'}
                 </div>
 
-                <div>
+                <div class="shrink-0">
                     ${renderProjectAvatarStack(s.projects, 'card')}
                 </div>
             </div>

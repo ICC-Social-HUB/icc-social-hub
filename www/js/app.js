@@ -48,6 +48,14 @@ const AppLoader = (() => {
 
     document.addEventListener('DOMContentLoaded', async () => {
         console.log('🚀 ICC Social Hub initializing...');
+        // Ensure native app status bar clearance class
+        if (window.Capacitor) {
+            document.documentElement.classList.add('is-native-app');
+            if (window.Capacitor.getPlatform?.() === 'android' || /Android/i.test(navigator.userAgent)) {
+                document.documentElement.classList.add('is-capacitor-android');
+            }
+        }
+
         AppLoader.updateSplash('Connecting to Hub...', 25);
 
         // 1. Initialize Supabase & Global Error Handling

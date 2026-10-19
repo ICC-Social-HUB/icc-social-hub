@@ -74,8 +74,22 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- SheetJS (xlsx) for Excel Generation and Export -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- App Environment & Safe Area Detector -->
+    <script>
+        (function() {
+            var isCapacitor = !!(window.Capacitor && (window.Capacitor.isNativePlatform?.() || window.Capacitor.getPlatform?.() === 'android' || window.Capacitor.getPlatform?.() === 'ios'));
+            var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            var isAndroidWV = /wv|Android.*Version\/[0-9.]+/i.test(navigator.userAgent);
+            if (isCapacitor || isStandalone || isAndroidWV) {
+                document.documentElement.classList.add('is-native-app');
+                if (isCapacitor || isAndroidWV || /Android/i.test(navigator.userAgent)) {
+                    document.documentElement.classList.add('is-capacitor-android');
+                }
+            }
+        })();
+    </script>
 </head>
-<body class="bg-obsidian text-white font-body min-h-[100dvh] antialiased overflow-x-hidden">
+<body class="bg-obsidian text-white font-body min-h-[100dvh] antialiased overflow-x-clip">
     <!-- App Initial Splash Loading Screen -->
     <div id="app-splash-screen" class="fixed inset-0 z-[9999] bg-[#0e1621] flex flex-col items-center justify-center transition-all duration-500">
         <div class="relative flex flex-col items-center max-w-xs text-center px-4">
