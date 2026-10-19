@@ -265,9 +265,126 @@ const sendRegistrationDenialEmail = async (email, fullName, reason) => {
     }
 };
 
+const sendSuperAdminReviewAlertEmail = async ({ toEmail, applicant, stage, reviewerName, reviewerRole, note }) => {
+    if (!toEmail) return false;
+
+    const applicantName = applicant?.full_name || 'New Applicant';
+    const applicantUsn = applicant?.usn ? applicant.usn.toUpperCase() : 'N/A';
+    const applicantBranch = applicant?.branch || 'N/A';
+    const applicantYear = applicant?.year || 'N/A';
+    const applicantEmail = applicant?.email || 'N/A';
+    const applicantPhone = applicant?.phone || 'N/A';
+    const applicantLinkedin = applicant?.linkedin || '';
+    const applicantGithub = applicant?.github || '';
+    
+    const isForwarded = stage === 'forwarded';
+    const subject = isForwarded
+        ? `📋 [Action Required] Registration Forwarded for Final Approval: ${applicantName} (${applicantUsn})`
+        : `📋 [Notification] New Student Registration Request: ${applicantName} (${applicantUsn})`;
+
+    const portalUrl = (process.env.APP_URL || 'https://icc-innovoapp.vercel.app').replace(/\/$/, '') + '/#admin';
+
+    const mailOptions = {
+        from: process.env.EMAIL_USER || 'ICC Social Hub <onboarding@resend.dev>',
+        to: toEmail,
+        subject: subject,
+        html: `
+        <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: #09090b; color: #e4e4e7; padding: 40px 20px; border-radius: 16px; max-width: 580px; margin: 0 auto; border: 1px solid #27272a;">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="display: inline-block; width: 48px; height: 48px; line-height: 48px; background: linear-gradient(135deg, #0284c7, #38bdf8); color: #ffffff; font-weight: 700; border-radius: 14px; font-size: 18px; box-shadow: 0 4px 12px rgba(56,189,248,0.3);">ICC</div>
+                <h1 style="color: #ffffff; font-size: 22px; font-weight: 700; margin: 16px 0 6px 0;">Super Admin Review Alert</h1>
+                <p style="color: ${isForwarded ? '#38bdf8' : '#a1a1aa'}; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0;">
+                    ${isForwarded ? 'Awaiting Final Approval' : 'New Registration Submission'}
+                </p>
+            </div>
+
+            <div style="background-color: #18181b; border: 1px solid #27272a; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+                <p style="color: #e4e4e7; font-size: 14px; line-height: 1.6; margin: 0 0 16px 0;">
+                    ${isForwarded
+                        ? `A registration request has been reviewed by <strong>${reviewerName || 'an Admin'}</strong> (${reviewerRole || 'Reviewer'}) and forwarded to you for final approval.`
+                        : `A new registration request has been submitted by an applicant and is currently pending review.`}
+                </p>
+
+                ${isForwarded && note ? `
+                <div style="background-color: #09090b; border-left: 3px solid #38bdf8; border-radius: 4px; padding: 12px 16px; margin-bottom: 18px;">
+                    <span style="color: #71717a; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">Reviewer Note:</span>
+                    <p style="color: #e0f2fe; font-size: 13px; line-height: 1.5; margin: 0; font-style: italic;">"${note}"</p>
+                </div>
+                ` : ''}
+
+                <div style="background-color: #09090b; border: 1px solid #3f3f46; border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+                    <h3 style="color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px 0;">Applicant Information</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <tr>
+                            <td style="color: #71717a; padding: 6px 0; width: 35%;">Full Name:</td>
+                            <td style="color: #ffffff; font-weight: 600; padding: 6px 0;">${applicantName}</td>
+                        </tr>
+                        <tr>
+                            <td style="color: #71717a; padding: 6px 0;">USN:</td>
+                            <td style="color: #38bdf8; font-family: monospace; font-weight: 600; padding: 6px 0;">${applicantUsn}</td>
+                        </tr>
+                        <tr>
+                            <td style="color: #71717a; padding: 6px 0;">Branch & Year:</td>
+                            <td style="color: #e4e4e7; padding: 6px 0;">${applicantBranch} · ${applicantYear}</td>
+                        </tr>
+                        <tr>
+                            <td style="color: #71717a; padding: 6px 0;">Email:</td>
+                            <td style="color: #e4e4e7; padding: 6px 0;">${applicantEmail}</td>
+                        </tr>
+                        <tr>
+                            <td style="color: #71717a; padding: 6px 0;">Phone:</td>
+                            <td style="color: #e4e4e7; padding: 6px 0;">${applicantPhone}</td>
+                        </tr>
+                        ${applicantLinkedin ? `
+                        <tr>
+                            <td style="color: #71717a; padding: 6px 0;">LinkedIn:</td>
+                            <td style="color: #60a5fa; padding: 6px 0;"><a href="${applicantLinkedin}" style="color: #60a5fa; text-decoration: underline;">View Profile</a></td>
+                        </tr>
+                        ` : ''}
+                        ${applicantGithub ? `
+                        <tr>
+                            <td style="color: #71717a; padding: 6px 0;">GitHub:</td>
+                            <td style="color: #60a5fa; padding: 6px 0;"><a href="${applicantGithub}" style="color: #60a5fa; text-decoration: underline;">View Profile</a></td>
+                        </tr>
+                        ` : ''}
+                    </table>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="${portalUrl}" style="display: inline-block; background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 12px 28px; border-radius: 10px; font-size: 13px; font-weight: 600; text-decoration: none; box-shadow: 0 4px 14px rgba(2,132,199,0.35);">
+                        Open Admin Command Center →
+                    </a>
+                </div>
+            </div>
+
+            <p style="text-align: center; color: #52525b; font-size: 12px; margin: 0;">
+                ICC Social Hub · Administrator Security Notification
+            </p>
+        </div>
+        `
+    };
+
+    try {
+        const transporter = createTransporter();
+        await transporter.sendMail(mailOptions);
+        console.log(`Super Admin review alert email sent via Gmail to ${toEmail}`);
+        return true;
+    } catch (error) {
+        console.error('Gmail SMTP error on Super Admin review alert:', error.message);
+        const resendRes = await sendEmailViaResend(mailOptions);
+        if (resendRes.success) {
+            console.log(`Super Admin review alert email sent via Resend to ${toEmail}`);
+            return true;
+        }
+        console.error('Failed to send Super Admin review alert:', resendRes.error || error.message);
+        return false;
+    }
+};
+
 module.exports = { 
     sendOTP, 
     sendTeamStatusEmail,
     sendRegistrationApprovalEmail,
-    sendRegistrationDenialEmail
+    sendRegistrationDenialEmail,
+    sendSuperAdminReviewAlertEmail
 };

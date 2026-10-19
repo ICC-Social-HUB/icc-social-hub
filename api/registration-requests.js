@@ -1,10 +1,74 @@
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
-const { sendRegistrationApprovalEmail, sendRegistrationDenialEmail } = require('./_mailer');
+const { 
+    sendRegistrationApprovalEmail, 
+    sendRegistrationDenialEmail, 
+    sendSuperAdminReviewAlertEmail 
+} = require('./_mailer');
 
 // Helper to hash token with SHA-256
 function hashToken(token) {
     return crypto.createHash('sha256').update(String(token).trim()).digest('hex');
+}
+
+// Helper to alert Super Admins via in-app notification and email
+async function notifySuperAdmins({ supabase, applicant, stage, reviewerName, reviewerRole, note, actorId }) {
+    const adminEmail = (process.env.ADMIN_EMAIL || process.env.EMAIL_USER || '').toLowerCase().trim();
+    const emailsToNotify = new Set();
+    if (adminEmail) emailsToNotify.add(adminEmail);
+
+    let superAdminIds = [];
+    try {
+        const { data: superAdmins } = await supabase
+            .from('profiles')
+            .select('id, email')
+            .or('role.eq.super_admin,role.eq.superadmin');
+
+        if (superAdmins && superAdmins.length > 0) {
+            superAdminIds = superAdmins.map(sa => sa.id);
+            superAdmins.forEach(sa => {
+                if (sa.email) emailsToNotify.add(sa.email.toLowerCase().trim());
+            });
+        }
+    } catch (e) {
+        console.warn('Could not query super admins from profiles:', e.message);
+    }
+
+    // 1. In-App Notifications
+    if (superAdminIds.length > 0) {
+        try {
+            const body = stage === 'forwarded'
+                ? `📋 Registration Request Forwarded: ${applicant.full_name} (${applicant.usn}) has been reviewed by ${reviewerName || 'an Admin'} and is awaiting your final approval.`
+                : `📋 New Registration Request: ${applicant.full_name} (${applicant.usn}) has submitted an application and is pending review.`;
+
+            const notifRows = superAdminIds.map(uid => ({
+                user_id: uid,
+                actor_id: actorId || null,
+                type: 'system',
+                body: body,
+                created_at: new Date().toISOString()
+            }));
+            await supabase.from('notifications').insert(notifRows);
+        } catch (e) {
+            console.warn('Could not insert in-app notification:', e.message);
+        }
+    }
+
+    // 2. Email Notifications
+    for (const email of emailsToNotify) {
+        try {
+            await sendSuperAdminReviewAlertEmail({
+                toEmail: email,
+                applicant,
+                stage,
+                reviewerName,
+                reviewerRole,
+                note
+            });
+        } catch (err) {
+            console.error(`Failed to send Super Admin review alert email to ${email}:`, err.message);
+        }
+    }
 }
 
 // Simple in-memory rate limiter for submissions
@@ -212,6 +276,22 @@ module.exports = async (req, res) => {
                 return sendError(500, 'Unable to submit your registration request at this time. Please try again.');
             }
 
+            // Asynchronously notify Super Admins via in-app notification and email
+            notifySuperAdmins({
+                supabase,
+                applicant: {
+                    full_name: fullName,
+                    usn,
+                    branch,
+                    year,
+                    email,
+                    phone,
+                    linkedin,
+                    github
+                },
+                stage: 'new_submission'
+            }).catch(err => console.error('Error notifying Super Admins of new submission:', err));
+
             return res.status(200).json({
                 success: true,
                 message: 'Your registration request has been submitted successfully.',
@@ -391,26 +471,16 @@ module.exports = async (req, res) => {
                 return sendError(500, updateErr.message);
             }
 
-            // In-app Notification for Super Admins
-            try {
-                const { data: superAdmins } = await supabase
-                    .from('profiles')
-                    .select('id')
-                    .or('role.eq.super_admin,role.eq.superadmin');
-
-                if (superAdmins && superAdmins.length > 0) {
-                    const notifRows = superAdmins.map(sa => ({
-                        user_id: sa.id,
-                        actor_id: callerId,
-                        type: 'system',
-                        body: `📋 Registration Request forwarded: ${currentReq.full_name} (${currentReq.usn}) is awaiting your final approval.`,
-                        created_at: now
-                    }));
-                    await supabase.from('notifications').insert(notifRows);
-                }
-            } catch (e) {
-                console.warn('Could not insert in-app notification:', e.message);
-            }
+            // Asynchronously notify Super Admins via in-app notification and email
+            notifySuperAdmins({
+                supabase,
+                applicant: updatedReq || currentReq,
+                stage: 'forwarded',
+                reviewerName: callerName,
+                reviewerRole: callerRoleTitle,
+                note: note || '',
+                actorId: callerId
+            }).catch(e => console.warn('Could not notify Super Admins on forward:', e.message));
 
             return res.status(200).json({
                 success: true,

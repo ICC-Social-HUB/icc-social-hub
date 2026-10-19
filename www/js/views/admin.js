@@ -60,9 +60,8 @@ const AdminView = (() => {
         const section = (student ? student.section : '') || '';
         const isManuallyUpdated = !!(u.usn || u.phone || (u.full_name && u.full_name !== (student ? student.fullName : '')));
 
-        let status = 'Unverified';
+        let status = 'Verified';
         if (isManuallyUpdated) status = 'Manually Updated';
-        else if (isVerified) status = 'Excel Verified';
 
         const leadObj = CORE_LEADS.find(l => Number(l.id) === Number(u.team_id));
         const teamName = leadObj ? leadObj.team : (u.team_id ? `Team ${u.team_id}` : 'No Team');
@@ -613,7 +612,10 @@ const AdminView = (() => {
 
         if (isSuper || perms.broadcast) tabs.push({ id: 'broadcast', label: 'Broadcast', icon: '📢' });
         if (isSuper || perms.leads) tabs.push({ id: 'leads', label: 'Leads', icon: '👥' });
-        if (isSuper || perms.users_edit || perms.users_export || perms.users) tabs.push({ id: 'users', label: 'Users', icon: '📋' });
+        if (isSuper || perms.users_edit || perms.users_export || perms.users) {
+            tabs.push({ id: 'registrations', label: 'Registrations', icon: '🎫' });
+            tabs.push({ id: 'users', label: 'Members', icon: '👥' });
+        }
         if (isSuper || perms.moderate) tabs.push({ id: 'moderate', label: 'Moderate', icon: '🛡️' });
         if (isSuper || perms.events) tabs.push({ id: 'events', label: 'Events', icon: '📅' });
         if (isSuper) tabs.push({ id: 'access_control', label: 'Access Control', icon: '🔐', badge: 'Super' });
@@ -642,7 +644,7 @@ const AdminView = (() => {
 
         const tabs = getAvailableTabs();
         if (!tabs.some(t => t.id === activeTab)) {
-            activeTab = tabs[0]?.id || 'users';
+            activeTab = tabs[0]?.id || 'registrations';
         }
 
         return `
@@ -681,6 +683,17 @@ const AdminView = (() => {
         </section>`;
     }
 
+    function renderRegistrations() {
+        return `
+        <div class="space-y-6 animate-fade-in">
+            <!-- Private Registration Link Card -->
+            ${typeof RegistrationQueue !== 'undefined' ? RegistrationQueue.renderRegistrationLinkCard() : ''}
+
+            <!-- 2-Stage Approval Queue Tabs & Cards -->
+            ${typeof RegistrationQueue !== 'undefined' ? RegistrationQueue.renderRequestsArea() : ''}
+        </div>`;
+    }
+
     function renderTab() {
         const isSuper = ICCSupabase.isSuperAdmin();
         const perms = ICCSupabase.getAdminPermissions ? ICCSupabase.getAdminPermissions() : { all: true };
@@ -694,8 +707,8 @@ const AdminView = (() => {
         if (activeTab === 'leads' && !isSuper && !perms.leads && !perms.all) {
             return renderPermissionDenied('You have not been granted access to Core Leads management.');
         }
-        if (activeTab === 'users' && !isSuper && !perms.users_edit && !perms.users_export && !perms.users && !perms.all) {
-            return renderPermissionDenied('You have not been granted access to User Management.');
+        if ((activeTab === 'users' || activeTab === 'registrations') && !isSuper && !perms.users_edit && !perms.users_export && !perms.users && !perms.all) {
+            return renderPermissionDenied('You have not been granted access to Member Management.');
         }
         if (activeTab === 'moderate' && !isSuper && !perms.moderate && !perms.all) {
             return renderPermissionDenied('You have not been granted access to Content Moderation.');
@@ -707,6 +720,7 @@ const AdminView = (() => {
         switch (activeTab) {
             case 'broadcast': return renderBroadcast();
             case 'leads': return renderLeads();
+            case 'registrations': return renderRegistrations();
             case 'users': return renderUsers();
             case 'moderate': return renderModerate();
             case 'events': return renderEvents();
@@ -1440,8 +1454,6 @@ const AdminView = (() => {
                     allEvents.map(e => {
                         const date = new Date(e.event_date).toLocaleDateString();
                         return `
-                        <tr class="border-b border-zinc-800/30 hover:bg-zinc-800/20 transition-colors">
-                            <td class="px-4 py-3"><span class="text-sm font-medium line-clamp-1">${e.title}</span></td>
                             <td class="px-4 py-3 text-zinc-500 text-xs whitespace-nowrap">${date}</td>
                             <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider ${e.status === 'upcoming' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-400'}">${e.status}</span></td>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
@@ -1464,132 +1476,100 @@ const AdminView = (() => {
         const canRequestEdit = isSuper || perms.users_edit || perms.all;
         const canExportExcel = isSuper || perms.users_export || perms.all;
 
-        if (!usersSubSection) {
-            usersSubSection = isSuper ? 'requests' : 'roster';
-        }
-
         return `
-        <div class="space-y-4">
-            <!-- Registration Link Management Card (Super Admin & Admin only) -->
-            ${typeof RegistrationQueue !== 'undefined' ? RegistrationQueue.renderRegistrationLinkCard() : ''}
-
-            <!-- Sub Section Navigation (Requests vs Roster) -->
-            <div class="flex items-center gap-2 mb-2 bg-zinc-950/90 p-1.5 rounded-xl border border-zinc-800 w-fit shadow-sm">
-                <button id="admin-user-subnav-requests" class="px-4 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${usersSubSection === 'requests' ? 'bg-[#3390ec] text-white shadow-md' : 'text-zinc-400 hover:text-white'}">
-                    <span>📋 Registration Requests</span>
-                </button>
-                <button id="admin-user-subnav-roster" class="px-4 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${usersSubSection === 'roster' ? 'bg-[#3390ec] text-white shadow-md' : 'text-zinc-400 hover:text-white'}">
-                    <span>👥 Member Directory (${displayUsers.length})</span>
-                </button>
-            </div>
-
-            ${usersSubSection === 'requests' ? `
-                ${typeof RegistrationQueue !== 'undefined' ? RegistrationQueue.renderRequestsArea() : ''}
-            ` : `
-            <!-- Approval Hub / Permission Status Banner -->
-            ${isSuper ? `
-                <div class="glass-card rounded-2xl p-5 border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-zinc-900 to-zinc-900 shadow-xl">
+        <div class="space-y-5 animate-fade-in">
+            <!-- Pending Change Requests Banner (Only shown when pending requests exist) -->
+            ${pendingEditRequests.length > 0 ? (isSuper ? `
+                <div class="glass-card rounded-2xl p-4 border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-zinc-900 to-zinc-900 shadow-lg">
                     <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center text-lg font-bold shadow-inner">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center text-sm font-bold shadow-inner">
                                 🛡️
                             </div>
                             <div>
-                                <h3 class="font-heading font-bold text-sm text-amber-200">Super Admin Approval Hub</h3>
-                                <p class="text-[11px] text-zinc-400">Review and authorize administrator modification requests</p>
+                                <h3 class="font-heading font-bold text-xs text-amber-200">Super Admin Profile Approval Hub</h3>
+                                <p class="text-[10px] text-zinc-400">Review pending profile modification requests submitted by administrators</p>
                             </div>
                         </div>
-                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${pendingEditRequests.length > 0 ? 'bg-amber-500/15 text-amber-300 animate-pulse' : 'bg-zinc-800 text-zinc-500'}">
+                        <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 animate-pulse">
                             ${pendingEditRequests.length} Pending
                         </span>
                     </div>
-
-                    ${pendingEditRequests.length === 0 ? `
-                        <div class="p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/60 text-center">
-                            <p class="text-xs text-zinc-400">✅ No pending change requests. All user profile records are up to date.</p>
-                        </div>
-                    ` : `
-                        <div class="space-y-3 mt-3">
-                            ${pendingEditRequests.map(req => renderPendingRequestCard(req, true)).join('')}
-                        </div>
-                    `}
+                    <div class="space-y-2.5 mt-2">
+                        ${pendingEditRequests.map(req => renderPendingRequestCard(req, true)).join('')}
+                    </div>
                 </div>
-            ` : (pendingEditRequests.length > 0 ? `
+            ` : `
                 <div class="glass-card rounded-2xl p-4 border border-blue-500/30 bg-gradient-to-r from-blue-500/10 via-zinc-900 to-zinc-900 shadow-md">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center text-sm font-bold shadow-inner">
-                                ⏳
-                            </div>
-                            <div>
-                                <h3 class="font-heading font-bold text-xs text-blue-200">Pending User Edit Requests</h3>
-                                <p class="text-[10px] text-zinc-400">Awaiting Super Admin review and authorization</p>
-                            </div>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm">⏳</span>
+                            <h3 class="font-heading font-bold text-xs text-blue-200">Pending Profile Edit Requests</h3>
                         </div>
-                        <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-blue-500/15 text-blue-300">
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/15 text-blue-300">
                             ${pendingEditRequests.length} Pending
                         </span>
                     </div>
-                    <div class="space-y-2.5">
+                    <div class="space-y-2">
                         ${pendingEditRequests.map(req => renderPendingRequestCard(req, false)).join('')}
                     </div>
                 </div>
-            ` : (canRequestEdit ? `
-                <div class="glass-card rounded-xl p-3.5 border border-zinc-800 bg-zinc-950/40 flex items-center gap-2.5 text-xs text-zinc-400">
-                    <span class="text-base">✏️</span>
-                    <span>You can request edits for member profiles. All submitted changes are reviewed and approved by the Super Admin.</span>
-                </div>
-            ` : `
-                <div class="glass-card rounded-xl p-3.5 border border-zinc-800 bg-zinc-950/40 flex items-center gap-2.5 text-xs text-zinc-400">
-                    <span class="text-base">📋</span>
-                    <span>You have view-only access to this user roster. Profile editing requests are restricted.</span>
-                </div>
-            `))}
+            `) : ''}
 
-            <div class="flex items-center justify-between px-2 flex-wrap gap-3">
-                <div class="flex items-center gap-3">
-                    <h3 class="font-heading font-semibold text-sm">User Management</h3>
-                    <span class="text-xs text-zinc-500" id="users-count-badge">${displayUsers.length} members</span>
+            <!-- Clean Header Toolbar -->
+            <div class="glass-card rounded-2xl p-4 border border-zinc-800/80 bg-zinc-950/60 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center text-base font-bold shadow-inner">
+                        👥
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-heading font-bold text-sm text-white">Member Directory</h3>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-800 text-zinc-300 border border-zinc-700/60" id="users-count-badge">
+                                ${displayUsers.length} Members
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-zinc-400 mt-0.5">Verified active members of the Innovators Creators Club</p>
+                    </div>
                 </div>
-                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                    <select id="admin-user-section-filter" class="bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white px-2 py-2 outline-none focus:border-blue-500">
-                        <option value="">All Secs</option>
-                        ${['A','B','C','D','E','F','G','H','I','J','K'].map(s => `<option value="${s}" ${userSectionFilter === s ? 'selected' : ''}>Sec ${s}</option>`).join('')}
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <select id="admin-user-section-filter" class="bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-300 px-3 py-2 outline-none focus:border-blue-500 cursor-pointer">
+                        <option value="">All Sections</option>
+                        ${['A','B','C','D','E','F','G','H','I','J','K'].map(s => `<option value="${s}" ${userSectionFilter === s ? 'selected' : ''}>Section ${s}</option>`).join('')}
                     </select>
-                    <select id="admin-user-team-filter" class="bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white px-2 py-2 outline-none focus:border-blue-500">
+
+                    <select id="admin-user-team-filter" class="bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-300 px-3 py-2 outline-none focus:border-blue-500 cursor-pointer">
                         <option value="">All Teams</option>
                         <option value="none" ${userTeamFilter === 'none' ? 'selected' : ''}>No Team</option>
                         ${CORE_LEADS.map(l => `<option value="${l.id}" ${userTeamFilter === String(l.id) ? 'selected' : ''}>${l.team}</option>`).join('')}
                     </select>
-                    <div class="relative flex-1 sm:w-56">
-                        <input type="text" id="admin-user-search" placeholder="Search by name, email, or USN..." class="form-input w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white" value="${userSearchQuery}">
-                        <svg class="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+
+                    <div class="relative flex-1 sm:w-60">
+                        <input type="text" id="admin-user-search" placeholder="Search by name, email, or USN..." class="w-full pl-8 pr-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 outline-none focus:border-blue-500" value="${escapeHtml(userSearchQuery)}">
+                        <svg class="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
+
                     ${canExportExcel ? `
-                        <button id="admin-download-excel-btn" class="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all cursor-pointer whitespace-nowrap group" title="Download dynamic Excel format (.xlsx) of users & teams based on active filters">
+                        <button id="admin-download-excel-btn" class="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all cursor-pointer whitespace-nowrap group" title="Download Excel export (.xlsx) of members based on active filters">
                             <svg class="w-4 h-4 text-emerald-100 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            <span id="admin-excel-btn-text">${(userSectionFilter || userTeamFilter || userSearchQuery) ? 'Export Filtered (.xlsx)' : 'Download Excel (.xlsx)'}</span>
+                            <span id="admin-excel-btn-text">${(userSectionFilter || userTeamFilter || userSearchQuery) ? 'Export (.xlsx)' : 'Export Excel'}</span>
                         </button>
-                    ` : `
-                        <div class="px-3 py-2 bg-zinc-950/80 border border-zinc-800/80 rounded-xl text-[11px] text-zinc-500 flex items-center gap-1.5" title="Excel download permission restricted">
-                            <span class="text-xs">🔒</span>
-                            <span>Excel Download Restricted</span>
-                        </div>
-                    `}
+                    ` : ''}
                 </div>
             </div>
 
+            <!-- Member Cards List -->
             <div class="grid gap-3" id="users-list-container">
                 ${displayUsers.map(u => {
                     const isEditing = editingUserId === u.id;
                     const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
-                    const isVerified = !!student;
                     
-                    const fullName = u.full_name || (student ? student.fullName : '');
-                    const usn = u.usn || (student ? student.usn : '');
-                    const phone = u.phone || (student ? student.phone : '');
+                    const fullName = u.full_name || (student ? student.fullName : '') || 'Anonymous Member';
+                    const usn = (u.usn || (student ? student.usn : '') || '').trim().toUpperCase();
+                    const phone = u.phone || (student ? student.phone : '') || '';
                     const section = student ? student.section : '';
                     
                     const isManuallyUpdated = !!(u.usn || u.phone || (u.full_name && u.full_name !== (student ? student.fullName : '')));
@@ -1597,21 +1577,21 @@ const AdminView = (() => {
                     const userPendingReq = pendingEditRequests.find(r => r.target_user_id === u.id);
                     
                     return `
-                    <div class="glass-card rounded-2xl p-4 transition-all duration-300 ${isEditing ? 'ring-1 ring-blue-500/50 bg-blue-500/5' : ''}" data-user-id="${u.id}" data-section="${(section || '').toUpperCase()}" data-team-id="${u.team_id || ''}">
+                    <div class="glass-card rounded-2xl p-4 transition-all duration-200 border border-zinc-800/80 bg-zinc-950/40 hover:border-zinc-700/80 ${isEditing ? 'ring-2 ring-blue-500/50 bg-blue-500/5' : ''}" data-user-id="${u.id}" data-section="${(section || '').toUpperCase()}" data-team-id="${u.team_id || ''}">
                         ${userPendingReq ? `
                             <div class="mb-3 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-[11px] text-amber-300 flex items-center justify-between">
                                 <span class="flex items-center gap-1.5 font-medium">
                                     <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-                                    Edit Request Pending Super Admin Approval
+                                    Profile Change Request Pending Super Admin Approval
                                 </span>
                                 <span class="text-zinc-400 text-[10px]">by ${escapeHtml(userPendingReq.requester_name || 'Admin')}</span>
                             </div>
                         ` : ''}
 
-                        <div class="flex items-start justify-between gap-4">
+                        <div class="flex items-center justify-between gap-3">
                             <div class="flex items-center gap-3 flex-1 min-w-0">
-                                <div class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-bold flex-shrink-0 border border-zinc-700 relative">
-                                    ${(fullName || u.username || '?').charAt(0).toUpperCase()}
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center text-sm font-bold flex-shrink-0 border border-zinc-700 text-zinc-300 shadow-inner">
+                                    ${(fullName || '?').charAt(0).toUpperCase()}
                                 </div>
                                 
                                 ${isEditing ? `
@@ -1642,106 +1622,96 @@ const AdminView = (() => {
                                 ` : `
                                     <div class="flex-1 min-w-0">
                                         <div class="flex flex-wrap items-center gap-2">
-                                            <h4 class="text-sm font-semibold text-white break-words">${escapeHtml(fullName || 'Anonymous')}</h4>
-                                            ${u.role === 'mentor' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 inline-flex items-center gap-1">${ICC_CONFIG.MENTOR_TICK} Mentor</span>` : (u.role === 'super_admin' || u.role === 'superadmin' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-300">🛡️ Super Admin</span>` : (u.role === 'admin' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/15 text-blue-300">👑 Admin</span>` : (u.role === 'lead' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-400">Lead</span>` : '')))}
-                                            ${isVerified ? `<span class="text-[9px] font-bold uppercase tracking-wider text-emerald-400">Excel Verified</span>` : `<span class="text-[9px] font-bold uppercase tracking-wider text-red-400">Unverified</span>`}
-                                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${u.approval_status === 'approved' || !u.approval_status ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : (u.approval_status === 'denied' ? 'bg-red-500/15 text-red-400 border border-red-500/30' : 'bg-amber-500/15 text-amber-300 border border-amber-500/30')}">
-                                                ${escapeHtml(u.approval_status || 'Approved')}
+                                            <h4 class="text-sm font-semibold text-white break-words">${escapeHtml(fullName)}</h4>
+                                            
+                                            <!-- Role Badge -->
+                                            ${u.role === 'mentor' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 inline-flex items-center gap-1">${ICC_CONFIG.MENTOR_TICK} Mentor</span>` : (u.role === 'super_admin' || u.role === 'superadmin' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">🛡️ Super Admin</span>` : (u.role === 'admin' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">👑 Admin</span>` : (u.role === 'lead' ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">⭐ Team Lead</span>` : `<span class="px-2 py-0.5 rounded-full text-[9px] font-medium bg-zinc-800 text-zinc-300 border border-zinc-700/60">Member</span>`)))}
+
+                                            <!-- Verified Badge (Everyone in directory is verified) -->
+                                            <span class="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
+                                                ✓ Verified
                                             </span>
-                                            ${isManuallyUpdated ? `<span class="text-[9px] font-bold uppercase tracking-wider text-blue-400">Manually Updated</span>` : ''}
-                                            ${(() => {
-                                                const att = attendanceMap[u.id];
-                                                if (att && att.total > 0) {
-                                                    const col = att.percent >= 75 ? 'text-emerald-400' : att.percent >= 50 ? 'text-amber-400' : 'text-red-400';
-                                                    return `<span class="text-[9px] font-bold uppercase tracking-wider ${col}" title="Attendance: ${att.present}/${att.total} days">Att: ${att.percent}%</span>`;
-                                                }
-                                                return `<span class="text-[9px] font-bold uppercase tracking-wider text-zinc-500">Att: 0%</span>`;
-                                            })()}
+
+                                            ${isManuallyUpdated ? `<span class="text-[9px] font-semibold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">Edited</span>` : ''}
                                         </div>
-                                        <p class="text-[11px] text-zinc-500 truncate">@${escapeHtml(u.username || '—')}</p>
+                                        <p class="text-[11px] text-zinc-500 truncate mt-0.5">@${escapeHtml(u.username || '—')}</p>
                                     </div>
                                 `}
                             </div>
                             
                             <div class="flex items-center gap-1.5 flex-shrink-0">
-                                
-
                                 ${canRequestEdit && !isEditing ? `
-                                    <button class="edit-user-btn p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-all cursor-pointer" data-id="${u.id}" title="${isSuper ? 'Edit user details (Direct)' : 'Request edit for user details'}">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                    <button class="edit-user-btn px-2.5 py-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 border border-zinc-800/80 hover:border-zinc-700" data-id="${u.id}" title="${isSuper ? 'Edit member details directly' : 'Request edit for member details'}">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                        <span class="hidden sm:inline">Edit</span>
                                     </button>
                                 ` : ''}
                             </div>
                         </div>
 
-                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 border-t border-zinc-800/50 pt-4">
-                            <div class="space-y-1">
-                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Email Address (Read Only)</span>
-                                <p class="text-[11px] text-zinc-400 font-mono truncate">${escapeHtml(u.email || 'No email')}</p>
-                            </div>
-                            <div class="space-y-1">
-                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">USN</span>
+                        <!-- Info Row (Clean 4-column layout) -->
+                        <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-zinc-800/60 pt-3">
+                            <div class="space-y-0.5">
+                                <span class="text-[9px] text-zinc-500 uppercase font-semibold tracking-wider block">USN</span>
                                 ${isEditing ? `
-                                    <input type="text" class="user-usn-input w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] text-white focus:border-blue-500 outline-none uppercase" value="${escapeHtml(usn)}" placeholder="1KS...">
+                                    <input type="text" class="user-usn-input w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-xs text-white focus:border-blue-500 outline-none uppercase" value="${escapeHtml(usn)}" placeholder="1KS...">
                                 ` : `
-                                    <p class="text-[11px] text-zinc-300 font-mono uppercase">${escapeHtml(usn || '—')}</p>
+                                    <p class="text-xs text-white font-mono font-medium uppercase">${escapeHtml(usn || '—')}</p>
                                 `}
                             </div>
-                            <div class="space-y-1">
-                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Phone Number</span>
-                                ${isEditing ? `
-                                    <input type="tel" class="user-phone-input w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] text-white focus:border-blue-500 outline-none" value="${escapeHtml(phone)}" placeholder="10 digits">
-                                ` : `
-                                    <p class="text-[11px] text-zinc-300 font-mono">${escapeHtml(phone || '—')}</p>
-                                `}
+
+                            <div class="space-y-0.5">
+                                <span class="text-[9px] text-zinc-500 uppercase font-semibold tracking-wider block">Email</span>
+                                <p class="text-xs text-zinc-300 font-mono truncate" title="${escapeHtml(u.email || '')}">${escapeHtml(u.email || '—')}</p>
                             </div>
-                            <div class="space-y-1">
-                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Section & Team</span>
-                                <div class="flex gap-2 items-center">
-                                    <span class="text-[11px] font-bold text-zinc-300 uppercase">${escapeHtml(section || '-')}</span>
-                                    <span class="text-[11px] font-medium ${u.team_id ? 'text-blue-400' : 'text-zinc-500'}">
-                                        ${escapeHtml(teamName)}
-                                    </span>
-                                </div>
+
+                            <div class="space-y-0.5">
+                                <span class="text-[9px] text-zinc-500 uppercase font-semibold tracking-wider block">Section & Team</span>
+                                <p class="text-xs text-zinc-300 truncate">
+                                    <span class="font-bold text-white">${escapeHtml(section || '—')}</span>
+                                    <span class="text-zinc-600 mx-1">·</span>
+                                    <span class="${u.team_id ? 'text-blue-400 font-medium' : 'text-zinc-500'}">${escapeHtml(teamName)}</span>
+                                </p>
                             </div>
-                            <div class="space-y-1">
-                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Attendance Rate</span>
-                                <div class="flex items-center gap-1.5">
+
+                            <div class="space-y-0.5">
+                                <span class="text-[9px] text-zinc-500 uppercase font-semibold tracking-wider block">Attendance</span>
+                                <div>
                                     ${(() => {
                                         const att = attendanceMap[u.id];
                                         if (att && att.total > 0) {
                                             const colorCls = att.percent >= 75 ? 'text-emerald-400' : att.percent >= 50 ? 'text-amber-400' : 'text-red-400';
-                                            return `<p class="text-[11px] font-bold font-mono ${colorCls}">${att.percent}% <span class="text-zinc-500 font-normal font-sans text-[10px]">(${att.present}/${att.total} days)</span></p>`;
+                                            return `<p class="text-xs font-bold font-mono ${colorCls}">${att.percent}% <span class="text-zinc-500 font-normal font-sans text-[10px]">(${att.present}/${att.total}d)</span></p>`;
                                         }
-                                        return `<p class="text-[11px] text-zinc-500 font-mono">0% <span class="text-zinc-600 font-normal font-sans text-[10px]">(0 days)</span></p>`;
+                                        return `<p class="text-xs text-zinc-500 font-mono">0% <span class="text-zinc-600 font-normal font-sans text-[10px]">(0d)</span></p>`;
                                     })()}
                                 </div>
-                            </div>
-                            <div class="space-y-1">
-                                <span class="text-[9px] text-zinc-500 uppercase tracking-wider block">Approval Authority</span>
-                                <p class="text-[11px] text-zinc-300 font-medium truncate" title="Approved by: ${escapeHtml(u.approved_by || 'Legacy import')}">
-                                    <span class="text-zinc-500 text-[10px]">Approved:</span> ${escapeHtml(u.approved_by || 'Legacy import')}
-                                </p>
-                                <p class="text-[10px] text-zinc-400 truncate" title="Reviewed by: ${escapeHtml(u.reviewed_by || 'Legacy import')}">
-                                    <span class="text-zinc-500">Reviewed:</span> ${escapeHtml(u.reviewed_by || 'Legacy import')}
-                                </p>
                             </div>
                         </div>
 
                         ${isEditing ? `
-                            <div class="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-zinc-800/30">
-                                <button class="save-user-btn flex-1 py-2 ${isSuper ? 'bg-blue-600 hover:bg-blue-500' : 'bg-amber-600 hover:bg-amber-500'} text-white rounded-xl text-xs font-semibold transition-all shadow-md flex items-center justify-center gap-1.5" data-id="${u.id}">
-                                    ${isSuper ? '<span>Save Changes (Direct)</span>' : '<span>🛡️ Submit Request for Super Admin Approval</span>'}
+                            <div class="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-zinc-800/40">
+                                <button class="save-user-btn flex-1 py-2 ${isSuper ? 'bg-blue-600 hover:bg-blue-500' : 'bg-amber-600 hover:bg-amber-500'} text-white rounded-xl text-xs font-semibold transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer" data-id="${u.id}">
+                                    ${isSuper ? '<span>Save Changes</span>' : '<span>🛡️ Submit Request for Super Admin Approval</span>'}
                                 </button>
-                                <button class="cancel-user-edit-btn px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-medium transition-all">Cancel</button>
+                                <button class="cancel-user-edit-btn px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-medium transition-all cursor-pointer">Cancel</button>
                                 ${isManuallyUpdated ? `
-                                    <button class="restore-user-btn px-3 py-2 bg-orange-600/10 hover:bg-orange-600 text-orange-500 hover:text-white border border-orange-500/30 rounded-xl text-xs font-semibold transition-all" data-id="${u.id}" title="Revert to Excel Data">
-                                        ${isSuper ? 'Restore' : 'Request Restore'}
+                                    <button class="restore-user-btn px-3 py-2 bg-orange-600/10 hover:bg-orange-600 text-orange-400 hover:text-white border border-orange-500/30 rounded-xl text-xs font-semibold transition-all cursor-pointer" data-id="${u.id}" title="Revert to original Excel data">
+                                        Restore
                                     </button>
                                 ` : ''}
                                 ${isSuper ? `
-                                    <button class="delete-user-btn p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-all" data-id="${u.id}" title="Delete User">
+                                    <button class="delete-user-btn p-2 text-red-400 hover:text-white hover:bg-red-500/20 rounded-xl transition-all cursor-pointer border border-red-500/20" data-id="${u.id}" title="Delete User">
                                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>`;
+    }n="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                     </button>
                                 ` : `
                                     <button class="p-2 text-zinc-600 cursor-not-allowed rounded-xl transition-all" title="Only Super Admins can delete users" disabled>
