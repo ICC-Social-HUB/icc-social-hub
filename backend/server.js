@@ -13,13 +13,11 @@ app.use(express.json());
 app.use('/api/otp', otpRoutes);
 
 // Vercel Compatibility Routes (Mapped from /api folder)
-const masterLogin = require('../api/master-login');
 const sendAuthOtp = require('../api/send-auth-otp');
 const verifyAuthOtp = require('../api/verify-auth-otp');
 const verifyOtp = require('../api/verify-otp');
 const teamStatusEmail = require('../api/team-status-email');
 
-app.post('/api/master-login', masterLogin);
 app.post('/api/send-auth-otp', sendAuthOtp);
 app.post('/api/verify-auth-otp', verifyAuthOtp);
 app.post('/api/verify-otp', verifyOtp);

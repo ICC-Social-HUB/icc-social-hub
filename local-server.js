@@ -44,7 +44,6 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     console.warn('👉 Please create a .env.local file using .env.example as a template.\n');
 }
 
-const masterLoginHandler = require('./api/master-login');
 const sendAuthOtpHandler = require('./api/send-auth-otp');
 const verifyAuthOtpHandler = require('./api/verify-auth-otp');
 const verifyOtpHandler = require('./api/verify-otp');
@@ -83,9 +82,7 @@ const server = http.createServer((req, res) => {
             console.log(`[API Request] ${req.method} ${url}`);
 
             try {
-                if (url === '/api/master-login') {
-                    return await masterLoginHandler(req, res);
-                } else if (url === '/api/send-auth-otp') {
+                if (url === '/api/send-auth-otp') {
                     return await sendAuthOtpHandler(req, res);
                 } else if (url === '/api/verify-auth-otp') {
                     return await verifyAuthOtpHandler(req, res);

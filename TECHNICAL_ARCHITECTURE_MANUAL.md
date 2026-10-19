@@ -84,7 +84,6 @@
 ├── api/                          # Serverless endpoints (deployed on Vercel)
 │   ├── _mailer.js                # Nodemailer helper for sending styled HTML emails
 │   ├── generate-otp.js           # Generates 6-digit numeric OTP and stores in Supabase
-│   ├── master-login.js           # Authenticates master bypass credentials
 │   ├── send-auth-otp.js          # Dispatches email containing 6-digit OTP to user
 │   ├── send-push.js              # Dispatches FCM push notifications to mobile tokens
 │   ├── team-status-email.js      # Sends notification emails when team join status changes
@@ -105,7 +104,7 @@
 │   │
 │   ├── components/               # Reusable UI component modules
 │   │   ├── androidNavigation.js  # Android hardware back button and modal backstack
-│   │   ├── authModal.js          # Authentication dialog (OTP login, master login, student lookup)
+│   │   ├── authModal.js          # Authentication dialog (OTP login, password login, signup)
 │   │   ├── bottomNav.js          # Mobile bottom navigation bar
 │   │   ├── chatPanel.js          # Direct messaging panel with chat bubbles
 │   │   ├── createPostModal.js    # Post composer with image upload and tagging
@@ -213,8 +212,8 @@ sequenceDiagram
 ```
 
 ### Key Auth Methods:
-- **Email OTP Authentication**: Passwordless authentication. Users receive a cryptographically random 6-digit code via Gmail SMTP.
-- **Master Authentication (`/api/master-login`)**: Hardcoded bypass login for emergency testing, official demonstration, and administrative rescue.
+- **Email OTP Authentication**: Passwordless authentication. Users receive a cryptographically random 6-digit code via email.
+- **Email & Password Authentication**: Standard Supabase password authentication with bcrypt hashing.
 - **Session Persistence**: Stored via Supabase Auth in browser `localStorage`. Survives browser restarts.
 
 ---
@@ -400,7 +399,7 @@ const ExampleView = (() => {
 - **`authModal.js`**: Multi-state authentication modal:
   1. *Email Step*: Asks for email, triggers `/api/send-auth-otp`.
   2. *OTP Step*: 6-digit numeric input with countdown timer and resend capability.
-  3. *Master Login Step*: Quick toggle for administrative password authentication.
+  3. *Password Step*: Secure user password authentication and profile synchronization.
 - **`postCard.js`**: Pure HTML generator for feed posts. Includes sanitize helpers (`escapeHtml`), verified badges, media embeds, and comment threads.
 - **`sidebar.js` & `bottomNav.js`**: Responsive navigation. Desktop renders persistent left sidebar; mobile switches to bottom tab bar and slide-out drawer.
 - **`imageViewer.js`**: Lightbox dialog for viewing uploaded post attachments in full resolution.
