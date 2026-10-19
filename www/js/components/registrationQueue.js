@@ -132,15 +132,20 @@ const RegistrationQueue = (() => {
             <!-- Link Display & Copy Control -->
             <div class="mt-4">
                 ${fullUrl ? `
-                    <div class="p-3.5 bg-zinc-950/80 rounded-xl border border-sky-500/40 flex items-center justify-between gap-3 flex-wrap">
-                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                    <div id="reg-link-container" class="p-3.5 bg-zinc-950/80 rounded-xl border border-sky-500/40 flex items-center justify-between gap-3 flex-wrap transition-all duration-300">
+                        <div class="flex items-center gap-2 min-w-0 flex-1 cursor-pointer group" id="copy-reg-link-bar" title="Click to copy link">
                             <span class="text-xs text-sky-400 font-mono font-bold">New Link:</span>
-                            <span class="text-xs text-white font-mono truncate select-all" id="active-join-url">${escapeHtml(fullUrl)}</span>
+                            <span class="text-xs text-white font-mono truncate select-all group-hover:text-sky-300 transition-colors" id="active-join-url">${escapeHtml(fullUrl)}</span>
+                            <span class="text-[10px] text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline">(click to copy)</span>
                         </div>
-                        <button id="copy-reg-link-btn" data-url="${escapeHtml(fullUrl)}" class="px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer flex-shrink-0">
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                            <span>Copy Link</span>
+                        <button id="copy-reg-link-btn" data-url="${escapeHtml(fullUrl)}" class="px-3.5 py-1.5 bg-sky-500 hover:bg-sky-400 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all duration-200 cursor-pointer flex-shrink-0 active:scale-95">
+                            <svg class="w-3.5 h-3.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            <span class="copy-label">Copy Link</span>
                         </button>
+                    </div>
+                    <div id="reg-link-copied-badge" class="hidden mt-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
+                        <svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        <span>Registration link copied to clipboard! You can now send it to the student.</span>
                     </div>
                     <p class="text-[10px] text-amber-400/90 mt-2">
                         ⚠️ Please copy this link now. For maximum security, the raw token is never stored in plain text and cannot be retrieved again once refreshed.
@@ -577,19 +582,93 @@ const RegistrationQueue = (() => {
             });
         }
 
-        // Copy Link
+        // Copy Link with Rich Visual Feedback
         const copyBtn = document.getElementById('copy-reg-link-btn');
-        if (copyBtn) {
-            copyBtn.addEventListener('click', async () => {
-                const url = copyBtn.dataset.url;
-                if (url) {
-                    try {
-                        await navigator.clipboard.writeText(url);
-                        if (window.Toast) Toast.show('Registration link copied to clipboard!', 'success');
-                    } catch {
-                        prompt('Copy this link:', url);
-                    }
+        const copyBar = document.getElementById('copy-reg-link-bar');
+        const linkContainer = document.getElementById('reg-link-container');
+        const copiedBadge = document.getElementById('reg-link-copied-badge');
+        let copyFeedbackTimer = null;
+
+        const performCopyFeedback = async (url) => {
+            if (!url) return;
+            try {
+                await navigator.clipboard.writeText(url);
+            } catch {
+                try {
+                    const fallbackInput = document.createElement('textarea');
+                    fallbackInput.value = url;
+                    fallbackInput.style.position = 'fixed';
+                    fallbackInput.style.opacity = '0';
+                    document.body.appendChild(fallbackInput);
+                    fallbackInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(fallbackInput);
+                } catch {
+                    prompt('Copy this registration link:', url);
+                    return;
                 }
+            }
+
+            // Visual feedback: Button transformation
+            if (copyBtn) {
+                copyBtn.classList.remove('bg-sky-500', 'hover:bg-sky-400');
+                copyBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-500', 'shadow-emerald-500/30', 'scale-105');
+                copyBtn.innerHTML = `
+                    <svg class="w-3.5 h-3.5 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span class="copy-label font-bold text-white">Copied!</span>
+                `;
+            }
+
+            // Visual feedback: Highlight link container
+            if (linkContainer) {
+                linkContainer.classList.add('ring-2', 'ring-emerald-500/80', 'border-emerald-500', 'bg-emerald-950/30');
+                linkContainer.classList.remove('border-sky-500/40', 'bg-zinc-950/80');
+            }
+
+            // Visual feedback: Reveal confirmation badge
+            if (copiedBadge) {
+                copiedBadge.classList.remove('hidden');
+            }
+
+            if (window.Toast) {
+                Toast.show('Registration link copied to clipboard!', 'success');
+            }
+
+            // Reset visual feedback smoothly after 2.5 seconds
+            clearTimeout(copyFeedbackTimer);
+            copyFeedbackTimer = setTimeout(() => {
+                if (copyBtn) {
+                    copyBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500', 'shadow-emerald-500/30', 'scale-105');
+                    copyBtn.classList.add('bg-sky-500', 'hover:bg-sky-400');
+                    copyBtn.innerHTML = `
+                        <svg class="w-3.5 h-3.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        <span class="copy-label">Copy Link</span>
+                    `;
+                }
+                if (linkContainer) {
+                    linkContainer.classList.remove('ring-2', 'ring-emerald-500/80', 'border-emerald-500', 'bg-emerald-950/30');
+                    linkContainer.classList.add('border-sky-500/40', 'bg-zinc-950/80');
+                }
+                if (copiedBadge) {
+                    copiedBadge.classList.add('hidden');
+                }
+            }, 2500);
+        };
+
+        if (copyBtn) {
+            copyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                performCopyFeedback(copyBtn.dataset.url);
+            });
+        }
+
+        if (copyBar && copyBtn) {
+            copyBar.addEventListener('click', () => {
+                performCopyFeedback(copyBtn.dataset.url);
             });
         }
 
