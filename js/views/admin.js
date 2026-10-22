@@ -14,7 +14,8 @@ const AdminView = (() => {
     let editingUserId = null;
     let editingEvent = null;
     let userSearchQuery = '';
-    let userSectionFilter = '';
+    let userYearFilter = '';
+    let userBranchFilter = '';
     let userTeamFilter = '';
     let accessSearchQuery = '';
     let accessRoleFilter = 'all'; // 'all', 'super_admin', 'admin'
@@ -51,14 +52,94 @@ const AdminView = (() => {
         });
     }
 
+    function normalizeYear(rawYear) {
+        if (!rawYear) return '';
+        const str = String(rawYear).trim();
+        if (/^1(st)?(\s*year)?$/i.test(str)) return '1st Year';
+        if (/^2(nd)?(\s*year)?$/i.test(str)) return '2nd Year';
+        if (/^3(rd)?(\s*year)?$/i.test(str)) return '3rd Year';
+        if (/^4(th)?(\s*year)?$/i.test(str)) return '4th Year';
+        return str;
+    }
+
+    function getBranchAndYear(u, student) {
+        let branch = (u?.branch || student?.branch || student?.department || '').trim();
+        let year = normalizeYear(u?.year || student?.year || student?.academicYear);
+        const usn = (u?.usn || student?.usn || '').trim().toUpperCase();
+
+        const branchAliases = {
+            'artificial intelligence & machine learning': 'AIML',
+            'artificial intelligence and machine learning': 'AIML',
+            'ai & ml': 'AIML',
+            'ai and ml': 'AIML',
+            'computer science & engineering': 'CSE',
+            'computer science and engineering': 'CSE',
+            'computer science & data science': 'CSD',
+            'computer science and data science': 'CSD',
+            'information science & engineering': 'ISE',
+            'information science and engineering': 'ISE',
+            'electronics & communication': 'ECE',
+            'electronics and communication': 'ECE',
+            'electrical & electronics': 'EEE',
+            'electrical and electronics': 'EEE',
+            'mechanical engineering': 'Mech',
+            'mechanical': 'Mech',
+            'civil engineering': 'Civil',
+            'civil': 'Civil'
+        };
+
+        if (branch && branchAliases[branch.toLowerCase()]) {
+            branch = branchAliases[branch.toLowerCase()];
+        }
+
+        if (!branch && usn) {
+            const branchMatch = usn.match(/^1[A-Z]{2}\d{2}([A-Z]{2})/);
+            if (branchMatch) {
+                const code = branchMatch[1];
+                const codeMap = {
+                    'AI': 'AIML',
+                    'CS': 'CSE',
+                    'IS': 'ISE',
+                    'EC': 'ECE',
+                    'EE': 'EEE',
+                    'ME': 'Mech',
+                    'CV': 'Civil',
+                    'CD': 'CSD',
+                    'CB': 'ICB',
+                    'CC': 'CCE'
+                };
+                branch = codeMap[code] || code;
+            }
+        }
+
+        if (!year && usn) {
+            const yearMatch = usn.match(/^1[A-Z]{2}(\d{2})/);
+            if (yearMatch) {
+                const batchYear = parseInt('20' + yearMatch[1], 10);
+                const currentYear = new Date().getFullYear();
+                const currentMonth = new Date().getMonth() + 1;
+                let diff = currentYear - batchYear + (currentMonth >= 7 ? 1 : 0);
+                if (diff <= 1) year = '1st Year';
+                else if (diff === 2) year = '2nd Year';
+                else if (diff === 3) year = '3rd Year';
+                else if (diff >= 4) year = '4th Year';
+            }
+        }
+
+        return {
+            branch: branch || '—',
+            year: year || '—'
+        };
+    }
+
     function getUserDetails(u) {
         const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
         const isVerified = !!student;
         const fullName = u.full_name || (student ? student.fullName : '') || 'Anonymous';
         const usn = (u.usn || (student ? student.usn : '') || '').trim().toUpperCase();
         const phone = u.phone || (student ? student.phone : '') || '';
-        const section = (student ? student.section : '') || '';
-        const isManuallyUpdated = !!(u.usn || u.phone || (u.full_name && u.full_name !== (student ? student.fullName : '')));
+        const { year, branch } = getBranchAndYear(u, student);
+        const isManuallyUpdated = !!(u.usn || u.phone || u.year || u.branch || (u.full_name && u.full_name !== (student ? student.fullName : '')));
 
         let status = 'Verified';
         if (isManuallyUpdated) status = 'Manually Updated';
@@ -87,7 +168,8 @@ const AdminView = (() => {
             email: u.email || '',
             phone: phone ? String(phone) : '',
             usn,
-            section,
+            year,
+            branch,
             attendancePercent,
             attendancePresent,
             attendanceTotal,
@@ -112,7 +194,8 @@ const AdminView = (() => {
     function getFilteredUsers() {
         const displayUsers = allUsers.filter(u => u.role !== 'mentor' && !u.is_mentor);
         const query = (userSearchQuery || '').trim().toLowerCase();
-        const sectionQuery = (userSectionFilter || '').trim().toUpperCase();
+        const yearQuery = (userYearFilter || '').trim();
+        const branchQuery = (userBranchFilter || '').trim().toUpperCase();
         const teamQuery = (userTeamFilter || '').trim();
 
         return displayUsers.filter(u => {
@@ -121,12 +204,13 @@ const AdminView = (() => {
             const username = (u.username || '').toLowerCase();
             const email = (u.email || '').toLowerCase();
             const usn = (u.usn || (student ? student.usn : '') || '').toLowerCase();
-            const section = (student ? student.section : '') || '';
+            const { year, branch } = getBranchAndYear(u, student);
             const cardTeamId = u.team_id !== null && u.team_id !== undefined ? String(u.team_id) : '';
 
-            const searchText = `${fullName} ${username} ${email} ${usn}`;
+            const searchText = `${fullName} ${username} ${email} ${usn} ${year} ${branch}`.toLowerCase();
             const matchesSearch = !query || searchText.includes(query);
-            const matchesSection = !sectionQuery || section.toUpperCase() === sectionQuery;
+            const matchesYear = !yearQuery || year === yearQuery;
+            const matchesBranch = !branchQuery || branch.toUpperCase() === branchQuery;
 
             let matchesTeam = true;
             if (teamQuery === 'none') {
@@ -135,7 +219,7 @@ const AdminView = (() => {
                 matchesTeam = cardTeamId === teamQuery;
             }
 
-            return matchesSearch && matchesSection && matchesTeam;
+            return matchesSearch && matchesYear && matchesBranch && matchesTeam;
         });
     }
 
@@ -182,7 +266,8 @@ const AdminView = (() => {
 
             // Build filter description for title
             const filterParts = [];
-            if (userSectionFilter) filterParts.push(`Section: ${userSectionFilter}`);
+            if (userYearFilter) filterParts.push(`Year: ${userYearFilter}`);
+            if (userBranchFilter) filterParts.push(`Branch: ${userBranchFilter}`);
             if (userTeamFilter) {
                 if (userTeamFilter === 'none') filterParts.push('Team: No Team (Unassigned)');
                 else {
@@ -218,8 +303,8 @@ const AdminView = (() => {
                 const teamMembers = filteredUsers.filter(u => Number(u.team_id) === Number(lead.id));
                 const allTeamMembers = allUsers.filter(u => Number(u.team_id) === Number(lead.id) && u.role !== 'admin' && u.role !== 'lead');
 
-                // If filtering by specific section/search across all teams and this team has 0 matches, skip
-                if (filteredUsers.length > 0 && teamMembers.length === 0 && (userSectionFilter || userSearchQuery) && !userTeamFilter) {
+                // If filtering by specific year/branch/search across all teams and this team has 0 matches, skip
+                if (filteredUsers.length > 0 && teamMembers.length === 0 && (userYearFilter || userBranchFilter || userSearchQuery) && !userTeamFilter) {
                     return;
                 }
 
@@ -249,7 +334,8 @@ const AdminView = (() => {
                     '#',
                     'Member Full Name',
                     'USN / Reg No',
-                    'Section',
+                    'Year',
+                    'Branch',
                     'Attendance %',
                     'Email Address',
                     'Phone Number',
@@ -262,7 +348,7 @@ const AdminView = (() => {
 
                 // 3. Member Rows (Listed one below the other)
                 if (teamMembers.length === 0) {
-                    aoaGrouped.push(['—', '(No members in this team matching active filter)', '', '', '', '', '', '', '', '', '', '']);
+                    aoaGrouped.push(['—', '(No members in this team matching active filter)', '', '', '', '', '', '', '', '', '', '', '']);
                 } else {
                     teamMembers.forEach((u, idx) => {
                         const d = getUserDetails(u);
@@ -270,7 +356,8 @@ const AdminView = (() => {
                             idx + 1,
                             d.fullName,
                             d.usn,
-                            d.section,
+                            d.year,
+                            d.branch,
                             d.attendancePercent,
                             d.email,
                             d.phone,
@@ -305,7 +392,8 @@ const AdminView = (() => {
                     '#',
                     'Member Full Name',
                     'USN / Reg No',
-                    'Section',
+                    'Year',
+                    'Branch',
                     'Attendance %',
                     'Email Address',
                     'Phone Number',
@@ -317,7 +405,7 @@ const AdminView = (() => {
                 ]);
 
                 if (unassignedMembers.length === 0) {
-                    aoaGrouped.push(['—', '(No unassigned members matching active filter)', '', '', '', '', '', '', '', '', '', '']);
+                    aoaGrouped.push(['—', '(No unassigned members matching active filter)', '', '', '', '', '', '', '', '', '', '', '']);
                 } else {
                     unassignedMembers.forEach((u, idx) => {
                         const d = getUserDetails(u);
@@ -325,7 +413,8 @@ const AdminView = (() => {
                             idx + 1,
                             d.fullName,
                             d.usn,
-                            d.section,
+                            d.year,
+                            d.branch,
                             d.attendancePercent,
                             d.email,
                             d.phone,
@@ -354,7 +443,8 @@ const AdminView = (() => {
                     'Team Leader Email': d.teamLeaderEmail,
                     'Student Full Name': d.fullName,
                     'USN / Reg No': d.usn,
-                    'Section': d.section,
+                    'Year': d.year,
+                    'Branch': d.branch,
                     'Attendance %': d.attendancePercent,
                     'Email Address': d.email,
                     'Phone Number': d.phone,
@@ -408,7 +498,8 @@ const AdminView = (() => {
             // Build dynamic filename reflecting current filters
             const dateStr = new Date().toISOString().slice(0, 10);
             let filterSuffix = '';
-            if (userSectionFilter) filterSuffix += `_Sec_${userSectionFilter}`;
+            if (userYearFilter) filterSuffix += `_${userYearFilter.replace(/\s+/g, '')}`;
+            if (userBranchFilter) filterSuffix += `_${userBranchFilter}`;
             if (userTeamFilter) {
                 if (userTeamFilter === 'none') filterSuffix += '_NoTeam';
                 else {
@@ -432,7 +523,8 @@ const AdminView = (() => {
                     { wch: 8 },   // # or TEAM: XXX
                     { wch: 28 },  // Full Name / Leader
                     { wch: 18 },  // USN / Lead Email
-                    { wch: 10 },  // Section / Project
+                    { wch: 12 },  // Year
+                    { wch: 12 },  // Branch
                     { wch: 16 },  // Attendance %
                     { wch: 32 },  // Email Address / Progress
                     { wch: 18 },  // Phone Number / Total Members
@@ -451,7 +543,8 @@ const AdminView = (() => {
                     { wch: 28 }, // Team Leader Email
                     { wch: 24 }, // Student Full Name
                     { wch: 15 }, // USN
-                    { wch: 9 },  // Section
+                    { wch: 12 }, // Year
+                    { wch: 12 }, // Branch
                     { wch: 16 }, // Attendance %
                     { wch: 30 }, // Email Address
                     { wch: 15 }, // Phone Number
@@ -526,6 +619,20 @@ const AdminView = (() => {
                 label: 'Phone Number',
                 from: orig.phone || '(Empty)',
                 to: changes.phone || '(Cleared/Reset)'
+            });
+        }
+        if (changes.hasOwnProperty('year') && changes.year !== orig.year) {
+            diffs.push({
+                label: 'Academic Year',
+                from: orig.year || '(Empty)',
+                to: changes.year || '(Cleared/Reset)'
+            });
+        }
+        if (changes.hasOwnProperty('branch') && changes.branch !== orig.branch) {
+            diffs.push({
+                label: 'Branch',
+                from: orig.branch || '(Empty)',
+                to: changes.branch || '(Cleared/Reset)'
             });
         }
         if (changes.hasOwnProperty('team_id') && String(changes.team_id) !== String(orig.team_id)) {
@@ -996,7 +1103,7 @@ const AdminView = (() => {
                             const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
                             const fullName = u.full_name || (student ? student.fullName : 'Anonymous');
                             const usn = u.usn || (student ? student.usn : '');
-                            const section = student ? student.section : '';
+                            const { year, branch } = getBranchAndYear(u, student);
                             return `
                             <div class="flex items-center justify-between gap-3 p-3 bg-zinc-950/70 hover:bg-zinc-900 border border-zinc-800/80 rounded-xl transition-colors">
                                 <div class="flex items-center gap-3 min-w-0">
@@ -1007,7 +1114,8 @@ const AdminView = (() => {
                                         <div class="flex items-center gap-1.5 flex-wrap">
                                             <span class="text-xs font-semibold text-white truncate">${escapeHtml(fullName)}</span>
                                             ${usn ? `<span class="text-[10px] font-mono text-zinc-400">(${escapeHtml(usn)})</span>` : ''}
-                                            ${section ? `<span class="px-1.5 py-0.2 rounded text-[9px] bg-zinc-800 text-zinc-300">Sec ${escapeHtml(section)}</span>` : ''}
+                                            ${(year && year !== '—') ? `<span class="px-1.5 py-0.5 rounded text-[9px] bg-blue-500/15 text-blue-300 border border-blue-500/20">${escapeHtml(year)}</span>` : ''}
+                                            ${(branch && branch !== '—') ? `<span class="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">${escapeHtml(branch)}</span>` : ''}
                                         </div>
                                         <p class="text-[11px] text-zinc-400 font-mono truncate">${escapeHtml(u.email || 'No email')} · @${escapeHtml(u.username || 'user')}</p>
                                     </div>
@@ -1534,9 +1642,14 @@ const AdminView = (() => {
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2">
-                    <select id="admin-user-section-filter" class="bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-300 px-3 py-2 outline-none focus:border-blue-500 cursor-pointer">
-                        <option value="">All Sections</option>
-                        ${['A','B','C','D','E','F','G','H','I','J','K'].map(s => `<option value="${s}" ${userSectionFilter === s ? 'selected' : ''}>Section ${s}</option>`).join('')}
+                    <select id="admin-user-year-filter" class="bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-300 px-3 py-2 outline-none focus:border-blue-500 cursor-pointer">
+                        <option value="">All Years</option>
+                        ${['1st Year', '2nd Year', '3rd Year', '4th Year'].map(y => `<option value="${y}" ${userYearFilter === y ? 'selected' : ''}>${y}</option>`).join('')}
+                    </select>
+
+                    <select id="admin-user-branch-filter" class="bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-300 px-3 py-2 outline-none focus:border-blue-500 cursor-pointer">
+                        <option value="">All Branches</option>
+                        ${['AIML', 'CSE', 'CSD', 'ISE', 'ECE', 'EEE', 'Mech', 'Civil', 'ICB', 'CCE'].map(b => `<option value="${b}" ${userBranchFilter === b ? 'selected' : ''}>${b}</option>`).join('')}
                     </select>
 
                     <select id="admin-user-team-filter" class="bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-300 px-3 py-2 outline-none focus:border-blue-500 cursor-pointer">
@@ -1555,7 +1668,7 @@ const AdminView = (() => {
                             <svg class="w-4 h-4 text-emerald-100 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            <span id="admin-excel-btn-text">${(userSectionFilter || userTeamFilter || userSearchQuery) ? 'Export (.xlsx)' : 'Export Excel'}</span>
+                            <span id="admin-excel-btn-text">${(userYearFilter || userBranchFilter || userTeamFilter || userSearchQuery) ? 'Export (.xlsx)' : 'Export Excel'}</span>
                         </button>
                     ` : ''}
                 </div>
@@ -1570,14 +1683,14 @@ const AdminView = (() => {
                     const fullName = u.full_name || (student ? student.fullName : '') || 'Anonymous Member';
                     const usn = (u.usn || (student ? student.usn : '') || '').trim().toUpperCase();
                     const phone = u.phone || (student ? student.phone : '') || '';
-                    const section = student ? student.section : '';
+                    const { year, branch } = getBranchAndYear(u, student);
                     
-                    const isManuallyUpdated = !!(u.usn || u.phone || (u.full_name && u.full_name !== (student ? student.fullName : '')));
+                    const isManuallyUpdated = !!(u.usn || u.phone || u.year || u.branch || (u.full_name && u.full_name !== (student ? student.fullName : '')));
                     const teamName = CORE_LEADS.find(l => Number(l.id) === Number(u.team_id))?.team || 'No Team';
                     const userPendingReq = pendingEditRequests.find(r => r.target_user_id === u.id);
                     
                     return `
-                    <div class="glass-card rounded-2xl p-4 transition-all duration-200 border border-zinc-800/80 bg-zinc-950/40 hover:border-zinc-700/80 ${isEditing ? 'ring-2 ring-blue-500/50 bg-blue-500/5' : ''}" data-user-id="${u.id}" data-section="${(section || '').toUpperCase()}" data-team-id="${u.team_id || ''}">
+                    <div class="glass-card rounded-2xl p-4 transition-all duration-200 border border-zinc-800/80 bg-zinc-950/40 hover:border-zinc-700/80 ${isEditing ? 'ring-2 ring-blue-500/50 bg-blue-500/5' : ''}" data-user-id="${u.id}" data-year="${escapeHtml(year)}" data-branch="${escapeHtml(branch)}" data-team-id="${u.team_id || ''}">
                         ${userPendingReq ? `
                             <div class="mb-3 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-[11px] text-amber-300 flex items-center justify-between">
                                 <span class="flex items-center gap-1.5 font-medium">
@@ -1649,8 +1762,8 @@ const AdminView = (() => {
                             </div>
                         </div>
 
-                        <!-- Info Row (Clean 4-column layout) -->
-                        <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-zinc-800/60 pt-3">
+                        <!-- Info Row (Clean 6-column layout: USN, Year, Branch, Team, Email, Attendance) -->
+                        <div class="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 border-t border-zinc-800/60 pt-3">
                             <div class="space-y-0.5">
                                 <span class="text-[9px] text-zinc-500 uppercase font-semibold tracking-wider block">USN</span>
                                 ${isEditing ? `
@@ -1661,17 +1774,39 @@ const AdminView = (() => {
                             </div>
 
                             <div class="space-y-0.5">
-                                <span class="text-[9px] text-zinc-500 uppercase font-semibold tracking-wider block">Email</span>
-                                <p class="text-xs text-zinc-300 font-mono truncate" title="${escapeHtml(u.email || '')}">${escapeHtml(u.email || '—')}</p>
+                                <span class="text-[9px] text-zinc-500 uppercase font-semibold tracking-wider block">Year</span>
+                                ${isEditing ? `
+                                    <select class="user-year-select w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-xs text-white focus:border-blue-500 outline-none">
+                                        <option value="" ${!year || year === '—' ? 'selected' : ''}>Select Year</option>
+                                        ${['1st Year', '2nd Year', '3rd Year', '4th Year'].map(y => `<option value="${y}" ${year === y ? 'selected' : ''}>${y}</option>`).join('')}
+                                    </select>
+                                ` : `
+                                    <p class="text-xs font-semibold text-blue-400">${escapeHtml(year || '—')}</p>
+                                `}
                             </div>
 
                             <div class="space-y-0.5">
-                                <span class="text-[9px] text-zinc-500 uppercase font-semibold tracking-wider block">Section & Team</span>
-                                <p class="text-xs text-zinc-300 truncate">
-                                    <span class="font-bold text-white">${escapeHtml(section || '—')}</span>
-                                    <span class="text-zinc-600 mx-1">·</span>
-                                    <span class="${u.team_id ? 'text-blue-400 font-medium' : 'text-zinc-500'}">${escapeHtml(teamName)}</span>
+                                <span class="text-[9px] text-zinc-500 uppercase font-semibold tracking-wider block">Branch</span>
+                                ${isEditing ? `
+                                    <select class="user-branch-select w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-xs text-white focus:border-blue-500 outline-none">
+                                        <option value="" ${!branch || branch === '—' ? 'selected' : ''}>Select Branch</option>
+                                        ${['AIML', 'CSE', 'CSD', 'ISE', 'ECE', 'EEE', 'Mech', 'Civil', 'ICB', 'CCE'].map(b => `<option value="${b}" ${(branch || '').toUpperCase() === b.toUpperCase() ? 'selected' : ''}>${b}</option>`).join('')}
+                                    </select>
+                                ` : `
+                                    <p class="text-xs font-semibold text-emerald-400">${escapeHtml(branch || '—')}</p>
+                                `}
+                            </div>
+
+                            <div class="space-y-0.5">
+                                <span class="text-[9px] text-zinc-500 uppercase font-semibold tracking-wider block">Team</span>
+                                <p class="text-xs truncate ${u.team_id ? 'text-zinc-200 font-medium' : 'text-zinc-500'}">
+                                    ${escapeHtml(teamName)}
                                 </p>
+                            </div>
+
+                            <div class="space-y-0.5">
+                                <span class="text-[9px] text-zinc-500 uppercase font-semibold tracking-wider block">Email</span>
+                                <p class="text-xs text-zinc-300 font-mono truncate" title="${escapeHtml(u.email || '')}">${escapeHtml(u.email || '—')}</p>
                             </div>
 
                             <div class="space-y-0.5">
@@ -1946,6 +2081,8 @@ const AdminView = (() => {
                 const username = card.querySelector(`.user-username-input`)?.value.trim();
                 const usn = card.querySelector(`.user-usn-input`)?.value.trim();
                 const phone = card.querySelector(`.user-phone-input`)?.value.trim();
+                const year = card.querySelector('.user-year-select')?.value.trim();
+                const branch = card.querySelector('.user-branch-select')?.value.trim();
                 const cleanedPhone = phone ? phone.replace(/\D/g, '') : null;
                 
                 if (!username) { Toast.error('Username cannot be empty'); return; }
@@ -1970,12 +2107,16 @@ const AdminView = (() => {
                     usn: usn ? usn.toUpperCase() : null,
                     phone: cleanedPhone
                 };
+                if (year !== undefined) fields.year = year || null;
+                if (branch !== undefined) fields.branch = branch || null;
 
                 const origData = {
                     full_name: targetUser?.full_name || (student ? student.fullName : ''),
                     username: targetUser?.username || '',
                     usn: targetUser?.usn || (student ? student.usn : ''),
                     phone: targetUser?.phone || (student ? student.phone : ''),
+                    year: targetUser?.year || (student ? student.year : ''),
+                    branch: targetUser?.branch || (student ? student.branch : ''),
                     team_id: targetUser?.team_id
                 };
 
@@ -2045,14 +2186,18 @@ const AdminView = (() => {
                 const fields = { 
                     full_name: null, 
                     usn: null, 
-                    phone: null 
+                    phone: null,
+                    year: null,
+                    branch: null
                 };
 
                 const origData = {
                     full_name: targetUser?.full_name || (student ? student.fullName : ''),
                     username: targetUser?.username || '',
                     usn: targetUser?.usn || (student ? student.usn : ''),
-                    phone: targetUser?.phone || (student ? student.phone : '')
+                    phone: targetUser?.phone || (student ? student.phone : ''),
+                    year: targetUser?.year || (student ? student.year : ''),
+                    branch: targetUser?.branch || (student ? student.branch : '')
                 };
 
                 if (isSuper) {
@@ -2084,12 +2229,11 @@ const AdminView = (() => {
             });
         });
 
-        
-
         // User Search & Filter
         const applyUserFilters = () => {
             const query = userSearchQuery.trim().toLowerCase();
-            const sectionQuery = userSectionFilter;
+            const yearQuery = userYearFilter.trim();
+            const branchQuery = userBranchFilter.trim().toUpperCase();
             const teamQuery = userTeamFilter;
             const listContainer = document.getElementById('users-list-container');
             if (!listContainer) return;
@@ -2098,11 +2242,13 @@ const AdminView = (() => {
             
             cards.forEach(card => {
                 const text = card.textContent.toLowerCase();
-                const cardSection = card.getAttribute('data-section') || '';
+                const cardYear = card.getAttribute('data-year') || '';
+                const cardBranch = (card.getAttribute('data-branch') || '').toUpperCase();
                 const cardTeamId = card.getAttribute('data-team-id') || '';
 
                 const matchesSearch = !query || text.includes(query);
-                const matchesSection = !sectionQuery || cardSection === sectionQuery;
+                const matchesYear = !yearQuery || cardYear === yearQuery;
+                const matchesBranch = !branchQuery || cardBranch === branchQuery;
                 
                 let matchesTeam = true;
                 if (teamQuery === 'none') {
@@ -2111,7 +2257,7 @@ const AdminView = (() => {
                     matchesTeam = String(cardTeamId) === String(teamQuery);
                 }
 
-                if (matchesSearch && matchesSection && matchesTeam) {
+                if (matchesSearch && matchesYear && matchesBranch && matchesTeam) {
                     card.style.display = '';
                     visibleCount++;
                 } else {
@@ -2123,7 +2269,7 @@ const AdminView = (() => {
 
             const excelBtnText = document.getElementById('admin-excel-btn-text');
             if (excelBtnText) {
-                const hasFilters = !!(query || sectionQuery || teamQuery);
+                const hasFilters = !!(query || yearQuery || branchQuery || teamQuery);
                 excelBtnText.textContent = hasFilters ? `Export Filtered (${visibleCount})` : 'Download Excel (.xlsx)';
             }
         };
@@ -2136,10 +2282,18 @@ const AdminView = (() => {
             });
         }
         
-        const sectionSelect = document.getElementById('admin-user-section-filter');
-        if (sectionSelect) {
-            sectionSelect.addEventListener('change', e => {
-                userSectionFilter = e.target.value;
+        const yearSelect = document.getElementById('admin-user-year-filter');
+        if (yearSelect) {
+            yearSelect.addEventListener('change', e => {
+                userYearFilter = e.target.value;
+                applyUserFilters();
+            });
+        }
+
+        const branchSelect = document.getElementById('admin-user-branch-filter');
+        if (branchSelect) {
+            branchSelect.addEventListener('change', e => {
+                userBranchFilter = e.target.value;
                 applyUserFilters();
             });
         }
@@ -2161,7 +2315,7 @@ const AdminView = (() => {
             });
         }
 
-        if (userSearchQuery || userSectionFilter || userTeamFilter) {
+        if (userSearchQuery || userYearFilter || userBranchFilter || userTeamFilter) {
             applyUserFilters();
         }
 
