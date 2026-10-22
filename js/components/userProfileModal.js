@@ -227,28 +227,6 @@ const UserProfileModal = (() => {
                 </div>
                 ` : ''}
 
-                <!-- Super Admin Mentor Controls -->
-                ${(typeof ICCSupabase.isSuperAdmin === 'function' && ICCSupabase.isSuperAdmin() && !isMe) ? `
-                <div class="bg-[#17212b] rounded-2xl p-4 space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Super Admin Controls</span>
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400">
-                            ${profile.role === 'mentor' ? '🎓 Mentor' : 'Member'}
-                        </span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        ${profile.role !== 'mentor' ? `
-                            <button id="modal-assign-mentor-btn" class="flex-1 py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-xl text-xs transition-all active:scale-95 cursor-pointer">
-                                Assign as Mentor
-                            </button>
-                        ` : `
-                            <button id="modal-revoke-mentor-btn" class="flex-1 py-2.5 px-4 bg-red-500/15 hover:bg-red-500 text-red-400 hover:text-white font-bold rounded-xl text-xs transition-all active:scale-95 cursor-pointer">
-                                Revoke Mentor Status
-                            </button>
-                        `}
-                    </div>
-                </div>
-                ` : ''}
 
                 <!-- 7. "My Work" Section (Reference: My Work Grid) -->
                 <div class="space-y-3.5 pt-2">
@@ -356,40 +334,6 @@ const UserProfileModal = (() => {
         });
         document.querySelectorAll('.user-profile-project-card').forEach(card => {
             card.addEventListener('click', () => close());
-        });
-
-        // Super Admin Mentor Controls
-        document.getElementById('modal-assign-mentor-btn')?.addEventListener('click', async (e) => {
-            const btn = e.currentTarget;
-            btn.disabled = true;
-            btn.innerHTML = 'Assigning...';
-            const res = await ICCSupabase.setMentorRole(profile.id, true);
-            if (res?.error) {
-                Toast.error('Failed to assign mentor: ' + (res.error.message || res.error));
-                btn.disabled = false;
-                btn.innerHTML = 'Assign as Mentor';
-            } else {
-                Toast.success(`🎓 Appointed ${profile.full_name || profile.username || 'user'} as Mentor!`);
-                profile.role = 'mentor';
-                mount();
-            }
-        });
-
-        document.getElementById('modal-revoke-mentor-btn')?.addEventListener('click', async (e) => {
-            const btn = e.currentTarget;
-            if (!confirm(`Are you sure you want to revoke Mentor status for ${profile.full_name || profile.username || 'this user'}?`)) return;
-            btn.disabled = true;
-            btn.innerHTML = 'Revoking...';
-            const res = await ICCSupabase.setMentorRole(profile.id, false);
-            if (res?.error) {
-                Toast.error('Failed to revoke mentor: ' + (res.error.message || res.error));
-                btn.disabled = false;
-                btn.innerHTML = 'Revoke Mentor Status';
-            } else {
-                Toast.success(`Mentor role revoked for ${profile.full_name || profile.username || 'user'}`);
-                profile.role = 'member';
-                mount();
-            }
         });
     }
 
