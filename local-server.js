@@ -51,6 +51,7 @@ const verifyOtpHandler = require('./api/verify-otp');
 const studentsHandler = require('./api/students');
 const registrationLinkHandler = require('./api/registration-link');
 const registrationRequestsHandler = require('./api/registration-requests');
+const deleteUserHandler = require('./api/delete-user');
 
 const corsMiddleware = cors({ origin: true, credentials: true });
 
@@ -103,6 +104,8 @@ const server = http.createServer((req, res) => {
                     return await registrationLinkHandler(req, res);
                 } else if (url === '/api/registration-requests') {
                     return await registrationRequestsHandler(req, res);
+                } else if (url === '/api/delete-user') {
+                    return await deleteUserHandler(req, res);
                 } else {
                     res.status(404).json({ error: 'Endpoint not found' });
                 }
