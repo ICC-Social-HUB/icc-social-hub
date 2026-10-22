@@ -82,6 +82,11 @@ const AppLoader = (() => {
         // 4. Initialize Router & Android Hardware/WebView Navigation
         Router.init();
         if (typeof AndroidNavigation !== 'undefined') AndroidNavigation.init();
+        if (typeof AuthModal !== 'undefined' && typeof AuthModal.restore === 'function') {
+            if (AuthModal.restore()) {
+                AuthModal.mount();
+            }
+        }
         AppLoader.updateSplash('Preparing Hub Experience...', 95);
 
         let subscriptionsStarted = false;
@@ -94,7 +99,14 @@ const AppLoader = (() => {
             Sidebar.mount();
             
             if (session) {
-                AuthModal.close();
+                // Do not close AuthModal if user is currently verifying OTP or entering new password
+                if (typeof AuthModal !== 'undefined' && typeof AuthModal.isPendingPasswordOrOtp === 'function') {
+                    if (!AuthModal.isPendingPasswordOrOtp()) {
+                        AuthModal.close();
+                    }
+                } else {
+                    AuthModal.close();
+                }
             }
             
             const newUserId = session?.user?.id || null;
@@ -103,7 +115,9 @@ const AppLoader = (() => {
                 if (ICCSupabase.needsOnboarding()) {
                     window.location.hash = '#onboarding';
                 } else {
-                    if (typeof ProfileCompletionModal !== 'undefined') ProfileCompletionModal.checkAndShow();
+                    if (typeof ProfileCompletionModal !== 'undefined' && (!AuthModal.isPendingPasswordOrOtp || !AuthModal.isPendingPasswordOrOtp())) {
+                        ProfileCompletionModal.checkAndShow();
+                    }
                     if (!isInitialRouteHandled || (newUserId && currentUserId && newUserId !== currentUserId)) {
                         isInitialRouteHandled = true;
                         const currentHash = window.location.hash;

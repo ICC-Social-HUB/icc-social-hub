@@ -10,17 +10,73 @@ const AuthModal = (() => {
     let loading = false;
     let errorMsg = '';
 
+    const STORAGE_KEY = 'icc_auth_flow_state';
+
+    function saveState() {
+        if (!isOpen || step === 'main') {
+            clearState();
+            return;
+        }
+        if (['otp-sent', 'set-password', 'forgot-email', 'forgot-otp', 'forgot-reset'].includes(step)) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    isOpen: true,
+                    step: step,
+                    authMode: authMode,
+                    email: email,
+                    timestamp: Date.now()
+                }));
+            } catch (e) {}
+        }
+    }
+
+    function clearState() {
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+        } catch (e) {}
+    }
+
+    function restoreState() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return false;
+            const data = JSON.parse(raw);
+            if (!data || !data.timestamp || (Date.now() - data.timestamp > 15 * 60 * 1000)) {
+                clearState();
+                return false;
+            }
+            if (data.isOpen && ['otp-sent', 'set-password', 'forgot-email', 'forgot-otp', 'forgot-reset'].includes(data.step)) {
+                isOpen = true;
+                step = data.step;
+                authMode = data.authMode || 'login';
+                email = data.email || '';
+                loading = false;
+                errorMsg = '';
+                return true;
+            }
+        } catch (e) {
+            clearState();
+        }
+        return false;
+    }
+
+    function isPendingPasswordOrOtp() {
+        return isOpen && ['otp-sent', 'set-password', 'forgot-email', 'forgot-otp', 'forgot-reset'].includes(step);
+    }
+
     function open(startStep = 'main', targetEmail = '') {
         isOpen = true; 
         step = startStep; 
         email = targetEmail; 
         loading = false; 
         errorMsg = '';
+        saveState();
         mount(); 
         document.body.style.overflow = 'hidden';
     }
     function close() {
         isOpen = false; errorMsg = ''; loading = false;
+        clearState();
         mount(); document.body.style.overflow = '';
     }
 
@@ -114,7 +170,7 @@ const AuthModal = (() => {
         </div>
         <form id="otp-verify-form" class="space-y-4">
             <div class="flex justify-center gap-2" id="otp-inputs">
-                ${[0,1,2,3,4,5].map(i => `<input type="text" maxlength="1" class="otp-input" data-idx="${i}" inputmode="numeric" autocomplete="one-time-code">`).join('')}
+                ${[0,1,2,3,4,5].map(i => `<input type="text" maxlength="6" class="otp-input" data-idx="${i}" inputmode="numeric" autocomplete="one-time-code">`).join('')}
             </div>
             ${errorMsg ? `<div class="px-3 py-2 bg-red-900/30 border border-red-800/50 rounded-lg"><p class="text-sm text-red-400">${errorMsg}</p></div>` : ''}
             <button type="submit" class="w-full py-3 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50" ${loading ? 'disabled' : ''}>
@@ -181,7 +237,7 @@ const AuthModal = (() => {
         </div>
         <form id="forgot-otp-form" class="space-y-4">
             <div class="flex justify-center gap-2" id="otp-inputs">
-                ${[0,1,2,3,4,5].map(i => `<input type="text" maxlength="1" class="otp-input" data-idx="${i}" inputmode="numeric" autocomplete="one-time-code">`).join('')}
+                ${[0,1,2,3,4,5].map(i => `<input type="text" maxlength="6" class="otp-input" data-idx="${i}" inputmode="numeric" autocomplete="one-time-code">`).join('')}
             </div>
             ${errorMsg ? `<div class="px-3 py-2 bg-red-900/30 border border-red-800/50 rounded-lg"><p class="text-sm text-red-400">${errorMsg}</p></div>` : ''}
             <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-black rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50" ${loading ? 'disabled' : ''}>
@@ -385,7 +441,7 @@ const AuthModal = (() => {
                 const { error } = await ICCSupabase.sendOTP(email, metadata);
                 loading = false;
                 if (error) { errorMsg = error.message; mount(); }
-                else { step = 'otp-sent'; mount(); setupOTPInputs(); }
+                else { step = 'otp-sent'; saveState(); mount(); setupOTPInputs(); }
             }
         });
 
@@ -400,7 +456,7 @@ const AuthModal = (() => {
             const { error } = await ICCSupabase.verifyOTP(email, code);
             loading = false;
             if (error) { errorMsg = error.message; mount(); setupOTPInputs(); }
-            else { step = 'set-password'; mount(); }
+            else { step = 'set-password'; saveState(); mount(); }
         });
 
         // Set Password form
@@ -415,21 +471,21 @@ const AuthModal = (() => {
             const { error } = await ICCSupabase.updatePassword(p1);
             loading = false;
             if (error) { errorMsg = error.message; mount(); }
-            else { close(); handleAuthSuccess(); }
+            else { clearState(); close(); handleAuthSuccess(); }
         });
 
         // Back buttons
         document.getElementById('otp-back-btn')?.addEventListener('click', () => {
-            step = 'main'; errorMsg = ''; mount();
+            step = 'main'; clearState(); errorMsg = ''; mount();
         });
         document.getElementById('forgot-password-btn')?.addEventListener('click', () => {
-            step = 'forgot-email'; errorMsg = ''; mount();
+            step = 'forgot-email'; saveState(); errorMsg = ''; mount();
         });
         document.getElementById('forgot-back-btn')?.addEventListener('click', () => {
-            step = 'main'; authMode = 'login'; errorMsg = ''; mount();
+            step = 'main'; clearState(); authMode = 'login'; errorMsg = ''; mount();
         });
         document.getElementById('forgot-otp-back-btn')?.addEventListener('click', () => {
-            step = 'forgot-email'; errorMsg = ''; mount();
+            step = 'forgot-email'; saveState(); errorMsg = ''; mount();
         });
 
         // Forgot password — send OTP
@@ -446,7 +502,7 @@ const AuthModal = (() => {
             const { error } = await ICCSupabase.sendOTP(email);
             loading = false;
             if (error) { errorMsg = error.message; mount(); }
-            else { step = 'forgot-otp'; mount(); setupOTPInputs(); }
+            else { step = 'forgot-otp'; saveState(); mount(); setupOTPInputs(); }
         });
 
         // Forgot password — verify OTP
@@ -459,7 +515,7 @@ const AuthModal = (() => {
             const { error } = await ICCSupabase.verifyOTP(email, code);
             loading = false;
             if (error) { errorMsg = error.message; mount(); setupOTPInputs(); }
-            else { step = 'forgot-reset'; mount(); }
+            else { step = 'forgot-reset'; saveState(); mount(); }
         });
 
         // Forgot password — set new password
@@ -474,7 +530,7 @@ const AuthModal = (() => {
             const { error } = await ICCSupabase.updatePassword(p1);
             loading = false;
             if (error) { errorMsg = error.message; mount(); }
-            else { close(); Toast.success('Password reset successfully! 🔑'); handleAuthSuccess(); }
+            else { clearState(); close(); Toast.success('Password reset successfully! 🔑'); handleAuthSuccess(); }
         });
 
         // ESC key
@@ -485,25 +541,104 @@ const AuthModal = (() => {
     }
 
     function setupOTPInputs() {
-        const inputs = document.querySelectorAll('.otp-input');
+        const inputs = Array.from(document.querySelectorAll('.otp-input'));
+        const container = document.getElementById('otp-inputs');
+        if (!inputs.length) return;
+
+        function distributeCode(rawText, startIndex = 0) {
+            if (!rawText) return;
+            // Clean up: strip non-digits (handles "123-456", "123 456", "Code: 123456", etc.)
+            const digits = String(rawText).replace(/\D/g, '');
+            if (!digits) return;
+
+            // If 4 or more digits pasted, user pasted full/partial code -> fill from 0
+            const start = digits.length >= 4 ? 0 : startIndex;
+            const slice = digits.slice(0, 6 - start);
+
+            for (let j = 0; j < slice.length; j++) {
+                const targetIdx = start + j;
+                if (inputs[targetIdx]) {
+                    inputs[targetIdx].value = slice[j];
+                }
+            }
+
+            // Find first empty input or focus the 6th input
+            const nextEmpty = inputs.findIndex(inp => !inp.value);
+            if (nextEmpty !== -1) {
+                inputs[nextEmpty].focus();
+            } else if (inputs[inputs.length - 1]) {
+                inputs[inputs.length - 1].focus();
+            }
+        }
+
+        const handlePaste = e => {
+            e.preventDefault();
+            const clip = e.clipboardData || window.clipboardData;
+            const text = clip ? clip.getData('text') : '';
+            const idx = inputs.indexOf(e.target);
+            distributeCode(text, idx !== -1 ? idx : 0);
+        };
+
+        if (container) {
+            container.removeEventListener('paste', handlePaste);
+            container.addEventListener('paste', handlePaste);
+        }
+
         inputs.forEach((inp, i) => {
+            inp.addEventListener('paste', handlePaste);
+
             inp.addEventListener('input', e => {
-                if (e.target.value && i < 5) inputs[i + 1].focus();
+                const val = inp.value;
+                const digits = val.replace(/\D/g, '');
+
+                if (digits.length > 1) {
+                    // Pasted or autofilled into input directly (e.g. mobile keyboard suggestion)
+                    distributeCode(digits, i);
+                    return;
+                }
+
+                inp.value = digits;
+                if (digits && i < inputs.length - 1) {
+                    inputs[i + 1].focus();
+                }
             });
+
             inp.addEventListener('keydown', e => {
-                if (e.key === 'Backspace' && !e.target.value && i > 0) inputs[i - 1].focus();
+                if (e.key === 'Backspace') {
+                    if (!inp.value && i > 0) {
+                        inputs[i - 1].focus();
+                        inputs[i - 1].value = '';
+                        e.preventDefault();
+                    }
+                } else if (e.key === 'ArrowLeft' && i > 0) {
+                    inputs[i - 1].focus();
+                } else if (e.key === 'ArrowRight' && i < inputs.length - 1) {
+                    inputs[i + 1].focus();
+                } else if (e.key === 'Enter') {
+                    const code = inputs.map(el => el.value).join('');
+                    if (code.length === 6) {
+                        const form = inp.closest('form');
+                        if (form) {
+                            e.preventDefault();
+                            if (typeof form.requestSubmit === 'function') form.requestSubmit();
+                            else form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                        }
+                    }
+                }
             });
-            inp.addEventListener('paste', e => {
-                e.preventDefault();
-                const text = (e.clipboardData || window.clipboardData).getData('text').trim();
-                for (let j = 0; j < Math.min(text.length, 6); j++) { inputs[j].value = text[j]; }
-                if (text.length >= 6) inputs[5].focus();
+
+            inp.addEventListener('focus', () => {
+                inp.select();
             });
         });
-        inputs[0]?.focus();
+
+        // Autofocus first empty input or input 0
+        const firstEmpty = inputs.find(inp => !inp.value);
+        (firstEmpty || inputs[0])?.focus();
     }
 
     function handleAuthSuccess() {
+        clearState();
         BottomNav.mount();
         if (ICCSupabase.needsOnboarding()) {
             window.location.hash = '#onboarding';
@@ -513,6 +648,9 @@ const AuthModal = (() => {
         Toast.success('Welcome to ICC! 🚀');
     }
 
-    return { open, close, mount };
+    // Attempt to restore any pending flow from previous session
+    restoreState();
+
+    return { open, close, mount, restore: restoreState, isPendingPasswordOrOtp, clearState };
 })();
 

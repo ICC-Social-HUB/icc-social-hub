@@ -55,7 +55,13 @@ const ICCSupabase = (() => {
             if (contentType && contentType.indexOf("application/json") !== -1) {
                 const data = await res.json();
                 if (res.ok && data.success !== false) {
-                    if (data.userId) sessionStorage.setItem('icc_auth_userid', data.userId);
+                    if (data.userId) {
+                        try {
+                            sessionStorage.setItem('icc_auth_userid', data.userId);
+                            localStorage.setItem('icc_auth_userid', data.userId);
+                            localStorage.setItem('icc_auth_userid_time', Date.now().toString());
+                        } catch(e) {}
+                    }
                     return { data, error: null };
                 } else {
                     return { error: { message: data.error || 'Failed to send OTP' } };
@@ -75,7 +81,18 @@ const ICCSupabase = (() => {
     async function verifyOTP(email, token) {
         if (!client) return { error: { message: 'Supabase not configured' } };
         
-        const userId = sessionStorage.getItem('icc_auth_userid');
+        let userId = sessionStorage.getItem('icc_auth_userid') || localStorage.getItem('icc_auth_userid');
+        const time = parseInt(localStorage.getItem('icc_auth_userid_time') || '0', 10);
+        if (time && (Date.now() - time > 15 * 60 * 1000)) {
+            try {
+                localStorage.removeItem('icc_auth_userid');
+                localStorage.removeItem('icc_auth_userid_time');
+            } catch(e) {}
+            userId = null;
+        }
+        if (!userId && currentUser?.id) {
+            userId = currentUser.id;
+        }
         if (!userId) return { error: { message: 'Auth session expired. Please try sending the code again.' } };
 
         try {
@@ -97,7 +114,11 @@ const ICCSupabase = (() => {
                     if (signInError) return { error: signInError };
                     
                     // Cleanup
-                    sessionStorage.removeItem('icc_auth_userid');
+                    try {
+                        sessionStorage.removeItem('icc_auth_userid');
+                        localStorage.removeItem('icc_auth_userid');
+                        localStorage.removeItem('icc_auth_userid_time');
+                    } catch(e) {}
                     return { data, error: null };
                 } else {
                     return { error: { message: data.error || 'Verification failed' } };
