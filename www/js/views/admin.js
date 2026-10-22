@@ -1148,7 +1148,7 @@ const AdminView = (() => {
                                     <div class="flex items-center justify-between p-3 bg-zinc-950/70 rounded-xl border border-zinc-800">
                                         <div>
                                             <span class="text-xs font-semibold text-white block">⚡ Master Toggle: Full Access (All Admin Features)</span>
-                                            <span class="text-[10px] text-zinc-400">${isMentorRole ? 'Grant or remove administrator feature permissions for this mentor' : 'Grant or remove all 6 administrator permissions simultaneously'}</span>
+                                            <span class="text-[10px] text-zinc-400">${isMentorRole ? 'Grant or remove administrator feature permissions for this mentor' : 'Grant or remove all administrator feature permissions simultaneously'}</span>
                                         </div>
                                         <label class="switch-container">
                                             <input type="checkbox" class="switch-input admin-all-perm-toggle" data-user-id="${u.id}" data-name="${escapeHtml(fullName)}" ${perms.all ? 'checked' : ''}>

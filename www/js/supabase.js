@@ -2003,8 +2003,9 @@ const ICCSupabase = (() => {
             const ue = !!permissions.users_edit;
             const ux = !!permissions.users_export;
             const mom = !!permissions.mom;
-            // `all` is true only when ALL 7 features are enabled — always recompute, never trust caller's value
-            const computedAll = b && m && ev && l && ue && ux && mom;
+            const inv = !!permissions.inventory;
+            // `all` is true only when ALL 8 features are enabled — always recompute, never trust caller's value
+            const computedAll = b && m && ev && l && ue && ux && mom && inv;
 
             const cleanPermissions = {
                 broadcast: b,
@@ -2015,6 +2016,7 @@ const ICCSupabase = (() => {
                 users_export: ux,
                 users: ue || ux,
                 mom: mom,
+                inventory: inv,
                 all: computedAll
             };
 
