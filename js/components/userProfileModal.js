@@ -277,13 +277,20 @@ const UserProfileModal = (() => {
                             ${projects.map(p => `
                             <a href="#teams/${p.id}" class="user-profile-project-card group flex flex-col justify-between bg-[#17212b] hover:bg-[#202b38] border border-white/[0.06] hover:border-white/15 rounded-2xl p-3.5 transition-all duration-200 hover:-translate-y-0.5 shadow-md active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3390ec]" title="Open ${escapeHtml(p.name)}">
                                 <div>
-                                    <div class="aspect-[16/9] rounded-xl bg-gradient-to-br ${p.gradient || 'from-blue-600 to-indigo-600'} p-2.5 flex items-center justify-between shadow-inner relative overflow-hidden mb-3">
-                                        <div class="w-8 h-8 rounded-lg bg-black/35 backdrop-blur-md flex items-center justify-center text-white font-bold text-xs shadow-sm">
-                                            ${p.initials}
+                                    <div class="aspect-[16/9] rounded-xl bg-zinc-900 border border-white/[0.04] p-2.5 flex flex-col justify-between shadow-inner relative overflow-hidden mb-3">
+                                        <div class="absolute inset-0 bg-gradient-to-br ${p.gradient || 'from-blue-600 to-indigo-600'}"></div>
+                                        ${(p.avatar_url || p.image_url || p.image) ? `
+                                            <img src="${p.avatar_url || p.image_url || p.image}" alt="${escapeHtml(p.name)}" onerror="this.remove()" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                                            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/30 pointer-events-none"></div>
+                                        ` : ''}
+                                        <div class="relative z-10 flex items-center justify-between w-full">
+                                            <div class="w-8 h-8 rounded-lg bg-black/50 backdrop-blur-md flex items-center justify-center text-white font-bold text-xs shadow-sm border border-white/10">
+                                                ${p.initials}
+                                            </div>
+                                            <span class="text-[10px] font-bold uppercase tracking-wider text-white/95 bg-black/60 px-2.5 py-1 rounded-full backdrop-blur-md border border-white/10">
+                                                ${p.is_lead ? 'Team Lead' : 'Project'}
+                                            </span>
                                         </div>
-                                        <span class="text-[10px] font-bold uppercase tracking-wider text-white/95 bg-black/40 px-2.5 py-1 rounded-full backdrop-blur-xs">
-                                            ${p.is_lead ? 'Team Lead' : 'Project'}
-                                        </span>
                                     </div>
                                     <h3 class="font-heading font-bold text-sm text-white group-hover:text-[#3390ec] transition-colors line-clamp-2 leading-snug">
                                         ${escapeHtml(p.name)}

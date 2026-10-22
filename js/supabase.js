@@ -4509,6 +4509,7 @@ const ICCSupabase = (() => {
                         name: lead.team || lead.project_name || `Project ${lead.id}`,
                         lead_name: lead.name,
                         initials: lead.initials || (lead.team ? lead.team.replace(/Team\s*/i, '').slice(0, 2).toUpperCase() : 'PR'),
+                        avatar_url: lead.avatar_url || lead.image_url || lead.image || lead.picture || null,
                         gradient: lead.gradient || 'from-blue-600 to-indigo-600',
                         color: lead.color || '#3390ec',
                         specialties: Array.isArray(lead.specialties) ? lead.specialties : [],
