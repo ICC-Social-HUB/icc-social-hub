@@ -77,7 +77,7 @@ const EventsView = (() => {
             </div>
             <div class="p-4">
                 <h3 class="font-heading font-bold text-lg text-white mb-1 group-hover:text-crimson transition-colors line-clamp-1">${event.title}</h3>
-                <p class="text-xs text-zinc-400 line-clamp-2">${event.description || 'No description available.'}</p>
+                <p class="text-xs text-zinc-400 line-clamp-2">${stripHtml(event.description) || 'No description available.'}</p>
                 
                 <div class="mt-4 flex items-center justify-between">
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${event.status === 'upcoming' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-500'}">

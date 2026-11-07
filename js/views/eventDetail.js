@@ -4,6 +4,39 @@
 const EventDetailView = (() => {
     let currentEvent = null;
 
+    function escapeHtml(str) {
+        if (!str && str !== 0) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function sanitizeEventHtml(html) {
+        if (!html) return '';
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+        temp.querySelectorAll('script, style, iframe, object, embed, form, input, button, textarea, meta, link, svg, applet, noscript').forEach(el => el.remove());
+        const all = temp.querySelectorAll('*');
+        all.forEach(el => {
+            for (let i = el.attributes.length - 1; i >= 0; i--) {
+                const attr = el.attributes[i];
+                const name = attr.name.toLowerCase();
+                const val = attr.value.trim().toLowerCase();
+                if (name.startsWith('on') || val.startsWith('javascript:')) {
+                    el.removeAttribute(attr.name);
+                }
+            }
+            if (el.tagName === 'A') {
+                el.setAttribute('target', '_blank');
+                el.setAttribute('rel', 'noopener noreferrer');
+            }
+        });
+        return temp.innerHTML;
+    }
+
     function render() {
         if (!currentEvent) {
             return `
@@ -47,8 +80,14 @@ const EventDetailView = (() => {
             </div>`;
         }
 
-        // Format description nicely (convert newlines to paragraphs)
-        const descHtml = (currentEvent.description || '').split('\\n').filter(p => p.trim() !== '').map(p => `<p class="mb-4 last:mb-0 leading-relaxed">${p}</p>`).join('');
+        // Format description nicely (supports rich HTML or legacy plain text with newlines)
+        const rawDesc = currentEvent.description || '';
+        let descHtml = '';
+        if (/<[a-z][\s\S]*>/i.test(rawDesc)) {
+            descHtml = sanitizeEventHtml(rawDesc);
+        } else {
+            descHtml = rawDesc.split(/\r?\n/).filter(p => p.trim() !== '').map(p => `<p class="mb-4 last:mb-0 leading-relaxed">${escapeHtml(p)}</p>`).join('');
+        }
 
         return `
         <div class="pb-16 relative">
@@ -90,7 +129,7 @@ const EventDetailView = (() => {
                     </div>
                     ` : '<div class="mb-8 pb-8 border-b border-zinc-800/50"></div>'}
 
-                    <div class="prose prose-invert prose-zinc max-w-none text-zinc-300 text-[15px] md:text-base">
+                    <div class="prose prose-invert prose-zinc prose-clean max-w-none text-zinc-300 text-[15px] md:text-base leading-relaxed">
                         ${descHtml}
                     </div>
                 </div>

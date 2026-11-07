@@ -33,6 +33,89 @@ const AdminView = (() => {
             .replace(/'/g, '&#039;');
     }
 
+    function sanitizeAndCleanEventHtml(rawHtml) {
+        if (!rawHtml) return '';
+        const temp = document.createElement('div');
+        temp.innerHTML = rawHtml;
+
+        // 1. Remove dangerous or unwanted tags
+        const blockedTags = temp.querySelectorAll('script, style, iframe, object, embed, form, input, button, textarea, meta, link, svg, applet, noscript');
+        blockedTags.forEach(el => el.remove());
+
+        // 2. Handle Google Docs fake bold (<b style="font-weight:normal"> / <strong style="font-weight:400">)
+        temp.querySelectorAll('b, strong').forEach(el => {
+            const style = el.getAttribute('style') || '';
+            if (/font-weight\s*:\s*(normal|400)/i.test(style)) {
+                const span = document.createElement('span');
+                span.innerHTML = el.innerHTML;
+                el.replaceWith(span);
+            }
+        });
+
+        // 3. Convert CSS style-based formatting to semantic tags before stripping styles
+        const all = temp.querySelectorAll('*');
+        all.forEach(el => {
+            const style = el.getAttribute('style') || '';
+            const isBold = /font-weight\s*:\s*(bold|[6-9]00)/i.test(style);
+            const isItalic = /font-style\s*:\s*italic/i.test(style);
+            const isUnderline = /text-decoration\s*:\s*[^;]*underline/i.test(style);
+            const isStrike = /text-decoration\s*:\s*[^;]*line-through/i.test(style);
+
+            if (isBold && el.tagName !== 'B' && el.tagName !== 'STRONG') {
+                const b = document.createElement('strong');
+                b.innerHTML = el.innerHTML;
+                el.innerHTML = '';
+                el.appendChild(b);
+            }
+            if (isItalic && el.tagName !== 'I' && el.tagName !== 'EM') {
+                const i = document.createElement('em');
+                i.innerHTML = el.innerHTML;
+                el.innerHTML = '';
+                el.appendChild(i);
+            }
+            if (isUnderline && el.tagName !== 'U') {
+                const u = document.createElement('u');
+                u.innerHTML = el.innerHTML;
+                el.innerHTML = '';
+                el.appendChild(u);
+            }
+            if (isStrike && el.tagName !== 'S' && el.tagName !== 'STRIKE') {
+                const s = document.createElement('s');
+                s.innerHTML = el.innerHTML;
+                el.innerHTML = '';
+                el.appendChild(s);
+            }
+
+            // Remove dangerous event handlers and URLs
+            for (let i = el.attributes.length - 1; i >= 0; i--) {
+                const attr = el.attributes[i];
+                const name = attr.name.toLowerCase();
+                const val = attr.value.trim().toLowerCase();
+                if (name.startsWith('on') || val.startsWith('javascript:') || val.startsWith('data:text/html')) {
+                    el.removeAttribute(attr.name);
+                }
+            }
+
+            // Strip style and unwanted presentation attributes to prevent black text / white background issues
+            el.removeAttribute('style');
+            el.removeAttribute('class');
+            el.removeAttribute('face');
+            el.removeAttribute('color');
+            el.removeAttribute('bgcolor');
+
+            if (el.tagName === 'A') {
+                el.setAttribute('target', '_blank');
+                el.setAttribute('rel', 'noopener noreferrer');
+            }
+        });
+
+        // 4. Remove base64 data URIs from images
+        temp.querySelectorAll('img[src^="data:"]').forEach(img => img.remove());
+
+        return temp.innerHTML;
+    }
+
+
     function updateAttendanceStats(records) {
         attendanceMap = {};
         if (!Array.isArray(records)) return;
@@ -1523,7 +1606,69 @@ const AdminView = (() => {
                         <input type="file" id="event-gallery-files" accept="image/*" multiple class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white">
                         <p class="text-[10px] text-zinc-500 mt-1">Selecting new images will replace the existing gallery.</p>
                     </div>
-                    <div><label class="block text-xs font-medium text-zinc-400 mb-1">Description (Rich Text/HTML supported)</label><textarea id="event-desc" rows="5" class="form-input w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white resize-none" required>${editingEvent.description || ''}</textarea></div>
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-xs font-medium text-zinc-300">Description <span class="text-crimson">*</span></label>
+                            <span class="text-[10px] text-zinc-500 font-mono">Formatted Text &amp; Rich Paste Supported</span>
+                        </div>
+
+                        <!-- Rich Formatting Editor Container -->
+                        <div class="border border-zinc-800 rounded-xl overflow-hidden focus-within:border-crimson transition-colors shadow-inner">
+                            <!-- Formatting Toolbar -->
+                            <div class="flex flex-wrap items-center gap-1 p-2 bg-zinc-900/95 border-b border-zinc-800 select-none" id="event-desc-toolbar">
+                                <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs font-bold transition-colors cursor-pointer active:scale-95" data-cmd="bold" title="Bold (Ctrl+B)">
+                                    <b>B</b>
+                                </button>
+                                <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs italic font-serif transition-colors cursor-pointer active:scale-95" data-cmd="italic" title="Italic (Ctrl+I)">
+                                    <i>I</i>
+                                </button>
+                                <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs underline transition-colors cursor-pointer active:scale-95" data-cmd="underline" title="Underline (Ctrl+U)">
+                                    <u>U</u>
+                                </button>
+                                <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs line-through transition-colors cursor-pointer active:scale-95" data-cmd="strikeThrough" title="Strikethrough">
+                                    <s>S</s>
+                                </button>
+
+                                <span class="w-[1px] h-4 bg-zinc-700 mx-1"></span>
+
+                                <button type="button" class="toolbar-btn px-2 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs font-semibold transition-colors cursor-pointer active:scale-95" data-cmd="formatBlock" data-val="<h3>" title="Heading 1">
+                                    H1
+                                </button>
+                                <button type="button" class="toolbar-btn px-2 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs font-semibold transition-colors cursor-pointer active:scale-95" data-cmd="formatBlock" data-val="<h4>" title="Heading 2">
+                                    H2
+                                </button>
+
+                                <span class="w-[1px] h-4 bg-zinc-700 mx-1"></span>
+
+                                <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs transition-colors cursor-pointer active:scale-95" data-cmd="insertUnorderedList" title="Bulleted List">
+                                    • List
+                                </button>
+                                <button type="button" class="toolbar-btn px-2.5 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs transition-colors cursor-pointer active:scale-95" data-cmd="insertOrderedList" title="Numbered List">
+                                    1. List
+                                </button>
+
+                                <span class="w-[1px] h-4 bg-zinc-700 mx-1"></span>
+
+                                <button type="button" class="toolbar-btn px-2 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md text-xs transition-colors cursor-pointer active:scale-95" data-cmd="createLink" title="Insert Link">
+                                    🔗 Link
+                                </button>
+                                <button type="button" class="toolbar-btn px-2 py-1 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 rounded-md text-xs transition-colors cursor-pointer active:scale-95" data-cmd="removeFormat" title="Clear Formatting">
+                                    ⌫ Clear
+                                </button>
+                            </div>
+
+                            <!-- Contenteditable Rich Editor Area -->
+                            <div id="event-desc-editor"
+                                 contenteditable="true"
+                                 class="prose-clean min-h-[200px] max-h-[460px] overflow-y-auto p-4 bg-zinc-950 text-sm text-zinc-200 outline-none leading-relaxed"
+                                 placeholder="Type or paste formatted event description (bold, underline, lists, links supported)..."></div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between text-[11px] text-zinc-500 mt-1.5 px-0.5 gap-2">
+                            <span>📋 Formatted text pasting supported from Google Docs, Word &amp; web pages.</span>
+                            <span>Shortcuts: Ctrl+B (Bold), Ctrl+U (Underline), Ctrl+I (Italic)</span>
+                        </div>
+                    </div>
                     
                     <div class="border-t border-zinc-800/50 pt-4 mt-4">
                         <label class="block text-xs font-medium text-zinc-400 mb-2">Dynamic Action Buttons</label>
@@ -2512,6 +2657,83 @@ const AdminView = (() => {
             });
         });
 
+                // ==================== EVENT DESCRIPTION RICH EDITOR SETUP ====================
+        const descEditor = container.querySelector('#event-desc-editor');
+        if (descEditor) {
+            // Populate existing description
+            if (editingEvent && editingEvent.description) {
+                const desc = editingEvent.description;
+                if (/<[a-z][\s\S]*>/i.test(desc)) {
+                    descEditor.innerHTML = sanitizeAndCleanEventHtml(desc);
+                } else {
+                    descEditor.innerHTML = desc.split(/\r?\n/).filter(Boolean).map(p => `<p>${escapeHtml(p)}</p>`).join('');
+                }
+            }
+
+            // Toolbar click handlers
+            const toolbar = container.querySelector('#event-desc-toolbar');
+            if (toolbar) {
+                toolbar.querySelectorAll('.toolbar-btn').forEach(btn => {
+                    btn.addEventListener('mousedown', (e) => {
+                        e.preventDefault(); // Prevents editor from losing focus/selection
+                    });
+                    btn.addEventListener('click', () => {
+                        const cmd = btn.dataset.cmd;
+                        const val = btn.dataset.val || null;
+
+                        if (cmd === 'createLink') {
+                            const url = prompt('Enter website link URL:', 'https://');
+                            if (url && url.trim()) {
+                                let validUrl = url.trim();
+                                if (!/^https?:\/\//i.test(validUrl)) validUrl = 'https://' + validUrl;
+                                document.execCommand('createLink', false, validUrl);
+                            }
+                        } else {
+                            document.execCommand(cmd, false, val);
+                        }
+                        descEditor.focus();
+                    });
+                });
+            }
+
+            // Keyboard shortcuts (Ctrl+B, Ctrl+I, Ctrl+U)
+            descEditor.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    const key = e.key.toLowerCase();
+                    if (key === 'b') {
+                        e.preventDefault();
+                        document.execCommand('bold', false, null);
+                    } else if (key === 'i') {
+                        e.preventDefault();
+                        document.execCommand('italic', false, null);
+                    } else if (key === 'u') {
+                        e.preventDefault();
+                        document.execCommand('underline', false, null);
+                    }
+                }
+            });
+
+            // Rich paste handling (preserving bold, underline, italic, lists, headings, links)
+            descEditor.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const html = e.clipboardData?.getData('text/html');
+                const text = e.clipboardData?.getData('text/plain') || '';
+
+                if (html) {
+                    const cleaned = sanitizeAndCleanEventHtml(html);
+                    if (cleaned && cleaned.trim()) {
+                        document.execCommand('insertHTML', false, cleaned);
+                        return;
+                    }
+                }
+
+                if (text) {
+                    const formatted = text.split(/\r?\n/).map(line => line.trim() ? `<p>${escapeHtml(line)}</p>` : '<br>').join('');
+                    document.execCommand('insertHTML', false, formatted);
+                }
+            });
+        }
+
         document.getElementById('event-edit-form')?.addEventListener('submit', async e => {
             e.preventDefault();
             const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -2557,11 +2779,26 @@ const AdminView = (() => {
                 gallery_urls = newGalleryUrls;
             }
 
+            const descEditorEl = document.getElementById('event-desc-editor');
+            let eventDescription = '';
+            if (descEditorEl) {
+                eventDescription = sanitizeAndCleanEventHtml(descEditorEl.innerHTML).trim();
+            } else {
+                eventDescription = document.getElementById('event-desc')?.value?.trim() || '';
+            }
+
+            const textContent = descEditorEl ? (descEditorEl.textContent || '').trim() : eventDescription;
+            if (!textContent && !eventDescription) {
+                Toast.error('Please enter an event description.');
+                submitBtn.disabled = false; submitBtn.textContent = 'Save Event';
+                return;
+            }
+
             const fields = {
                 title: document.getElementById('event-title').value.trim(),
                 event_date: new Date(document.getElementById('event-date').value).toISOString(),
                 status: document.getElementById('event-status').value,
-                description: document.getElementById('event-desc').value.trim(),
+                description: eventDescription,
                 banner_url: banner_url,
                 gallery_urls: gallery_urls,
                 action_buttons: actionButtons
