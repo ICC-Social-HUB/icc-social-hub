@@ -2959,7 +2959,7 @@ const ICCSupabase = (() => {
         if (!client) return [];
         const { data, error } = await client.from('events')
             .select('*')
-            .order('event_date', { ascending: true });
+            .order('created_at', { ascending: false });
         if (error) console.error('fetchEvents error:', error);
         return data || [];
     }

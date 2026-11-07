@@ -4,9 +4,22 @@
 const EventsView = (() => {
     let allEvents = [];
 
+    function getEventSortTime(e) {
+        const time = new Date(e.created_at || e.event_date || 0).getTime();
+        return isNaN(time) ? 0 : time;
+    }
+
+        function stripHtml(html) {
+        if (!html) return '';
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+        return (temp.textContent || temp.innerText || '').replace(/\s+/g, ' ').trim();
+    }
+
     function render() {
-        const upcoming = allEvents.filter(e => e.status === 'upcoming');
-        const past = allEvents.filter(e => e.status === 'past');
+        const sortedEvents = [...allEvents].sort((a, b) => getEventSortTime(b) - getEventSortTime(a));
+        const upcoming = sortedEvents.filter(e => e.status === 'upcoming');
+        const past = sortedEvents.filter(e => e.status === 'past');
 
         return `
         <div class="max-w-4xl mx-auto px-4 py-8">

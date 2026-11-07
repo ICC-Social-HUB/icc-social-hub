@@ -59,3 +59,4 @@ android/local.properties
 *.apk
 !assets/icc-social-hub.apk
 !www/assets/icc-social-hub.apk
+.aider*

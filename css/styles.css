@@ -1601,7 +1601,7 @@ input, select, textarea { font-size: 16px !important; }
 .prose-clean u {
     text-decoration: underline;
     text-underline-offset: 3px;
-    text-decoration-color: rgba(16, 185, 129, 0.6);
+    text-decoration-color: currentColor;
 }
 .prose-clean s, .prose-clean strike {
     text-decoration: line-through;
