@@ -19,6 +19,7 @@ const AdminView = (() => {
     let userTeamFilter = '';
     let accessSearchQuery = '';
     let accessRoleFilter = 'all'; // 'all', 'super_admin', 'admin'
+    let isAddingMentor = false;
     let appointingUserId = null;
     let appointingUserDraft = null; // { broadcast, moderate, events, leads, users, all, isSuperAdmin }
     let usersSubSection = null; // 'roster' | 'requests'
@@ -1011,15 +1012,81 @@ const AdminView = (() => {
                 </div>
             </div>
 
-            <!-- SECTION 1: SEARCH & APPOINT NEW ADMIN -->
+            <!-- SECTION 1: SEARCH & APPOINT / ADD NEW MENTORS -->
             <div class="glass-card rounded-2xl p-5 border border-zinc-800">
-                <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <div class="flex items-center justify-between mb-3 flex-wrap gap-3">
                     <div>
                         <h4 class="font-heading font-semibold text-sm text-white flex items-center gap-2">
                             <span>🛡️ Search & Appoint Administrators & Mentors</span>
                         </h4>
-                        <p class="text-[11px] text-zinc-400">Search any registered member to grant Mentor, Administrator, or Super Admin privileges.</p>
+                        <p class="text-[11px] text-zinc-400">Search registered members or authorize external faculty/industry Mentors by email.</p>
                     </div>
+                    <button type="button" id="open-add-mentor-btn" class="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold rounded-xl text-xs transition-all shadow-md shadow-amber-500/20 active:scale-95 flex items-center gap-1.5 cursor-pointer">
+                        <span>🎓 + Add New Mentor</span>
+                    </button>
+                </div>
+
+                <!-- Add New Mentor Form Panel -->
+                <div id="add-mentor-panel" class="${isAddingMentor ? '' : 'hidden'} mb-4 p-5 rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-500/10 via-zinc-900/95 to-zinc-900 shadow-xl border-dashed animate-fade-in space-y-4">
+                    <div class="flex items-start justify-between border-b border-amber-500/20 pb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-lg font-bold">
+                                🎓
+                            </div>
+                            <div>
+                                <h5 class="text-sm font-bold text-white">Add New Mentor / Faculty Advisor</h5>
+                                <p class="text-[11px] text-zinc-400">Authorizes a mentor by email. When they log in with this email, they enter the Mentor Portal directly without student requirements.</p>
+                            </div>
+                        </div>
+                        <button type="button" id="close-add-mentor-btn" class="text-xs text-zinc-400 hover:text-white px-2 py-1 bg-zinc-800/80 rounded-lg transition-colors cursor-pointer">✕ Cancel</button>
+                    </div>
+
+                    <form id="add-mentor-form" class="space-y-3.5">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-300 mb-1">
+                                    Mentor Email Address <span class="text-red-400">*</span>
+                                </label>
+                                <input type="email" id="new-mentor-email" required placeholder="e.g. mentor@college.edu or advisor@company.com" 
+                                    class="form-input w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:border-amber-500 outline-none">
+                                <p class="text-[10px] text-zinc-500 mt-1">Mentor uses this email to log in.</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-300 mb-1">
+                                    Full Name <span class="text-zinc-500 text-[10px] font-normal">(Optional, mentor can complete on login)</span>
+                                </label>
+                                <input type="text" id="new-mentor-name" placeholder="e.g. Dr. Alan Turing" 
+                                    class="form-input w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:border-amber-500 outline-none">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-300 mb-1">
+                                    Designation / Department <span class="text-zinc-500 text-[10px] font-normal">(Optional)</span>
+                                </label>
+                                <input type="text" id="new-mentor-designation" placeholder="e.g. Professor of Computer Science / Senior Tech Architect" 
+                                    class="form-input w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:border-amber-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-300 mb-1">
+                                    Short Bio / Scope <span class="text-zinc-500 text-[10px] font-normal">(Optional)</span>
+                                </label>
+                                <input type="text" id="new-mentor-bio" placeholder="e.g. Research in Distributed AI &amp; Cloud. Available for student guidance." 
+                                    class="form-input w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:border-amber-500 outline-none">
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800/80">
+                            <button type="button" id="cancel-add-mentor-btn" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer">
+                                Cancel
+                            </button>
+                            <button type="submit" id="submit-add-mentor-btn" class="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 rounded-xl text-xs font-bold transition-all shadow-md shadow-amber-500/20 active:scale-95 cursor-pointer flex items-center gap-1.5">
+                                <span>🎓 Confirm &amp; Add Mentor</span>
+                            </button>
+                        </div>
+                    </form>
                 </div>
 
                 <!-- Search Input Bar -->
@@ -1285,6 +1352,11 @@ const AdminView = (() => {
                                                 <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-300">🛡️ Super Admin</span>
                                             ` : (isMentorRole ? `
                                                 <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-300">🎓 Mentor</span>
+                                                ${!u.username ? `
+                                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">⏳ Pending Setup</span>
+                                                ` : `
+                                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">✓ Active</span>
+                                                `}
                                                 ${(perms.all || perms.broadcast || perms.moderate || perms.events || perms.leads || perms.users_edit || perms.users_export) ? `
                                                     <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">👑 Admin Features Enabled</span>
                                                 ` : ''}
@@ -2845,6 +2917,68 @@ const AdminView = (() => {
             accessSearchQuery = '';
             container.innerHTML = render();
             bindEvents(container);
+        });
+
+                // Open/Close Add Mentor Panel
+        container.querySelector('#open-add-mentor-btn')?.addEventListener('click', () => {
+            isAddingMentor = !isAddingMentor;
+            const panel = container.querySelector('#add-mentor-panel');
+            if (panel) {
+                if (isAddingMentor) {
+                    panel.classList.remove('hidden');
+                    container.querySelector('#new-mentor-email')?.focus();
+                } else {
+                    panel.classList.add('hidden');
+                }
+            }
+        });
+
+        container.querySelector('#close-add-mentor-btn')?.addEventListener('click', () => {
+            isAddingMentor = false;
+            container.querySelector('#add-mentor-panel')?.classList.add('hidden');
+        });
+
+        container.querySelector('#cancel-add-mentor-btn')?.addEventListener('click', () => {
+            isAddingMentor = false;
+            container.querySelector('#add-mentor-panel')?.classList.add('hidden');
+        });
+
+        // Submit Add Mentor Form
+        container.querySelector('#add-mentor-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = container.querySelector('#submit-add-mentor-btn');
+            const emailInput = container.querySelector('#new-mentor-email');
+            const nameInput = container.querySelector('#new-mentor-name');
+            const desigInput = container.querySelector('#new-mentor-designation');
+            const bioInput = container.querySelector('#new-mentor-bio');
+
+            const email = emailInput?.value?.trim().toLowerCase();
+            const full_name = nameInput?.value?.trim();
+            const designation = desigInput?.value?.trim();
+            const bio = bioInput?.value?.trim();
+
+            if (!email) {
+                Toast.error('Mentor email address is required');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="spinner spinner-sm"></div><span>Adding Mentor...</span>';
+
+            const res = await ICCSupabase.addNewMentor({ email, full_name, designation, bio });
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>🎓 Confirm &amp; Add Mentor</span>';
+
+            if (res.error) {
+                Toast.error('Failed to add mentor: ' + (res.error.message || res.error));
+            } else {
+                Toast.success(res.message || `🎓 Mentor ${email} added! They can now log in via the Mentor Portal.`);
+                isAddingMentor = false;
+                allUsers = await ICCSupabase.getAllProfiles();
+                accessRoleFilter = 'mentor';
+                container.innerHTML = render();
+                bindEvents(container);
+            }
         });
 
         // Role filter pills

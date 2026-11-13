@@ -5,7 +5,9 @@
 const AuthModal = (() => {
     let isOpen = false;
     let step = 'main'; // main, otp-sent, set-password, forgot-email, forgot-otp, forgot-reset
-    let authMode = 'login'; // login, signup
+    let authMode = 'login'; // login, signup, mentor
+    let isMentorDetected = false;
+    let detectedMentorProfile = null;
     let email = '';
     let loading = false;
     let errorMsg = '';
@@ -121,16 +123,34 @@ const AuthModal = (() => {
     }
 
     function renderMain() {
+        const isMentorMode = authMode === 'mentor' || isMentorDetected;
         return `
-        <div class="flex gap-2 mb-4 bg-[#0e1621] p-1 rounded-xl border border-[#242f3d]">
-            <button type="button" id="tab-login" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors ${authMode === 'login' ? 'bg-[#3390ec] text-white' : 'text-[#708499] hover:text-white'}">Log In</button>
-            <button type="button" id="tab-signup" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors ${authMode === 'signup' ? 'bg-[#3390ec] text-white' : 'text-[#708499] hover:text-white'}">Sign Up</button>
+        <div class="flex gap-1.5 mb-4 bg-[#0e1621] p-1 rounded-xl border border-[#242f3d]">
+            <button type="button" id="tab-login" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors ${authMode === 'login' && !isMentorDetected ? 'bg-[#3390ec] text-white' : 'text-[#708499] hover:text-white'}">Log In</button>
+            <button type="button" id="tab-signup" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors ${authMode === 'signup' && !isMentorDetected ? 'bg-[#3390ec] text-white' : 'text-[#708499] hover:text-white'}">Sign Up</button>
+            <button type="button" id="tab-mentor" class="py-1.5 px-3 text-xs font-semibold rounded-lg transition-colors ${isMentorMode ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-zinc-950 font-bold shadow-md shadow-amber-500/20' : 'text-amber-400/80 hover:text-amber-300'} flex items-center justify-center gap-1">
+                <span>🎓 Mentor</span>
+            </button>
         </div>
+
+        ${isMentorMode ? `
+        <div class="px-3.5 py-3 bg-gradient-to-r from-amber-500/15 via-zinc-900 to-zinc-900 border border-amber-500/30 rounded-xl mb-4 flex items-center gap-2.5 animate-fade-in">
+            <span class="text-xl">🎓</span>
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5">
+                    <p class="text-xs font-bold text-amber-300">ICC Mentor Portal</p>
+                    <span class="px-1.5 py-0.2 rounded text-[9px] bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30">Verified Access</span>
+                </div>
+                <p class="text-[11px] text-zinc-300 mt-0.5">Welcome, Advisor / Mentor. Student USN & review requirements waived.</p>
+            </div>
+        </div>
+        ` : `
         <div class="px-3 py-2.5 bg-[#242f3d]/60 border border-[#2b394a] rounded-xl mb-4">
-            <p class="text-[11px] text-[#708499] text-center">🔒 Access is restricted to approved ICC members only</p>
+            <p class="text-[11px] text-[#708499] text-center">🔒 Access is restricted to approved ICC members &amp; authorized mentors</p>
         </div>
+        `}
         <form id="auth-form" class="space-y-3">
-            ${authMode === 'signup' ? `
+            ${(authMode === 'signup' && !isMentorMode) ? `
             <div>
                 <label class="block text-xs font-medium text-[#708499] mb-1.5">Full Name</label>
                 <input type="text" id="auth-name" placeholder="John Doe" required class="form-input w-full px-4 py-2.5 bg-[#242f3d] border border-[#2b394a] rounded-xl text-white text-sm placeholder-[#708499]">
@@ -139,21 +159,36 @@ const AuthModal = (() => {
                 <label class="block text-xs font-medium text-[#708499] mb-1.5">Username</label>
                 <input type="text" id="auth-username" placeholder="johndoe" required pattern="[a-zA-Z0-9_]+" minlength="3" maxlength="20" class="form-input w-full px-4 py-2.5 bg-[#242f3d] border border-[#2b394a] rounded-xl text-white text-sm placeholder-[#708499]">
             </div>` : ''}
+
+            ${(isMentorMode && authMode !== 'login') ? `
             <div>
-                <label class="block text-xs font-medium text-[#708499] mb-1.5">Email address</label>
-                <input type="email" id="auth-email" placeholder="you@example.com" value="${email}" required class="form-input w-full px-4 py-2.5 bg-[#242f3d] border border-[#2b394a] rounded-xl text-white text-sm placeholder-[#708499]">
+                <label class="block text-xs font-semibold text-amber-300 mb-1.5">Mentor Full Name <span class="text-zinc-500 font-normal">(Dr. / Prof. / Full Name)</span></label>
+                <input type="text" id="auth-name" value="${detectedMentorProfile?.full_name || ''}" placeholder="e.g. Dr. Jane Smith" required class="form-input w-full px-4 py-2.5 bg-[#17212b] border border-amber-500/40 focus:border-amber-400 rounded-xl text-white text-sm placeholder-zinc-500">
+            </div>` : ''}
+
+            <div>
+                <label class="block text-xs font-medium ${isMentorMode ? 'text-amber-300 font-semibold' : 'text-[#708499]'} mb-1.5">${isMentorMode ? 'Mentor Email Address' : 'Email address'}</label>
+                <input type="email" id="auth-email" placeholder="you@example.com" value="${email}" required class="form-input w-full px-4 py-2.5 bg-[#242f3d] ${isMentorMode ? 'border-amber-500/40 focus:border-amber-400' : 'border-[#2b394a]'} rounded-xl text-white text-sm placeholder-[#708499]">
             </div>
-            ${authMode === 'login' ? `
+
+            ${(authMode === 'login' || isMentorMode) ? `
             <div>
                 <div class="flex items-center justify-between mb-1.5">
-                    <label class="block text-xs font-medium text-[#708499]">Password</label>
+                    <label class="block text-xs font-medium ${isMentorMode ? 'text-amber-300/90' : 'text-[#708499]'}">Password</label>
                     <button type="button" id="forgot-password-btn" class="text-[10px] text-[#708499] hover:text-[#3390ec] transition-colors">Forgot?</button>
                 </div>
-                <input type="password" id="auth-password" placeholder="••••••••" required class="form-input w-full px-4 py-2.5 bg-[#242f3d] border border-[#2b394a] rounded-xl text-white text-sm placeholder-[#708499]">
+                <input type="password" id="auth-password" placeholder="••••••••" ${isMentorMode ? '' : 'required'} class="form-input w-full px-4 py-2.5 bg-[#242f3d] ${isMentorMode ? 'border-amber-500/40' : 'border-[#2b394a]'} rounded-xl text-white text-sm placeholder-[#708499]">
+                ${isMentorMode ? `
+                <div class="flex items-center justify-between mt-1 px-1">
+                    <button type="button" id="mentor-otp-flow-btn" class="text-[11px] text-amber-400 hover:text-amber-300 transition-colors">First time logging in? Click here to set password via Code →</button>
+                </div>
+                ` : ''}
             </div>` : ''}
+
             ${errorMsg ? `<div class="px-3 py-2 bg-red-900/30 border border-red-800/50 rounded-lg"><p class="text-sm text-red-400">${errorMsg}</p></div>` : ''}
-            <button type="submit" class="w-full py-3 bg-[#3390ec] hover:bg-[#2b7cce] rounded-xl text-sm font-semibold text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-md" ${loading ? 'disabled' : ''}>
-                ${loading ? '<div class="spinner spinner-sm"></div>' : (authMode === 'login' ? 'Sign In' : 'Send Code')}
+
+            <button type="submit" class="w-full py-3 ${isMentorMode ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold shadow-amber-500/20' : 'bg-[#3390ec] hover:bg-[#2b7cce] text-white font-semibold'} rounded-xl text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-md cursor-pointer" ${loading ? 'disabled' : ''}>
+                ${loading ? '<div class="spinner spinner-sm"></div>' : (isMentorMode ? (authMode === 'signup' ? 'Send Code &amp; Setup Mentor Profile 🎓' : 'Sign In as Mentor 🎓') : (authMode === 'login' ? 'Sign In' : 'Send Code'))}
             </button>
         </form>
         <p class="text-[11px] text-[#708499] text-center mt-4">By signing in, you agree to ICC's community guidelines</p>`;
@@ -281,8 +316,45 @@ const AuthModal = (() => {
         document.getElementById('auth-close')?.addEventListener('click', close);
         document.getElementById('auth-overlay')?.addEventListener('click', e => { if (e.target.id === 'auth-overlay') close(); });
 
-        document.getElementById('tab-login')?.addEventListener('click', () => { authMode = 'login'; errorMsg=''; mount(); });
-        document.getElementById('tab-signup')?.addEventListener('click', () => { authMode = 'signup'; errorMsg=''; mount(); });
+        document.getElementById('tab-login')?.addEventListener('click', () => { authMode = 'login'; isMentorDetected = false; errorMsg=''; mount(); });
+        document.getElementById('tab-signup')?.addEventListener('click', () => { authMode = 'signup'; isMentorDetected = false; errorMsg=''; mount(); });
+        document.getElementById('tab-mentor')?.addEventListener('click', () => { authMode = 'mentor'; isMentorDetected = true; errorMsg=''; mount(); });
+
+        // Mentor OTP flow shortcut
+        document.getElementById('mentor-otp-flow-btn')?.addEventListener('click', () => {
+            authMode = 'signup';
+            isMentorDetected = true;
+            errorMsg = '';
+            mount();
+        });
+
+        // Dynamic Mentor Email Detection
+        const emailEl = document.getElementById('auth-email');
+        if (emailEl) {
+            let checkTimeout = null;
+            emailEl.addEventListener('input', (e) => {
+                const val = e.target.value.trim().toLowerCase();
+                clearTimeout(checkTimeout);
+                if (val.includes('@') && val.includes('.')) {
+                    checkTimeout = setTimeout(async () => {
+                        if (typeof ICCSupabase !== 'undefined' && ICCSupabase.isMentorEmail) {
+                            const check = await ICCSupabase.isMentorEmail(val);
+                            if (check && check.isMentor && !isMentorDetected) {
+                                isMentorDetected = true;
+                                detectedMentorProfile = check.profile;
+                                email = val;
+                                mount();
+                            } else if ((!check || !check.isMentor) && isMentorDetected && authMode !== 'mentor') {
+                                isMentorDetected = false;
+                                detectedMentorProfile = null;
+                                email = val;
+                                mount();
+                            }
+                        }
+                    }, 400);
+                }
+            });
+        }
 
         // Main Auth Form (Login or Send OTP for Signup)
         document.getElementById('auth-form')?.addEventListener('submit', async e => {
@@ -322,27 +394,42 @@ const AuthModal = (() => {
 
                 email = emailVal;
 
-                // Allowlist check
-                if (!isEmailAllowed(email)) {
-                    errorMsg = 'This email is not registered for ICC access. Contact your admin.';
-                    markInvalid('auth-email'); mount(); return;
+                // Check if mentor
+                let isMentor = isMentorDetected || authMode === 'mentor';
+                if (!isMentor && typeof ICCSupabase !== 'undefined' && ICCSupabase.isMentorEmail) {
+                    const mCheck = await ICCSupabase.isMentorEmail(email);
+                    if (mCheck && mCheck.isMentor) {
+                        isMentor = true;
+                        isMentorDetected = true;
+                        detectedMentorProfile = mCheck.profile;
+                    }
                 }
 
-                loading = true; errorMsg = ''; mount();
+                // If mentor, bypass student allowlist and student queue checks!
+                if (!isMentor) {
+                    if (!isEmailAllowed(email)) {
+                        errorMsg = 'This email is not registered for ICC access. Contact your admin.';
+                        markInvalid('auth-email'); mount(); return;
+                    }
 
-                // Check registration request status first
-                const reqStatus = await ICCSupabase.checkRegistrationStatus(email);
-                if (reqStatus === 'pending_review' || reqStatus === 'awaiting_super_admin') {
-                    loading = false;
-                    errorMsg = 'Your request is under review.';
-                    mount();
-                    return;
-                }
-                if (reqStatus === 'denied') {
-                    loading = false;
-                    errorMsg = 'Your request was not approved. Contact your admin.';
-                    mount();
-                    return;
+                    loading = true; errorMsg = ''; mount();
+
+                    // Check registration request status for students only
+                    const reqStatus = await ICCSupabase.checkRegistrationStatus(email);
+                    if (reqStatus === 'pending_review' || reqStatus === 'awaiting_super_admin') {
+                        loading = false;
+                        errorMsg = 'Your request is under review.';
+                        mount();
+                        return;
+                    }
+                    if (reqStatus === 'denied') {
+                        loading = false;
+                        errorMsg = 'Your request was not approved. Contact your admin.';
+                        mount();
+                        return;
+                    }
+                } else {
+                    loading = true; errorMsg = ''; mount();
                 }
 
                 const { error } = await ICCSupabase.signInWithPassword(email, password);
@@ -417,8 +504,17 @@ const AuthModal = (() => {
                     return;
                 }
 
-                // Allowlist check
-                if (!isEmailAllowed(email)) {
+                // Check mentor status
+                let isMentor = isMentorDetected || authMode === 'mentor';
+                if (!isMentor && typeof ICCSupabase !== 'undefined' && ICCSupabase.isMentorEmail) {
+                    const mCheck = await ICCSupabase.isMentorEmail(email);
+                    if (mCheck && mCheck.isMentor) {
+                        isMentor = true;
+                        isMentorDetected = true;
+                    }
+                }
+
+                if (!isMentor && !isEmailAllowed(email)) {
                     errorMsg = 'This email is not registered for ICC access. Contact your admin.';
                     markInvalid('auth-email'); mount(); return;
                 }
@@ -437,7 +533,7 @@ const AuthModal = (() => {
                     if (!available) { errorMsg = 'Username is already taken by another member'; loading = false; mount(); return; }
                 }
 
-                const metadata = { full_name: name, username: username };
+                const metadata = { full_name: name, username: username, role: (isMentorDetected || authMode === 'mentor') ? 'mentor' : 'member' };
                 const { error } = await ICCSupabase.sendOTP(email, metadata);
                 loading = false;
                 if (error) { errorMsg = error.message; mount(); }

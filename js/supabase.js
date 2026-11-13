@@ -336,8 +336,20 @@ const ICCSupabase = (() => {
         delete safeFields.is_pending_member;
 
         safeFields.updated_at = new Date().toISOString();
-        const { data, error } = await client
+        let { data, error } = await client
             .from('profiles').update(safeFields).eq('id', currentUser.id).select().single();
+        if (error && error.message && (error.message.includes('column') || error.message.includes('designation'))) {
+            if (safeFields.designation) {
+                const desig = safeFields.designation;
+                delete safeFields.designation;
+                if (desig && safeFields.bio && !safeFields.bio.includes(desig)) {
+                    safeFields.bio = `[${desig}] ${safeFields.bio}`;
+                }
+                const retry = await client.from('profiles').update(safeFields).eq('id', currentUser.id).select().single();
+                data = retry.data;
+                error = retry.error;
+            }
+        }
         if (!error && data) currentProfile = data;
         return { data, error };
     }
@@ -2162,6 +2174,87 @@ const ICCSupabase = (() => {
             return { error: { message: 'Unauthorized: Only Super Admins can alter Mentor roles.' } };
         }
         return setAdminRole(userId, isMentor ? 'mentor' : 'member', permissions);
+    }
+
+    async function addNewMentor(params = {}) {
+        if (!client || !isSuperAdmin()) {
+            return { error: { message: 'Unauthorized: Only Super Admins can add new mentors.' } };
+        }
+        const { email, full_name, bio, designation, skills, permissions } = params;
+        if (!email || !email.trim()) {
+            return { error: { message: 'Valid email address is required.' } };
+        }
+
+        try {
+            const session = (await client.auth.getSession())?.data?.session;
+            const token = session?.access_token;
+            const baseUrl = ICC_CONFIG.API_BASE_URL || '';
+            const res = await fetch(`${baseUrl}/api/add-mentor`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token ? `Bearer ${token}` : ''
+                },
+                body: JSON.stringify({
+                    email: email.trim().toLowerCase(),
+                    full_name,
+                    bio,
+                    designation,
+                    skills,
+                    permissions
+                })
+            });
+
+            const json = await res.json();
+            if (!res.ok || json.success === false) {
+                return { error: { message: json.error || 'Failed to add mentor.' } };
+            }
+            return { data: json.mentor, success: true, message: json.message };
+        } catch (fetchErr) {
+            console.warn('API add-mentor fetch failed, attempting client fallback:', fetchErr);
+            try {
+                const cleanEmail = email.trim().toLowerCase();
+                const { data: existing } = await client
+                    .from('profiles')
+                    .select('id, email, full_name, role')
+                    .ilike('email', cleanEmail)
+                    .maybeSingle();
+
+                if (existing) {
+                    const updateRes = await setMentorRole(existing.id, true, permissions);
+                    if (updateRes.error) return updateRes;
+                    if (bio) {
+                        await client.from('profiles').update({ bio: bio.trim() }).eq('id', existing.id);
+                    }
+                    return { data: existing, success: true, message: `Updated ${cleanEmail} to Mentor!` };
+                } else {
+                    return { error: { message: 'Server error reaching add-mentor API: ' + fetchErr.message } };
+                }
+            } catch (err) {
+                return { error: err };
+            }
+        }
+    }
+
+    async function isMentorEmail(email) {
+        if (!client || !email || typeof email !== 'string') return { isMentor: false, profile: null };
+        const clean = email.trim().toLowerCase();
+        try {
+            const { data, error } = await client
+                .from('profiles')
+                .select('id, email, full_name, role, bio, username, avatar_url, is_mentor')
+                .ilike('email', clean)
+                .maybeSingle();
+
+            if (!error && data) {
+                const r = (data.role || '').toLowerCase().trim();
+                const isM = r === 'mentor' || r === 'super_admin' || r === 'superadmin' || data.is_mentor === true;
+                return { isMentor: isM, profile: data };
+            }
+            return { isMentor: false, profile: null };
+        } catch {
+            return { isMentor: false, profile: null };
+        }
     }
 
 
@@ -5284,7 +5377,7 @@ const ICCSupabase = (() => {
         subscribeToTeam, subscribeToAllLeads, subscribeToBroadcasts, subscribeToNotifications,
         unsubscribeChannel, cleanupAllChannels,
         getUser, getProfile, isConfigured, getClient, isAdmin, isLead, isSuperAdmin, isMentor, needsOnboarding,
-        getAdminPermissions, hasAdminPermission, updateAdminPermissions, setAdminRole, setMentorRole, DEFAULT_ADMIN_PERMISSIONS,
+        getAdminPermissions, hasAdminPermission, updateAdminPermissions, setAdminRole, setMentorRole, addNewMentor, isMentorEmail, DEFAULT_ADMIN_PERMISSIONS,
         // Project Application & Mentor Workflow API
         createProjectApplication, fetchMyProjectApplications, fetchAllProjectApplications, fetchApplicationDetails,
         addApplicationComment, requestApplicationChanges, resubmitProjectApplication, approveProjectApplication,
