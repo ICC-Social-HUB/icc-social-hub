@@ -1,0 +1,9 @@
+# Ignore Android native code & build cache from Vercel web deployment
+android/
+
+# Ignore scratch files, SQL migrations, and local servers
+scratch/
+*.sql
+local-server.js
+.env*
+.env.local
