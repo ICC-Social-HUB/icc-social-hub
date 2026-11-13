@@ -177,12 +177,12 @@ module.exports = async (req, res) => {
             return sendError(500, 'Could not determine user ID for new mentor');
         }
 
-        // 5. Insert profile record in public.profiles
+        // 5. Upsert profile record in public.profiles
+        // Note: Supabase's on_auth_user_created trigger may have already created the row on auth.users insert
         const newProfile = {
             id: userId,
             email: cleanEmail,
             full_name: cleanName || cleanEmail.split('@')[0],
-            username: null, // Will be chosen during mentor onboarding
             role: 'mentor',
             approval_status: 'approved',
             approved_by: `Super Admin (${callerProfile?.full_name || callerEmail})`,
@@ -191,22 +191,21 @@ module.exports = async (req, res) => {
             designation: cleanDesignation || '',
             skills: mentorSkills,
             admin_permissions: finalPermissions,
-            created_at: now,
             updated_at: now
         };
 
-        const { error: insertErr } = await supabase
+        const { error: upsertErr } = await supabase
             .from('profiles')
-            .insert(newProfile);
+            .upsert(newProfile, { onConflict: 'id' });
 
-        if (insertErr) {
+        if (upsertErr) {
             // Handle optional designation column if missing in schema
-            if (insertErr.message && insertErr.message.includes('designation')) {
+            if (upsertErr.message && upsertErr.message.includes('designation')) {
                 delete newProfile.designation;
-                const { error: retryErr } = await supabase.from('profiles').insert(newProfile);
+                const { error: retryErr } = await supabase.from('profiles').upsert(newProfile, { onConflict: 'id' });
                 if (retryErr) return sendError(500, 'Database error creating mentor profile: ' + retryErr.message);
             } else {
-                return sendError(500, 'Database error creating mentor profile: ' + insertErr.message);
+                return sendError(500, 'Database error creating mentor profile: ' + upsertErr.message);
             }
         }
 
