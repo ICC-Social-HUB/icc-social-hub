@@ -18,7 +18,8 @@ const AdminView = (() => {
     let userBranchFilter = '';
     let userTeamFilter = '';
     let accessSearchQuery = '';
-    let accessRoleFilter = 'all'; // 'all', 'super_admin', 'admin'
+    let accessRoleFilter = 'all';
+    let accessSubSection = 'all'; // 'all', 'add_mentor', 'roles', 'appoint' // 'all', 'super_admin', 'admin'
     let isAddingMentor = false;
     let appointingUserId = null;
     let appointingUserDraft = null; // { broadcast, moderate, events, leads, users, all, isSuperAdmin }
@@ -920,6 +921,38 @@ const AdminView = (() => {
         }
     }
 
+    
+    function renderMentorsSnapshot(mentors) {
+        if (!mentors || mentors.length === 0) {
+            return `
+            <div class="p-6 text-center rounded-xl bg-zinc-950/40 border border-zinc-800 text-xs text-zinc-500">
+                No mentors authorized yet. Enter a mentor's email address above to grant them access!
+            </div>`;
+        }
+        return `
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            ${mentors.map(m => {
+                const hasFinished = Boolean(m.username);
+                return `
+                <div class="p-3 rounded-xl bg-zinc-950/70 border border-amber-500/20 hover:border-amber-500/40 transition-all flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold text-xs shrink-0">
+                            ${(m.full_name || m.username || m.email || 'M').charAt(0).toUpperCase()}
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-xs font-bold text-white truncate">${escapeHtml(m.full_name || m.username || 'Mentor (Unclaimed)')}</div>
+                            <div class="text-[10px] text-zinc-400 truncate">${escapeHtml(m.email || '')}</div>
+                            ${m.designation ? `<div class="text-[9px] text-amber-300/80 truncate">${escapeHtml(m.designation)}</div>` : ''}
+                        </div>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold shrink-0 ${hasFinished ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'}">
+                        ${hasFinished ? '✓ Active' : '⏳ Pending Setup'}
+                    </span>
+                </div>`;
+            }).join('')}
+        </div>`;
+    }
+
     function renderAccessControl() {
         const currentUserId = ICCSupabase.getUser()?.id;
         const allAdmins = allUsers.filter(u => u.role === 'admin' || u.role === 'super_admin' || u.role === 'superadmin' || u.role === 'mentor');
@@ -1012,85 +1045,136 @@ const AdminView = (() => {
                 </div>
             </div>
 
-            <!-- SECTION 1: SEARCH & APPOINT / ADD NEW MENTORS -->
-            <div class="glass-card rounded-2xl p-5 border border-zinc-800">
-                <div class="flex items-center justify-between mb-3 flex-wrap gap-3">
-                    <div>
-                        <h4 class="font-heading font-semibold text-sm text-white flex items-center gap-2">
-                            <span>🛡️ Search & Appoint Administrators & Mentors</span>
-                        </h4>
-                        <p class="text-[11px] text-zinc-400">Search registered members or authorize external faculty/industry Mentors by email.</p>
+            <!-- Access Control Sub-Navigation Pills -->
+            <div class="flex items-center gap-2 p-1.5 bg-zinc-950/80 rounded-2xl border border-zinc-800/80 flex-wrap">
+                <button type="button" class="access-section-tab px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${accessSubSection === 'add_mentor' ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-zinc-950 shadow-md shadow-amber-500/25 ring-2 ring-amber-400/50' : 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/30'}" data-subsection="add_mentor">
+                    <span>🎓</span>
+                    <span>Add Mentor (Grant Email Access)</span>
+                </button>
+                <button type="button" class="access-section-tab px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${accessSubSection === 'roles' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white hover:bg-zinc-900'}" data-subsection="roles">
+                    <span>🛡️</span>
+                    <span>Active Admins &amp; Mentors (${allAdmins.length})</span>
+                </button>
+                <button type="button" class="access-section-tab px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${accessSubSection === 'appoint' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white hover:bg-zinc-900'}" data-subsection="appoint">
+                    <span>🔍</span>
+                    <span>Search &amp; Appoint Members</span>
+                </button>
+                <button type="button" class="access-section-tab px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${accessSubSection === 'all' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white hover:bg-zinc-900'}" data-subsection="all">
+                    <span>📋</span>
+                    <span>View All</span>
+                </button>
+            </div>
+
+            <!-- ========================================================
+                 SEPARATE OPTION: ADD MENTOR (GRANT ACCESS TO NEW EMAIL)
+                 ======================================================== -->
+            ${(accessSubSection === 'all' || accessSubSection === 'add_mentor') ? `
+            <div class="glass-card rounded-2xl p-6 border-2 border-amber-500/40 bg-gradient-to-b from-amber-500/10 via-zinc-900/95 to-zinc-950 shadow-2xl space-y-5 animate-fade-in" id="add-mentor-dedicated-section">
+                <div class="flex items-start justify-between flex-wrap gap-4 pb-4 border-b border-amber-500/20">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-2xl font-bold shadow-lg shadow-amber-500/20">
+                            🎓
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-heading font-bold text-base text-white">Add New Mentor — Grant Email Access</h4>
+                                <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">Super Admin Privilege</span>
+                            </div>
+                            <p class="text-xs text-zinc-300 mt-0.5">Authorize an external mentor's email ID. Once added, this email receives immediate access to log in to the website as a Mentor.</p>
+                        </div>
                     </div>
-                    <button type="button" id="open-add-mentor-btn" class="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold rounded-xl text-xs transition-all shadow-md shadow-amber-500/20 active:scale-95 flex items-center gap-1.5 cursor-pointer">
-                        <span>🎓 + Add New Mentor</span>
-                    </button>
+                    <div class="px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-xs font-semibold text-amber-300 flex items-center gap-1.5">
+                        <span>✨</span>
+                        <span>Bypasses student USN, year/branch &amp; review queue</span>
+                    </div>
                 </div>
 
-                <!-- Add New Mentor Form Panel -->
-                <div id="add-mentor-panel" class="${isAddingMentor ? '' : 'hidden'} mb-4 p-5 rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-500/10 via-zinc-900/95 to-zinc-900 shadow-xl border-dashed animate-fade-in space-y-4">
-                    <div class="flex items-start justify-between border-b border-amber-500/20 pb-3">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-lg font-bold">
-                                🎓
-                            </div>
-                            <div>
-                                <h5 class="text-sm font-bold text-white">Add New Mentor / Faculty Advisor</h5>
-                                <p class="text-[11px] text-zinc-400">Authorizes a mentor by email. When they log in with this email, they enter the Mentor Portal directly without student requirements.</p>
-                            </div>
+                <!-- Guidance Info Box -->
+                <div class="p-3.5 bg-zinc-950/80 border border-amber-500/20 rounded-xl flex items-start gap-3 text-xs text-zinc-300">
+                    <span class="text-xl">💡</span>
+                    <div class="space-y-1">
+                        <p class="font-semibold text-amber-200">How Giving Email Access Works:</p>
+                        <p class="text-[11px] text-zinc-400 leading-relaxed">
+                            Enter the mentor's email address below. When the mentor opens the website and enters this email, the system automatically detects them as an authorized mentor. They bypass student registration queues, receive a login OTP, and enter their Name, Bio, and Expertise on the Mentor Portal.
+                        </p>
+                    </div>
+                </div>
+
+                <form id="add-mentor-form" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-amber-300 mb-1.5 flex items-center gap-1">
+                                <span>Mentor Email ID</span>
+                                <span class="text-red-400">*</span>
+                            </label>
+                            <input type="email" id="new-mentor-email" required placeholder="e.g. mentor@college.edu or advisor@company.com" 
+                                class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-700/80 rounded-xl text-xs text-white placeholder-zinc-500 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none">
+                            <p class="text-[10px] text-zinc-400 mt-1">This email ID will be given direct login access.</p>
                         </div>
-                        <button type="button" id="close-add-mentor-btn" class="text-xs text-zinc-400 hover:text-white px-2 py-1 bg-zinc-800/80 rounded-lg transition-colors cursor-pointer">✕ Cancel</button>
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-300 mb-1.5">
+                                Full Name <span class="text-zinc-500 text-[10px] font-normal">(Optional — mentor can enter on login)</span>
+                            </label>
+                            <input type="text" id="new-mentor-name" placeholder="e.g. Dr. Alan Turing" 
+                                class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:border-amber-500 outline-none">
+                        </div>
                     </div>
 
-                    <form id="add-mentor-form" class="space-y-3.5">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-semibold text-zinc-300 mb-1">
-                                    Mentor Email Address <span class="text-red-400">*</span>
-                                </label>
-                                <input type="email" id="new-mentor-email" required placeholder="e.g. mentor@college.edu or advisor@company.com" 
-                                    class="form-input w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:border-amber-500 outline-none">
-                                <p class="text-[10px] text-zinc-500 mt-1">Mentor uses this email to log in.</p>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-zinc-300 mb-1">
-                                    Full Name <span class="text-zinc-500 text-[10px] font-normal">(Optional, mentor can complete on login)</span>
-                                </label>
-                                <input type="text" id="new-mentor-name" placeholder="e.g. Dr. Alan Turing" 
-                                    class="form-input w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:border-amber-500 outline-none">
-                            </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-300 mb-1.5">
+                                Designation / Department <span class="text-zinc-500 text-[10px] font-normal">(Optional)</span>
+                            </label>
+                            <input type="text" id="new-mentor-designation" placeholder="e.g. Professor of Computer Science / Senior Tech Architect" 
+                                class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:border-amber-500 outline-none">
                         </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-300 mb-1.5">
+                                Short Bio / Guidance Scope <span class="text-zinc-500 text-[10px] font-normal">(Optional)</span>
+                            </label>
+                            <input type="text" id="new-mentor-bio" placeholder="e.g. Cloud Architecture, AI/ML, Startup Pitching" 
+                                class="form-input w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:border-amber-500 outline-none">
+                        </div>
+                    </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-semibold text-zinc-300 mb-1">
-                                    Designation / Department <span class="text-zinc-500 text-[10px] font-normal">(Optional)</span>
-                                </label>
-                                <input type="text" id="new-mentor-designation" placeholder="e.g. Professor of Computer Science / Senior Tech Architect" 
-                                    class="form-input w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:border-amber-500 outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-zinc-300 mb-1">
-                                    Short Bio / Scope <span class="text-zinc-500 text-[10px] font-normal">(Optional)</span>
-                                </label>
-                                <input type="text" id="new-mentor-bio" placeholder="e.g. Research in Distributed AI &amp; Cloud. Available for student guidance." 
-                                    class="form-input w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:border-amber-500 outline-none">
-                            </div>
+                    <div class="pt-3 border-t border-zinc-800/80 flex items-center justify-between flex-wrap gap-3">
+                        <div class="text-[11px] text-zinc-400 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
+                            <span>Authorized mentors can access project audits, chats, and mentorship directory.</span>
                         </div>
+                        <button type="submit" id="submit-add-mentor-btn" class="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold rounded-xl text-xs transition-all shadow-lg shadow-amber-500/25 active:scale-95 cursor-pointer flex items-center gap-2">
+                            <span>🎓 Authorize Email &amp; Grant Mentor Access</span>
+                        </button>
+                    </div>
+                </form>
 
-                        <!-- Submit Button -->
-                        <div class="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800/80">
-                            <button type="button" id="cancel-add-mentor-btn" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer">
-                                Cancel
-                            </button>
-                            <button type="submit" id="submit-add-mentor-btn" class="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 rounded-xl text-xs font-bold transition-all shadow-md shadow-amber-500/20 active:scale-95 cursor-pointer flex items-center gap-1.5">
-                                <span>🎓 Confirm &amp; Add Mentor</span>
-                            </button>
-                        </div>
-                    </form>
+                <!-- Currently Authorized Mentors Snapshot -->
+                <div class="pt-4 border-t border-zinc-800/80">
+                    <div class="flex items-center justify-between mb-3">
+                        <h5 class="text-xs font-bold text-zinc-300 flex items-center gap-2">
+                            <span>🎓 Currently Authorized Mentors</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300">${mentorsCount}</span>
+                        </h5>
+                    </div>
+                    ${renderMentorsSnapshot(allAdmins.filter(u => u.role === 'mentor'))}
+                </div>
+            </div>
+            ` : ''}
+
+            <!-- ========================================================
+                 SEPARATE OPTION: SEARCH & APPOINT REGISTERED MEMBERS
+                 ======================================================== -->
+            ${(accessSubSection === 'all' || accessSubSection === 'appoint') ? `
+            <div class="glass-card rounded-2xl p-5 border border-zinc-800 space-y-4 animate-fade-in">
+                <div>
+                    <h4 class="font-heading font-semibold text-sm text-white flex items-center gap-2">
+                        <span>🔍 Search &amp; Appoint Registered Members</span>
+                    </h4>
+                    <p class="text-[11px] text-zinc-400 mt-0.5">Search already registered students and promote them to Administrator or Team Lead.</p>
                 </div>
 
                 <!-- Search Input Bar -->
-                <div class="relative mb-3">
+                <div class="relative">
                     <input type="text" id="access-user-search-input" value="${escapeHtml(accessSearchQuery)}" 
                         placeholder="Search members by full name, email address, @username, or USN..." 
                         class="form-input w-full pl-10 pr-10 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:border-blue-500 outline-none">
@@ -1117,193 +1201,28 @@ const AdminView = (() => {
                             </div>
                             <button id="cancel-appoint-btn" class="text-xs text-zinc-400 hover:text-white px-2 py-1 bg-zinc-800/80 rounded-lg transition-colors">Cancel</button>
                         </div>
-
-                        <!-- Role Level Selector -->
-                        <div class="space-y-1.5">
-                            <label class="text-[11px] font-semibold text-zinc-300 block uppercase tracking-wider">Target Role</label>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                <label class="flex items-center gap-2 p-2.5 bg-zinc-950/70 border ${appointingUserDraft?.targetRole === 'admin' ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-800'} rounded-xl cursor-pointer">
-                                    <input type="radio" name="appoint_role" value="admin" class="accent-blue-500" ${appointingUserDraft?.targetRole === 'admin' ? 'checked' : ''} id="role-admin-radio">
-                                    <div>
-                                        <span class="text-xs font-semibold text-white block">👑 Standard Admin</span>
-                                        <span class="text-[10px] text-zinc-400">Customizable feature permissions</span>
-                                    </div>
-                                </label>
-                                <label class="flex items-center gap-2 p-2.5 bg-zinc-950/70 border ${appointingUserDraft?.targetRole === 'super_admin' ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-800'} rounded-xl cursor-pointer">
-                                    <input type="radio" name="appoint_role" value="super_admin" class="accent-amber-500" ${appointingUserDraft?.targetRole === 'super_admin' ? 'checked' : ''} id="role-superadmin-radio">
-                                    <div>
-                                        <span class="text-xs font-semibold text-amber-300 block">🛡️ Super Admin</span>
-                                        <span class="text-[10px] text-zinc-400">Unrestricted system-wide access</span>
-                                    </div>
-                                </label>
-                                <label class="flex items-center gap-2 p-2.5 bg-zinc-950/70 border ${appointingUserDraft?.targetRole === 'mentor' ? 'border-emerald-500 bg-emerald-500/10' : 'border-zinc-800'} rounded-xl cursor-pointer">
-                                    <input type="radio" name="appoint_role" value="mentor" class="accent-emerald-500" ${appointingUserDraft?.targetRole === 'mentor' ? 'checked' : ''} id="role-mentor-radio">
-                                    <div>
-                                        <span class="text-xs font-semibold text-emerald-400 block">🎓 Mentor</span>
-                                        <span class="text-[10px] text-zinc-400">Project review & full project visibility</span>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Granular Permissions (For Standard Admin & Mentors) -->
-                        <div id="appoint-perms-section" class="${(appointingUserDraft?.targetRole !== 'admin' && appointingUserDraft?.targetRole !== 'mentor') ? 'opacity-40 pointer-events-none' : ''} space-y-2.5">
-                            <div class="flex items-center justify-between">
-                                <label class="text-[11px] font-semibold text-zinc-300 uppercase tracking-wider">
-                                    Granular Admin Feature Permissions ${appointingUserDraft?.targetRole === 'mentor' ? '<span class="text-emerald-400 font-normal lowercase">(optional for mentors)</span>' : ''}
-                                </label>
-                                <label class="inline-flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" id="appoint-all-toggle" class="accent-blue-500" ${appointingUserDraft?.all ? 'checked' : ''}>
-                                    <span class="text-[11px] text-zinc-300 font-medium">All Features (Full Access)</span>
-                                </label>
-                            </div>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
-                                    <div>
-                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">📢 Broadcast Alerts</span>
-                                        <span class="text-[10px] text-zinc-500">Send push banners & alerts</span>
-                                    </div>
-                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="broadcast" ${appointingUserDraft?.broadcast ? 'checked' : ''}>
-                                </label>
-
-                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
-                                    <div>
-                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">🛡️ Moderate Content</span>
-                                        <span class="text-[10px] text-zinc-500">Delete & moderate posts</span>
-                                    </div>
-                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="moderate" ${appointingUserDraft?.moderate ? 'checked' : ''}>
-                                </label>
-
-                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
-                                    <div>
-                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">📅 Add & Manage Events</span>
-                                        <span class="text-[10px] text-zinc-500">Create, edit, delete events</span>
-                                    </div>
-                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="events" ${appointingUserDraft?.events ? 'checked' : ''}>
-                                </label>
-
-                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
-                                    <div>
-                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">👥 Core Team Leads</span>
-                                        <span class="text-[10px] text-zinc-500">Manage leads & rosters</span>
-                                    </div>
-                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="leads" ${appointingUserDraft?.leads ? 'checked' : ''}>
-                                </label>
-
-                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
-                                    <div>
-                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">✏️ Request User Edits</span>
-                                        <span class="text-[10px] text-zinc-500">Submit member edit requests for Super Admin review</span>
-                                    </div>
-                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="users_edit" ${appointingUserDraft?.users_edit ? 'checked' : ''}>
-                                </label>
-
-                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
-                                    <div>
-                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">📊 View & Download Excel</span>
-                                        <span class="text-[10px] text-zinc-500">View roster table & export member Excel</span>
-                                    </div>
-                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="users_export" ${appointingUserDraft?.users_export ? 'checked' : ''}>
-                                </label>
-
-                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
-                                    <div>
-                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">📝 Minutes of Meeting</span>
-                                        <span class="text-[10px] text-zinc-500">Create, edit, & delete MoM in Core Space</span>
-                                    </div>
-                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="mom" ${appointingUserDraft?.mom ? 'checked' : ''}>
-                                </label>
-
-                                <label class="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl cursor-pointer hover:border-zinc-700">
-                                    <div>
-                                        <span class="text-xs font-medium text-white flex items-center gap-1.5">📦 Inventory Management</span>
-                                        <span class="text-[10px] text-zinc-500">Add, edit, delete items & manage stock/orders</span>
-                                    </div>
-                                    <input type="checkbox" class="appoint-perm-check accent-blue-500 w-4 h-4" data-perm="inventory" ${appointingUserDraft?.inventory ? 'checked' : ''}>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Action Submit Button -->
-                        <div class="flex items-center gap-2 pt-2">
-                            <button id="confirm-appoint-btn" class="flex-1 py-2.5 ${appointingUserDraft?.targetRole === 'mentor' ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold shadow-amber-500/20' : (appointingUserDraft?.targetRole === 'super_admin' ? 'bg-amber-600 hover:bg-amber-500 text-white font-semibold shadow-amber-600/20' : 'bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-blue-600/20')} active:scale-95 rounded-xl text-xs transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer" data-user-id="${appointingUser.id}">
-                                <span>${appointingUserDraft?.targetRole === 'mentor' ? '🎓 Confirm & Appoint Mentor' : (appointingUserDraft?.targetRole === 'super_admin' ? '🛡️ Confirm & Appoint Super Admin' : '👑 Confirm & Appoint Administrator')}</span>
-                            </button>
-                            <button id="cancel-appoint-btn-2" class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-xl text-xs transition-all cursor-pointer">
-                                Cancel
-                            </button>
-                        </div>
+                        ${renderAppointingForm(appointingUser)}
                     </div>
                 ` : ''}
 
-                <!-- Search Results List -->
+                <!-- Search Results Dropdown / Grid -->
                 ${query ? `
                     <div class="space-y-2 mt-2">
-                        <div class="text-[11px] text-zinc-500 font-medium mb-1 flex items-center justify-between">
-                            <span>Search results for "${escapeHtml(query)}"</span>
-                            <span>${searchCandidates.length} found</span>
-                        </div>
                         ${searchCandidates.length === 0 ? `
-                            <div class="p-6 text-center bg-zinc-950/40 rounded-xl border border-zinc-800 text-xs text-zinc-500">
-                                No users found matching "${escapeHtml(query)}"
+                            <div class="p-4 text-center text-xs text-zinc-500 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
+                                No registered members found matching "${escapeHtml(query)}".
                             </div>
-                        ` : searchCandidates.map(u => {
-                            const isAlreadyAssigned = u.role === 'admin' || u.role === 'super_admin' || u.role === 'superadmin' || u.role === 'mentor';
-                            const student = window.getStudentDataByEmail ? window.getStudentDataByEmail(u.email) : null;
-                            const fullName = u.full_name || (student ? student.fullName : 'Anonymous');
-                            const usn = u.usn || (student ? student.usn : '');
-                            const { year, branch } = getBranchAndYear(u, student);
-                            return `
-                            <div class="flex items-center justify-between gap-3 p-3 bg-zinc-950/70 hover:bg-zinc-900 border border-zinc-800/80 rounded-xl transition-colors">
-                                <div class="flex items-center gap-3 min-w-0">
-                                    <div class="w-9 h-9 rounded-full bg-zinc-800/80 text-zinc-300/60 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                                        ${fullName.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div class="min-w-0">
-                                        <div class="flex items-center gap-1.5 flex-wrap">
-                                            <span class="text-xs font-semibold text-white truncate">${escapeHtml(fullName)}</span>
-                                            ${usn ? `<span class="text-[10px] font-mono text-zinc-400">(${escapeHtml(usn)})</span>` : ''}
-                                            ${(year && year !== '—') ? `<span class="px-1.5 py-0.5 rounded text-[9px] bg-blue-500/15 text-blue-300 border border-blue-500/20">${escapeHtml(year)}</span>` : ''}
-                                            ${(branch && branch !== '—') ? `<span class="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">${escapeHtml(branch)}</span>` : ''}
-                                        </div>
-                                        <p class="text-[11px] text-zinc-400 font-mono truncate">${escapeHtml(u.email || 'No email')} · @${escapeHtml(u.username || 'user')}</p>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2 flex-shrink-0">
-                                    ${isAlreadyAssigned ? `
-                                        <span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold ${u.role === 'mentor' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : (u.role === 'super_admin' || u.role === 'superadmin' ? 'bg-amber-500/15 text-amber-300' : 'bg-blue-500/15 text-blue-300')}">
-                                            ${u.role === 'super_admin' || u.role === 'superadmin' ? '🛡️ Super Admin' : (u.role === 'mentor' ? '🎓 Mentor' : '👑 Admin')}
-                                        </span>
-                                        ${u.role === 'mentor' ? `
-                                            <button class="revoke-mentor-btn px-2.5 py-1 text-[10px] font-semibold bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 rounded-lg transition-colors cursor-pointer" data-id="${u.id}" data-name="${escapeHtml(fullName)}">
-                                                Revoke
-                                            </button>
-                                        ` : (u.role !== 'super_admin' && u.role !== 'superadmin' ? `
-                                            <button class="start-appoint-btn px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg text-[10px] font-semibold transition-all cursor-pointer" data-user-id="${u.id}" data-target-role="mentor">
-                                                Change
-                                            </button>
-                                        ` : '')}
-                                    ` : `
-                                        <button class="start-appoint-btn px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold active:scale-95 rounded-xl text-xs transition-all shadow-sm cursor-pointer flex items-center gap-1" data-user-id="${u.id}" data-target-role="mentor">
-                                            <span>🎓 Assign Mentor</span>
-                                        </button>
-                                        <button class="start-appoint-btn px-3 py-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl text-xs font-semibold transition-all shadow-sm cursor-pointer" data-user-id="${u.id}" data-target-role="admin">
-                                            + Admin
-                                        </button>
-                                    `}
-                                </div>
-                            </div>`;
-                        }).join('')}
+                        ` : `
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                                ${searchCandidates.map(u => renderCandidateCard(u)).join('')}
+                            </div>
+                        `}
                     </div>
-                ` : `
-                    <div class="p-3 bg-zinc-950/40 rounded-xl border border-zinc-800/60 text-center">
-                        <p class="text-[11px] text-zinc-500">💡 Type a member's name, email, or USN above to grant Administrator or Mentor privileges.</p>
-                    </div>
-                `}
+                ` : ''}
             </div>
-
+            ` : ''}
             <!-- SECTION 2: ACTIVE ADMINISTRATORS & LIVE FEATURE TOGGLES -->
+            ${(accessSubSection === 'all' || accessSubSection === 'roles') ? `
             <div class="glass-card rounded-2xl p-5 border border-zinc-800">
                 <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
                     <div>
@@ -1538,6 +1457,8 @@ const AdminView = (() => {
                     Copy SQL Script
                 </button>
             </div>
+        </div>
+            ` : ''}
         </div>`;
     }
 
@@ -1888,6 +1809,12 @@ const AdminView = (() => {
                             <span id="admin-excel-btn-text">${(userYearFilter || userBranchFilter || userTeamFilter || userSearchQuery) ? 'Export (.xlsx)' : 'Export Excel'}</span>
                         </button>
                     ` : ''}
+
+                    ${isSuper ? `
+                        <button type="button" id="members-quick-add-mentor-btn" class="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-zinc-950 rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 transition-all cursor-pointer whitespace-nowrap" title="Add New Mentor / Faculty Advisor">
+                            <span>🎓 + Add Mentor</span>
+                        </button>
+                    ` : ''}
                 </div>
             </div>
 
@@ -2116,6 +2043,15 @@ const AdminView = (() => {
     }
 
     function bindEvents(container) {
+        // Access Control sub-section switching
+        container.querySelectorAll('.access-section-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                accessSubSection = btn.dataset.subsection;
+                container.innerHTML = render();
+                bindEvents(container);
+            });
+        });
+
         // Tab switching
         container.querySelectorAll('.admin-tab, .admin-tab-switch').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -2920,6 +2856,21 @@ const AdminView = (() => {
         });
 
                 // Open/Close Add Mentor Panel
+        container.querySelector('#members-quick-add-mentor-btn')?.addEventListener('click', () => {
+            activeTab = 'access_control';
+            isAddingMentor = true;
+            container.innerHTML = render();
+            bindEvents(container);
+            setTimeout(() => {
+                const panel = container.querySelector('#add-mentor-panel');
+                if (panel) {
+                    panel.classList.remove('hidden');
+                    panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    container.querySelector('#new-mentor-email')?.focus();
+                }
+            }, 60);
+        });
+
         container.querySelector('#open-add-mentor-btn')?.addEventListener('click', () => {
             isAddingMentor = !isAddingMentor;
             const panel = container.querySelector('#add-mentor-panel');
@@ -2967,7 +2918,7 @@ const AdminView = (() => {
 
             const res = await ICCSupabase.addNewMentor({ email, full_name, designation, bio });
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<span>🎓 Confirm &amp; Add Mentor</span>';
+            submitBtn.innerHTML = '<span>🎓 Authorize Email &amp; Grant Mentor Access</span>';
 
             if (res.error) {
                 Toast.error('Failed to add mentor: ' + (res.error.message || res.error));
@@ -2975,6 +2926,7 @@ const AdminView = (() => {
                 Toast.success(res.message || `🎓 Mentor ${email} added! They can now log in via the Mentor Portal.`);
                 isAddingMentor = false;
                 allUsers = await ICCSupabase.getAllProfiles();
+                accessSubSection = 'add_mentor';
                 accessRoleFilter = 'mentor';
                 container.innerHTML = render();
                 bindEvents(container);
